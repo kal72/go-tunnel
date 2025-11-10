@@ -24,7 +24,7 @@ WORKDIR /app
 # Copy hasil build
 COPY --from=builder /app/gotunnel-server .
 COPY .env .
-COPY cert-cache ./cert-cache
+RUN mkdir -p /app/cert-cache
 
 # Expose port:
 # 80    -> HTTP-01 challenge (Let's Encrypt)
