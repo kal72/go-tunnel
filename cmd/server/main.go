@@ -1,59 +1,62 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
+	"gotunnel/internal/config"
 	"gotunnel/internal/server"
 
 	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
-	domains := []string{
-		"tunnel.vpskamu.com",
-		"app.vpskamu.com",
-		"grafana.vpskamu.com",
+	env, err := config.LoadServerConfig(".env")
+	if err != nil {
+		log.Fatal("load .env:", err)
 	}
 
-	// Kunci JWT (HARUS cocok dengan client config)
-	const jwtSecret = "supersecretjwtkey"
+	log.Printf("[config] Ports: public=%d tunnel=%d dashboard=%d", env.ServerPort, env.TunnelPort, env.DashboardPort)
+	log.Printf("[config] Domains: %v", env.ACMEDomains)
 
-	// Autocert (Let's Encrypt)
+	// Setup autocert
 	m := &autocert.Manager{
-		Cache:      autocert.DirCache("./cert-cache"),
+		Cache:      autocert.DirCache(env.ACMECache),
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(domains...),
+		HostPolicy: autocert.HostWhitelist(env.ACMEDomains...),
 	}
 
-	// Server utama
-	srv, err := server.NewServerJWT(jwtSecret)
+	// Server init
+	srv, err := server.NewServerJWT(env.JWTSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// 1) HTTPS publik di :443 (autocert)
+	// HTTPS public
 	httpsSrv := &http.Server{
-		Addr:      ":8443",
+		Addr:      fmt.Sprintf(":%d", env.ServerPort),
 		TLSConfig: m.TLSConfig(),
-		Handler:   srv, // srv.ServeHTTP untuk meneruskan request ke tunnel
+		Handler:   srv,
 	}
 
-	// 2) Listener dashboard (HTTP) di :8081
+	// Dashboard
 	go func() {
-		log.Println("[edge] dashboard: http://0.0.0.0:8081")
-		if err := http.ListenAndServe(":8081", srv.DashboardHandler()); err != nil {
-			log.Println("[edge] dashboard error:", err)
+		addr := fmt.Sprintf(":%d", env.DashboardPort)
+		log.Printf("[edge] dashboard at http://0.0.0.0%s", addr)
+		if err := http.ListenAndServe(addr, srv.DashboardHandler()); err != nil {
+			log.Println("[dashboard]", err)
 		}
 	}()
 
-	// 3) Listener TUNNEL TLS (yamux) di :9443 (pakai cert ACME sama)
+	// Tunnel listener
 	go func() {
-		if err := srv.ListenTunnelTLS(":9443", m.TLSConfig()); err != nil {
+		addr := fmt.Sprintf(":%d", env.TunnelPort)
+		if err := srv.ListenTunnelTLS(addr, m.TLSConfig()); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	log.Println("[edge] HTTPS public listening on :8443")
-	log.Fatal(httpsSrv.ListenAndServeTLS("", "")) // cert & key dihandle autocert
+	log.Printf("[edge] HTTPS public listening on :%d", env.ServerPort)
+	log.Fatal(httpsSrv.ListenAndServeTLS("", ""))
 }
