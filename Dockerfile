@@ -22,7 +22,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
 # Copy hasil build
-COPY --from=builder /app/tunnel-server .
+COPY --from=builder /app/gotunnel-server .
 COPY .env .
 COPY cert-cache ./cert-cache
 
@@ -31,7 +31,7 @@ COPY cert-cache ./cert-cache
 # 8443   -> HTTPS publik
 # 9443  -> Tunnel TLS (client)
 # 8081  -> Dashboard admin
-EXPOSE 80 8443 9443 8081
+EXPOSE 80 443 9443 8081
 
 # Default command
 CMD ["./gotunnel-server"]
