@@ -42,7 +42,7 @@ func main() {
 
 	// Dashboard
 	go func() {
-		addr := fmt.Sprintf("0.0.0.0.:%d", env.DashboardPort)
+		addr := fmt.Sprintf("0.0.0.0:%d", env.DashboardPort)
 		log.Printf("[edge] dashboard at http://%s", addr)
 		if err := http.ListenAndServe(addr, srv.DashboardHandler()); err != nil {
 			log.Println("[dashboard]", err)
