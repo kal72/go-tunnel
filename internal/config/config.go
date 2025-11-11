@@ -60,8 +60,8 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	s := &ServerConfig{
 		ServerPort:    parsePort(get("SERVER_PORT", "8443"), 8443),
 		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
-		DashboardPort: parsePort(get("DASHBOARD_PORT", "8081"), 8081),
-		JWTSecret:     get("JWT_SECRET", "changeme"),
+		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
+		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:     get("ACME_CACHE", "./cert-cache"),
 		ACMEDomains:   strings.Split(get("ACME_DOMAINS", ""), ","),
 	}

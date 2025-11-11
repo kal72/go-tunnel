@@ -31,7 +31,7 @@ RUN mkdir -p /app/cert-cache
 # 8443   -> HTTPS publik
 # 9443  -> Tunnel TLS (client)
 # 8081  -> Dashboard admin
-EXPOSE 80 443 9443 8081
+EXPOSE 80 443 9443 8080
 
 # Default command
 CMD ["./gotunnel-server"]
