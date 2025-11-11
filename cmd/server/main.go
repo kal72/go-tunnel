@@ -35,15 +35,15 @@ func main() {
 
 	// HTTPS public
 	httpsSrv := &http.Server{
-		Addr:      fmt.Sprintf(":%d", env.ServerPort),
+		Addr:      fmt.Sprintf("0.0.0.0:%d", env.ServerPort),
 		TLSConfig: m.TLSConfig(),
 		Handler:   srv,
 	}
 
 	// Dashboard
 	go func() {
-		addr := fmt.Sprintf(":%d", env.DashboardPort)
-		log.Printf("[edge] dashboard at http://0.0.0.0%s", addr)
+		addr := fmt.Sprintf("0.0.0.0.:%d", env.DashboardPort)
+		log.Printf("[edge] dashboard at http://%s", addr)
 		if err := http.ListenAndServe(addr, srv.DashboardHandler()); err != nil {
 			log.Println("[dashboard]", err)
 		}
@@ -51,7 +51,7 @@ func main() {
 
 	// Tunnel listener
 	go func() {
-		addr := fmt.Sprintf(":%d", env.TunnelPort)
+		addr := fmt.Sprintf("0.0.0.0:%d", env.TunnelPort)
 		if err := srv.ListenTunnelTLS(addr, m.TLSConfig()); err != nil {
 			log.Fatal(err)
 		}
