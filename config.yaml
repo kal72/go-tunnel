@@ -1,10 +1,6 @@
 # Koneksi ke listener tunnel (di VPS)
 tunnel_addr: "tunnel.kristiawan.my.id:9443"
-skip_tls_verify: false
-
-# Daftar hostname publik yang akan diberi sertifikat Let's Encrypt
-tunnel_hostnames:
-  - "tunnel.kristiawan.my.id"
+skip_tls_verify: true
 
 # JWT Auth (harus cocok dengan server)
 jwt_secret: "supersecretjwtkey"
@@ -13,6 +9,6 @@ jwt_expire_sec: 3600
 
 # Mapping host -> target lokal
 tunnels:
-  - hostname: "tunnel.kristiawan.my.id"
-    target: "127.0.0.1:8080"
+  - hostname: "web.kristiawan.my.id"
+    target: "127.0.0.1:8087"
     mode: "http"

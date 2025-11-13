@@ -84,6 +84,7 @@ func (c *Client) runOnce() error {
 		Type:   protocol.MsgTypeRegister,
 		Token:  jwtStr,
 		Routes: c.routes,
+		Modes:  c.modes,
 	}); err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ import (
 type TunnelSession struct {
 	Session   *yamux.Session
 	Hostnames map[string]struct{}
+	Modes     map[string]string
 	Ctrl      *yamux.Stream
 	ClientIP  string
 	Connected time.Time
@@ -65,6 +66,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no tunnel for host", http.StatusBadGateway)
 		return
 	}
+	mode := ses.modeForHost(host)
 
 	stream, err := ses.Session.OpenStream()
 	if err != nil {
@@ -80,7 +82,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if strings.HasSuffix(host, ".http") { // contoh mode deteksi, opsional
+	if mode != "tcp" {
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
@@ -239,9 +241,25 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	ts := &TunnelSession{
 		Session:   session,
 		Hostnames: map[string]struct{}{},
+		Modes:     map[string]string{},
 		Ctrl:      ctrl,
 		ClientIP:  ip,
 		Connected: time.Now(),
+	}
+
+	rawModes := map[string]string{}
+	if m, ok := msg["modes"].(map[string]any); ok {
+		for hn, modeVal := range m {
+			if modeStr, ok := modeVal.(string); ok && modeStr != "" {
+				rawModes[hn] = strings.ToLower(modeStr)
+			}
+		}
+	}
+	getMode := func(host string) string {
+		if mode, ok := rawModes[host]; ok && mode != "" {
+			return mode
+		}
+		return "http"
 	}
 
 	s.mu.Lock()
@@ -259,6 +277,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 			break
 		}
 		ts.Hostnames[hn] = struct{}{}
+		ts.Modes[hn] = getMode(hn)
 		s.hostToSes[hn] = ts
 		addedHosts = append(addedHosts, hn)
 		s.logger.Info("[edge] registered host: "+hn+"->"+ip, zap.String("addr", ip))
@@ -266,6 +285,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	if conflict != "" {
 		for _, hn := range addedHosts {
 			delete(ts.Hostnames, hn)
+			delete(ts.Modes, hn)
 			if cur, ok := s.hostToSes[hn]; ok && cur == ts {
 				delete(s.hostToSes, hn)
 			}
@@ -349,6 +369,7 @@ func (s *Server) cleanup(ts *TunnelSession) {
 			if s.hostRegistry != nil {
 				s.hostRegistry.Remove(hn)
 			}
+			delete(ts.Modes, hn)
 			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
 		}
 	}
@@ -358,6 +379,18 @@ func (s *Server) sessionForHost(host string) *TunnelSession {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.hostToSes[host]
+}
+
+func (ts *TunnelSession) modeForHost(host string) string {
+	if ts == nil {
+		return "http"
+	}
+	if ts.Modes != nil {
+		if mode, ok := ts.Modes[host]; ok && mode != "" {
+			return mode
+		}
+	}
+	return "http"
 }
 
 func (s *Server) verifyJWT(tokenStr string) error {
