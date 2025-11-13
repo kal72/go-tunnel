@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gotunnel/internal/protocol"
+	"gotunnel/internal/registry"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
@@ -27,8 +28,9 @@ type TunnelSession struct {
 }
 
 type Server struct {
-	jwtSecret []byte
-	logger    *zap.Logger
+	jwtSecret    []byte
+	logger       *zap.Logger
+	hostRegistry *registry.HostRegistry
 
 	// host -> session
 	mu        sync.RWMutex
@@ -46,12 +48,13 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
-		jwtSecret: []byte(jwtSecret),
-		hostToSes: map[string]*TunnelSession{},
-		logger:    logger,
+		jwtSecret:    []byte(jwtSecret),
+		hostToSes:    map[string]*TunnelSession{},
+		logger:       logger,
+		hostRegistry: hostRegistry,
 	}, nil
 }
 
@@ -167,10 +170,11 @@ func (s *Server) refreshDashboard() {
 	s.summary = out
 }
 
-func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) error {
+// client listening
+func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener, error) {
 	ln, err := tls.Listen("tcp", addr, tlsCfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.logger.Info("[edge] tunnel TLS listening", zap.String("addr", addr))
 
@@ -184,7 +188,7 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) error {
 			go s.handleClientConn(conn)
 		}
 	}()
-	return nil
+	return ln, nil
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
@@ -241,10 +245,38 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}
 
 	s.mu.Lock()
+	var (
+		addedHosts []string
+		conflict   string
+	)
 	for hn := range rawRoutes {
+		if _, exists := s.hostToSes[hn]; exists {
+			conflict = hn
+			break
+		}
+		if s.hostRegistry != nil && !s.hostRegistry.Add(hn) {
+			conflict = hn
+			break
+		}
 		ts.Hostnames[hn] = struct{}{}
 		s.hostToSes[hn] = ts
+		addedHosts = append(addedHosts, hn)
 		s.logger.Info("[edge] registered host: "+hn+"->"+ip, zap.String("addr", ip))
+	}
+	if conflict != "" {
+		for _, hn := range addedHosts {
+			delete(ts.Hostnames, hn)
+			if cur, ok := s.hostToSes[hn]; ok && cur == ts {
+				delete(s.hostToSes, hn)
+			}
+			if s.hostRegistry != nil {
+				s.hostRegistry.Remove(hn)
+			}
+		}
+		s.mu.Unlock()
+		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: fmt.Sprintf("host already registered: %s", conflict)})
+		session.Close()
+		return
 	}
 	s.mu.Unlock()
 
@@ -289,12 +321,35 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}()
 }
 
+// func (s *Server) handleClientTunnel(conn net.Conn, hostRegistry *registry.HostRegistry) {
+// 	defer conn.Close()
+
+// 	// baca handshake sederhana dari client
+// 	buf := make([]byte, 1024)
+// 	n, _ := conn.Read(buf)
+// 	req := string(buf[:n])
+
+// 	// format handshake sederhana: "DOMAIN:app.vpskamu.com"
+// 	if strings.HasPrefix(req, "DOMAIN:") {
+// 		domain := strings.TrimSpace(strings.TrimPrefix(req, "DOMAIN:"))
+// 		log.Printf("[client] registered domain: %s", domain)
+// 		hostRegistry.Add(domain)
+// 		conn.Write([]byte("OK\n"))
+// 	} else {
+// 		conn.Write([]byte("ERR\n"))
+// 	}
+// }
+
 func (s *Server) cleanup(ts *TunnelSession) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for hn := range ts.Hostnames {
 		if cur, ok := s.hostToSes[hn]; ok && cur == ts {
 			delete(s.hostToSes, hn)
+			if s.hostRegistry != nil {
+				s.hostRegistry.Remove(hn)
+			}
+			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
 		}
 	}
 }
