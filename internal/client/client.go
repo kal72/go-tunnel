@@ -40,7 +40,9 @@ func NewClient(cfg *config.ClientConfig) *Client {
 	zapCfg := zap.NewProductionConfig()
 	zapCfg.Encoding = "console"
 	zapCfg.DisableStacktrace = true
+	zapCfg.DisableCaller = true
 	zapCfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	zapCfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	logger, _ := zapCfg.Build()
 	return &Client{cfg: cfg, routes: r, modes: m, logger: logger}
