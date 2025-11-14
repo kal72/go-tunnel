@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"gotunnel/internal/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Client struct {
@@ -35,7 +37,12 @@ func NewClient(cfg *config.ClientConfig) *Client {
 		m[t.Hostname] = mode
 	}
 
-	logger, _ := zap.NewProduction()
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Encoding = "console"
+	zapCfg.DisableStacktrace = true
+	zapCfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	logger, _ := zapCfg.Build()
 	return &Client{cfg: cfg, routes: r, modes: m, logger: logger}
 }
 
@@ -49,10 +56,15 @@ func (c *Client) RunForever() {
 }
 
 func (c *Client) runOnce() error {
+	serverName := hostOnly(c.cfg.TunnelAddr)
+	if sni := c.preferredSNIHost(); sni != "" {
+		serverName = sni
+	}
+
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: c.cfg.SkipTLSVerify,
-		// Penting: gunakan SNI agar cocok dengan cert ACME (host dari tunnel_addr)
-		ServerName: hostOnly(c.cfg.TunnelAddr),
+		// Penting: gunakan SNI agar cocok dengan cert ACME (ambil dari hostname tunnel)
+		ServerName: serverName,
 	}
 
 	c.logger.Info("[agent] connecting to", zap.String("server", c.cfg.TunnelAddr))
@@ -180,6 +192,15 @@ func hostOnly(addr string) string {
 		}
 	}
 	return addr
+}
+
+func (c *Client) preferredSNIHost() string {
+	for _, t := range c.cfg.Tunnels {
+		if h := strings.TrimSpace(t.Hostname); h != "" {
+			return h
+		}
+	}
+	return ""
 }
 
 func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {

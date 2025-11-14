@@ -29,9 +29,8 @@ type ServerConfig struct {
 }
 
 type ClientConfig struct {
-	TunnelAddr      string   `yaml:"tunnel_addr"`
-	SkipTLSVerify   bool     `yaml:"skip_tls_verify"`
-	TunnelHostnames []string `yaml:"tunnel_hostnames"`
+	TunnelAddr    string `yaml:"tunnel_addr"`
+	SkipTLSVerify bool   `yaml:"skip_tls_verify"`
 
 	JWTSecret    string `yaml:"jwt_secret"`
 	JWTIssuer    string `yaml:"jwt_issuer"`
