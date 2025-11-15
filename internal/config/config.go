@@ -57,7 +57,7 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 
 	s := &ServerConfig{
 		ServerDomain:  get("SERVER_DOMAIN", ""),
-		ServerPort:    parsePort(get("SERVER_PORT", "8443"), 8443),
+		ServerPort:    parsePort(get("SERVER_PORT", "443"), 443),
 		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
 		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),

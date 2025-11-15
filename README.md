@@ -73,7 +73,7 @@ tunnels:
     mode: "http"                       # or "tcp"
 ```
 
-> The client automatically picks the first tunnel hostname as SNI so make sure at least one entry matches a domain with a valid certificate on the server.
+> The client uses the hostname from `tunnel_addr` for TLS/SNI, so point it at the same domain you configured in the server `.env` (`SERVER_DOMAIN`).
 
 ## How to Run
 

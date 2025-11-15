@@ -27,9 +27,9 @@ RUN mkdir -p /app/cert-cache
 
 # Expose port:
 # 80    -> HTTP-01 challenge (Let's Encrypt)
-# 8443   -> HTTPS publik
+# 443   -> HTTPS publik
 # 9443  -> Tunnel TLS (client)
-# 8081  -> Dashboard admin
+# 808o  -> Dashboard admin
 EXPOSE 80 443 9443 8080
 
 # Default command

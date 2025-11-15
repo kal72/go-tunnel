@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"gotunnel/internal/config"
@@ -58,10 +57,9 @@ func (c *Client) RunForever() {
 }
 
 func (c *Client) runOnce() error {
+	// ServerName must match the public tunnel endpoint (SERVER_DOMAIN) so the
+	// server-side HostPolicy allows the TLS handshake before routes register.
 	serverName := hostOnly(c.cfg.TunnelAddr)
-	if sni := c.preferredSNIHost(); sni != "" {
-		serverName = sni
-	}
 
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: c.cfg.SkipTLSVerify,
@@ -194,15 +192,6 @@ func hostOnly(addr string) string {
 		}
 	}
 	return addr
-}
-
-func (c *Client) preferredSNIHost() string {
-	for _, t := range c.cfg.Tunnels {
-		if h := strings.TrimSpace(t.Hostname); h != "" {
-			return h
-		}
-	}
-	return ""
 }
 
 func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
