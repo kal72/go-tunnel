@@ -45,14 +45,16 @@ Copy `.env.example` and adjust:
 
 | Variable | Description |
 | --- | --- |
+| `SERVER_DOMAIN` | Canonical domain that points to the tunnel server (and is required to view the dashboard). |
 | `SERVER_PORT` | Public HTTPS port (default 8443; use 443 in production). |
 | `TUNNEL_PORT` | TLS port used by agents (default 9443). |
 | `DASHBOARD_PORT` | HTTP dashboard port. |
 | `JWT_SECRET` | HS256 key shared with clients. |
 | `ACME_CACHE` | Folder for Let's Encrypt cache. |
-| `ACME_DOMAINS` | Comma separated list of allowed domains. |
 
 > Keep port 80 open when using Let's Encrypt HTTP-01 challenges (see the `Dockerfile`, which exposes 80/443/9443/8080).
+>
+> The server keeps an in-memory registry of every hostname currently registered by the agents. Incoming HTTPS requests—and ACME certificate issuance—are only allowed for hosts that are actively registered, which prevents stray domains from being served accidentally.
 
 ## Client Configuration (`config.yaml`)
 Start from `config.yaml.example`. Important fields:
@@ -115,16 +117,23 @@ The client retries every 2 seconds if the tunnel drops.
        target: "127.0.0.1:22"
        mode: "tcp"
    ```
-3. **Automatic registration**: when the client starts it creates a JWT, sends the hostnames, and the server lists the routes on the dashboard at `http://SERVER_IP:8081`.
+3. **Automatic registration**: when the client starts it creates a JWT, sends the hostnames, and the server lists the routes on the dashboard at `http://tunnel.vpskamu.com:8081` (or whatever `SERVER_DOMAIN` you set). A hostname can only belong to one active agent at a time.
 4. **Access services**:
    - Open `https://app.vpskamu.com` → traffic forwards to the client’s `127.0.0.1:8080`.
    - SSH to `ssh.vpskamu.com:443` (TCP mode) → connection relays to local port 22.
 
-If a hostname is already registered or missing from `ACME_DOMAINS`, the server rejects the registration and logs `host already registered`.
+If a hostname is already registered with another agent the server rejects the registration and logs `host already registered`.
 
 ## Troubleshooting Tips
 - **Certificates never issue**: ensure ports 80/443 are reachable and DNS points at the server; inspect the `ACME_CACHE` folder.
-- **Client registration fails**: verify `JWT_SECRET` matches and `config.yaml` lists hostnames included in `ACME_DOMAINS`.
+- **Client registration fails**: verify `JWT_SECRET` matches, the hostnames resolve to the server, and no other agent already registered the same host.
 - **TCP mode**: ensure the front-end HTTP server supports connection hijacking (Go’s default does). It cannot be chained behind proxies that block hijacking.
+
+## CI/CD Workflow
+- The repository ships with `.github/workflows/cicd.yaml` named **Manual CI/CD Gotunnel**. Run it through the *Actions → Run workflow* button or via `gh workflow run "Manual CI/CD Gotunnel" -f target=dev`.
+- `target=dev` builds `ghcr.io/<owner>/gotunnel:dev`, pushes it, and redeploys the DEV Podman container on the VPS specified by `VPS_HOST/VPS_USER`.
+- `target=release` additionally requires `version` (e.g., `v1.2.3`), builds that tag plus `latest`, pushes both images, and redeploys using the tagged image.
+- Deploy steps log in to GHCR, pull the image, stop/remove the previous `tunnel` container, and run the new one with `-p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 -v $(pwd)/cert-cache:/app/cert-cache:Z -e SERVER_DOMAIN=...`.
+- The workflow assumes Podman on the VPS; adjust the script if you deploy elsewhere or need additional env vars.
 
 Happy tunneling! This README now covers the tech stack, how-to, and end-to-end example so onboarding is faster.
