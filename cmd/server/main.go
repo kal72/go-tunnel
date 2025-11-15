@@ -59,6 +59,7 @@ func main() {
 	publicTLS.ClientSessionCache = tls.NewLRUClientSessionCache(128)
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "h2")
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "http/1.1")
+	ensureDefaultServerName(publicTLS, env.ServerDomain)
 
 	httpsSrv := &http.Server{
 		Addr:              fmt.Sprintf("0.0.0.0:%d", env.ServerPort),
@@ -86,6 +87,7 @@ func main() {
 	tunnelTLS := cloneTLSConfig(m.TLSConfig())
 	tunnelTLS.MinVersion = tls.VersionTLS12
 	tunnelTLS.ClientSessionCache = tls.NewLRUClientSessionCache(64)
+	ensureDefaultServerName(tunnelTLS, env.ServerDomain)
 	tunnelAddr := fmt.Sprintf("0.0.0.0:%d", env.TunnelPort)
 	tunnelLn, err := srv.ListenTunnelTLS(tunnelAddr, tunnelTLS)
 	if err != nil {
@@ -135,4 +137,26 @@ func ensureProto(list []string, proto string) []string {
 		}
 	}
 	return append(list, proto)
+}
+
+func ensureDefaultServerName(cfg *tls.Config, fallback string) {
+	fallback = strings.TrimSpace(fallback)
+	if cfg == nil || fallback == "" {
+		return
+	}
+	baseGetCert := cfg.GetCertificate
+	cfg.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		if hello != nil && hello.ServerName == "" {
+			cloned := *hello
+			cloned.ServerName = fallback
+			hello = &cloned
+		}
+		if baseGetCert != nil {
+			return baseGetCert(hello)
+		}
+		if len(cfg.Certificates) > 0 {
+			return &cfg.Certificates[0], nil
+		}
+		return nil, fmt.Errorf("no certificates configured")
+	}
 }
