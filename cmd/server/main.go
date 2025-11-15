@@ -84,6 +84,17 @@ func main() {
 		}
 	}()
 
+	// HTTP-01 challenge listener (port 80)
+	acmeHTTP := &http.Server{
+		Addr:    ":80",
+		Handler: m.HTTPHandler(nil),
+	}
+	go func() {
+		if err := acmeHTTP.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Println("[acme-http]", err)
+		}
+	}()
+
 	tunnelTLS := cloneTLSConfig(m.TLSConfig())
 	tunnelTLS.MinVersion = tls.VersionTLS12
 	tunnelTLS.ClientSessionCache = tls.NewLRUClientSessionCache(64)
@@ -116,6 +127,9 @@ func main() {
 	}
 	if err := dashboardSrv.Shutdown(shutdownCtx); err != nil && err != http.ErrServerClosed {
 		log.Printf("[edge] dashboard shutdown error: %v", err)
+	}
+	if err := acmeHTTP.Shutdown(shutdownCtx); err != nil && err != http.ErrServerClosed {
+		log.Printf("[edge] acme-http shutdown error: %v", err)
 	}
 	if tunnelLn != nil {
 		_ = tunnelLn.Close()
