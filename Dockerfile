@@ -23,7 +23,6 @@ WORKDIR /app
 
 # Copy hasil build
 COPY --from=builder /app/gotunnel-server .
-COPY .env .
 RUN mkdir -p /app/cert-cache
 
 # Expose port:
