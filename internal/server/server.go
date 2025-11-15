@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gotunnel/internal/protocol"
+	"gotunnel/internal/registry"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
@@ -21,14 +22,16 @@ import (
 type TunnelSession struct {
 	Session   *yamux.Session
 	Hostnames map[string]struct{}
+	Modes     map[string]string
 	Ctrl      *yamux.Stream
 	ClientIP  string
 	Connected time.Time
 }
 
 type Server struct {
-	jwtSecret []byte
-	logger    *zap.Logger
+	jwtSecret    []byte
+	logger       *zap.Logger
+	hostRegistry *registry.HostRegistry
 
 	// host -> session
 	mu        sync.RWMutex
@@ -37,6 +40,8 @@ type Server struct {
 	// dashboard cache
 	dashMu  sync.RWMutex
 	summary []dashItem
+
+	dashboardDomain string
 }
 
 type dashItem struct {
@@ -46,12 +51,14 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
-		jwtSecret: []byte(jwtSecret),
-		hostToSes: map[string]*TunnelSession{},
-		logger:    logger,
+		jwtSecret:       []byte(jwtSecret),
+		hostToSes:       map[string]*TunnelSession{},
+		logger:          logger,
+		hostRegistry:    hostRegistry,
+		dashboardDomain: canonicalHost(serverDomain),
 	}, nil
 }
 
@@ -62,6 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no tunnel for host", http.StatusBadGateway)
 		return
 	}
+	mode := ses.modeForHost(host)
 
 	stream, err := ses.Session.OpenStream()
 	if err != nil {
@@ -77,7 +85,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if strings.HasSuffix(host, ".http") { // contoh mode deteksi, opsional
+	if mode != "tcp" {
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
@@ -116,6 +124,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) DashboardHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.dashboardDomain != "" {
+			reqHost := canonicalHost(r.Host)
+			if reqHost == "" || reqHost != s.dashboardDomain {
+				s.logger.Warn("[dashboard] blocked by host check", zap.String("host", r.Host), zap.String("allowed", s.dashboardDomain))
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+		}
+
 		s.refreshDashboard()
 		s.dashMu.RLock()
 		defer s.dashMu.RUnlock()
@@ -167,10 +184,11 @@ func (s *Server) refreshDashboard() {
 	s.summary = out
 }
 
-func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) error {
+// client listening
+func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener, error) {
 	ln, err := tls.Listen("tcp", addr, tlsCfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.logger.Info("[edge] tunnel TLS listening", zap.String("addr", addr))
 
@@ -181,10 +199,11 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) error {
 				s.logger.Error("[edge] accept tunnel", zap.Error(err))
 				continue
 			}
+
 			go s.handleClientConn(conn)
 		}
 	}()
-	return nil
+	return ln, nil
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
@@ -235,16 +254,62 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	ts := &TunnelSession{
 		Session:   session,
 		Hostnames: map[string]struct{}{},
+		Modes:     map[string]string{},
 		Ctrl:      ctrl,
 		ClientIP:  ip,
 		Connected: time.Now(),
 	}
 
+	rawModes := map[string]string{}
+	if m, ok := msg["modes"].(map[string]any); ok {
+		for hn, modeVal := range m {
+			if modeStr, ok := modeVal.(string); ok && modeStr != "" {
+				rawModes[hn] = strings.ToLower(modeStr)
+			}
+		}
+	}
+	getMode := func(host string) string {
+		if mode, ok := rawModes[host]; ok && mode != "" {
+			return mode
+		}
+		return "http"
+	}
+
 	s.mu.Lock()
+	var (
+		addedHosts []string
+		conflict   string
+	)
 	for hn := range rawRoutes {
+		if _, exists := s.hostToSes[hn]; exists {
+			conflict = hn
+			break
+		}
+		if s.hostRegistry != nil && !s.hostRegistry.Add(hn) {
+			conflict = hn
+			break
+		}
 		ts.Hostnames[hn] = struct{}{}
+		ts.Modes[hn] = getMode(hn)
 		s.hostToSes[hn] = ts
+		addedHosts = append(addedHosts, hn)
 		s.logger.Info("[edge] registered host: "+hn+"->"+ip, zap.String("addr", ip))
+	}
+	if conflict != "" {
+		for _, hn := range addedHosts {
+			delete(ts.Hostnames, hn)
+			delete(ts.Modes, hn)
+			if cur, ok := s.hostToSes[hn]; ok && cur == ts {
+				delete(s.hostToSes, hn)
+			}
+			if s.hostRegistry != nil {
+				s.hostRegistry.Remove(hn)
+			}
+		}
+		s.mu.Unlock()
+		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: fmt.Sprintf("host already registered: %s", conflict)})
+		session.Close()
+		return
 	}
 	s.mu.Unlock()
 
@@ -295,6 +360,11 @@ func (s *Server) cleanup(ts *TunnelSession) {
 	for hn := range ts.Hostnames {
 		if cur, ok := s.hostToSes[hn]; ok && cur == ts {
 			delete(s.hostToSes, hn)
+			if s.hostRegistry != nil {
+				s.hostRegistry.Remove(hn)
+			}
+			delete(ts.Modes, hn)
+			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
 		}
 	}
 }
@@ -303,6 +373,18 @@ func (s *Server) sessionForHost(host string) *TunnelSession {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.hostToSes[host]
+}
+
+func (ts *TunnelSession) modeForHost(host string) string {
+	if ts == nil {
+		return "http"
+	}
+	if ts.Modes != nil {
+		if mode, ok := ts.Modes[host]; ok && mode != "" {
+			return mode
+		}
+	}
+	return "http"
 }
 
 func (s *Server) verifyJWT(tokenStr string) error {
@@ -321,4 +403,17 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, vv)
 		}
 	}
+}
+
+func canonicalHost(hostport string) string {
+	hostport = strings.TrimSpace(hostport)
+	if hostport == "" {
+		return ""
+	}
+	if strings.Contains(hostport, ":") {
+		if h, _, err := net.SplitHostPort(hostport); err == nil {
+			hostport = h
+		}
+	}
+	return strings.ToLower(hostport)
 }

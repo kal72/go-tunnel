@@ -1,6 +1,6 @@
 # Koneksi ke listener tunnel (di VPS)
-tunnel_addr: "tunnel.vpskamu.com:9443"
-skip_tls_verify: false
+tunnel_addr: "tunnel.kristiawan.my.id:9443"
+skip_tls_verify: true
 
 # JWT Auth (harus cocok dengan server)
 jwt_secret: "supersecretjwtkey"
@@ -9,9 +9,6 @@ jwt_expire_sec: 3600
 
 # Mapping host -> target lokal
 tunnels:
-  - hostname: "app.vpskamu.com"
-    target: "127.0.0.1:8080"
+  - hostname: "web.kristiawan.my.id"
+    target: "127.0.0.1:8087"
     mode: "http"
-  - hostname: "ssh.vpskamu.com"
-    target: "127.0.0.1:22"
-    mode: "tcp"

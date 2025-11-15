@@ -18,20 +18,18 @@ type TunnelEntry struct {
 }
 
 type ServerConfig struct {
+	ServerDomain  string
 	ServerPort    int
 	TunnelPort    int
 	DashboardPort int
 
 	JWTSecret string
-
-	ACMEDomains []string
-	ACMECache   string
+	ACMECache string
 }
 
 type ClientConfig struct {
-	TunnelAddr      string   `yaml:"tunnel_addr"`
-	SkipTLSVerify   bool     `yaml:"skip_tls_verify"`
-	TunnelHostnames []string `yaml:"tunnel_hostnames"`
+	TunnelAddr    string `yaml:"tunnel_addr"`
+	SkipTLSVerify bool   `yaml:"skip_tls_verify"`
 
 	JWTSecret    string `yaml:"jwt_secret"`
 	JWTIssuer    string `yaml:"jwt_issuer"`
@@ -58,16 +56,16 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	}
 
 	s := &ServerConfig{
+		ServerDomain:  get("SERVER_DOMAIN", ""),
 		ServerPort:    parsePort(get("SERVER_PORT", "8443"), 8443),
 		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
 		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:     get("ACME_CACHE", "./cert-cache"),
-		ACMEDomains:   strings.Split(get("ACME_DOMAINS", ""), ","),
 	}
 
-	if len(s.ACMEDomains) == 0 || s.ACMEDomains[0] == "" {
-		return nil, fmt.Errorf("ACME_DOMAINS not set in .env")
+	if strings.TrimSpace(s.ServerDomain) == "" {
+		fmt.Println("[Warning] SERVER_DOMAIN not set in .env")
 	}
 
 	return s, nil

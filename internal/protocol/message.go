@@ -22,6 +22,7 @@ type RegisterMessage struct {
 	Type   string            `json:"type"`
 	Token  string            `json:"token"`  // JWT
 	Routes map[string]string `json:"routes"` // hostname -> target
+	Modes  map[string]string `json:"modes,omitempty"`
 }
 
 type AckMessage struct {

@@ -1,0 +1,103 @@
+name: Manual CI/CD Gotunnel
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Select environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - release
+      version:
+        description: "Tag versi release (ex: v1.0.0)"
+        required: false
+        type: string
+
+jobs:
+
+  # ========== MANUAL DEV ==========
+  build-dev:
+    if: ${{ github.event.inputs.target == 'dev' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:dev
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+  deploy-dev:
+    if: ${{ github.event.inputs.target == 'dev' }}
+    needs: build-dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:dev
+            sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
+            sudo podman pull $IMAGE
+            sudo podman stop tunnel || true
+            sudo podman rm tunnel || true
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 -v "$(pwd)/cert-cache:/app/cert-cache:Z" -e SERVER_DOMAIN=tunnel.kristiawan.my.id $IMAGE
+
+
+
+  # ======== MANUAL RELEASE =======
+  build-release:
+    if: ${{ github.event.inputs.target == 'release' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "ERROR: Version tag required."
+            exit 1
+          fi
+
+      - run: |
+          VERSION=${{ github.event.inputs.version }}
+          IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:$VERSION
+          docker build -t $IMAGE .
+          docker tag $IMAGE ghcr.io/${{ github.repository_owner }}/gotunnel:latest
+          docker push $IMAGE
+          docker push ghcr.io/${{ github.repository_owner }}/gotunnel:latest
+
+  deploy-release:
+    if: ${{ github.event.inputs.target == 'release' }}
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            VERSION=${{ github.event.inputs.version }}
+            IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:$VERSION
+
+            sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
+            sudo podman pull $IMAGE
+
+            sudo podman stop tunnel || true
+            sudo podman rm tunnel || true
+
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 -v "$(pwd)/cert-cache:/app/cert-cache:Z" -e SERVER_DOMAIN=tunnel.kristiawan.my.id $IMAGE
