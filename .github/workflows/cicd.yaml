@@ -10,10 +10,6 @@ on:
         options:
           - dev
           - release
-      version:
-        description: "Tag versi release (ex: v1.0.0)"
-        required: false
-        type: string
 
 jobs:
 
@@ -47,9 +43,15 @@ jobs:
             IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:dev
             sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
             sudo podman pull $IMAGE
+
+            sudo mkdir -p cert-cache
+
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 -v "$(pwd)/cert-cache:/app/cert-cache:Z" -e SERVER_DOMAIN=tunnel.kristiawan.my.id $IMAGE
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+              -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
+              -e SERVER_DOMAIN=tunnel.kristiawan.my.id \
+              $IMAGE
 
 
 
@@ -58,6 +60,7 @@ jobs:
     if: ${{ github.event.inputs.target == 'release' }}
     runs-on: ubuntu-latest
     steps:
+
       - uses: actions/checkout@v4
 
       - uses: docker/login-action@v3
@@ -66,19 +69,32 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - run: |
-          if [ -z "${{ github.event.inputs.version }}" ]; then
-            echo "ERROR: Version tag required."
-            exit 1
+      # Tentukan VERSION:
+      # - Jika ref adalah TAG → pakai tag otomatis
+      # - Jika bukan TAG → pakai input version
+      - name: Tentukan VERSION otomatis/manual
+        id: setver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            echo "Auto VERSION from TAG: ${GITHUB_REF_NAME}"
+          else
+            if [ -z "${{ github.event.inputs.version }}" ]; then
+              echo "ERROR: Version harus diisi jika tidak menjalankan dari TAG."
+              exit 1
+            fi
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "Manual VERSION: ${{ github.event.inputs.version }}"
           fi
 
-      - run: |
-          VERSION=${{ github.event.inputs.version }}
-          IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:$VERSION
+      - name: Build & Push Release Image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:${VERSION}
           docker build -t $IMAGE .
           docker tag $IMAGE ghcr.io/${{ github.repository_owner }}/gotunnel:latest
           docker push $IMAGE
           docker push ghcr.io/${{ github.repository_owner }}/gotunnel:latest
+
 
   deploy-release:
     if: ${{ github.event.inputs.target == 'release' }}
@@ -91,13 +107,15 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            VERSION=${{ github.event.inputs.version }}
-            IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:$VERSION
-
+            IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:${VERSION}
             sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
             sudo podman pull $IMAGE
+            
+            sudo mkdir -p cert-cache
 
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 -v "$(pwd)/cert-cache:/app/cert-cache:Z" -e SERVER_DOMAIN=tunnel.kristiawan.my.id $IMAGE
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+              -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
+              -e SERVER_DOMAIN=tunnel.kristiawan.my.id \
+              $IMAGE
