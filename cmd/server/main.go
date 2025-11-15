@@ -26,18 +26,16 @@ func main() {
 	}
 
 	log.Printf("[config] Ports: public=%d tunnel=%d dashboard=%d", env.ServerPort, env.TunnelPort, env.DashboardPort)
-	log.Printf("[config] Domains: %v", env.ACMEDomains)
+	log.Printf("[config] Domain: %v", env.ServerDomain)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// Setup autocert
 	hostRegistry := registry.NewHostRegistry()
-	for _, domain := range env.ACMEDomains {
-		if d := strings.TrimSpace(domain); d != "" {
-			if !hostRegistry.Add(d) {
-				log.Printf("[config] duplicate domain ignored: %s", d)
-			}
+	if d := strings.TrimSpace(env.ServerDomain); d != "" {
+		if !hostRegistry.Add(d) {
+			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
 	}
 	m := &autocert.Manager{
@@ -52,14 +50,12 @@ func main() {
 	}
 
 	// Server init
-	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry)
+	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.ServerDomain)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	publicTLS := cloneTLSConfig(m.TLSConfig())
 	publicTLS.MinVersion = tls.VersionTLS12
-	// publicTLS.PreferServerCipherSuites = true
 	publicTLS.ClientSessionCache = tls.NewLRUClientSessionCache(128)
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "h2")
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "http/1.1")

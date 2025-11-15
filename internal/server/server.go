@@ -40,6 +40,8 @@ type Server struct {
 	// dashboard cache
 	dashMu  sync.RWMutex
 	summary []dashItem
+
+	dashboardDomain string
 }
 
 type dashItem struct {
@@ -49,13 +51,14 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
-		jwtSecret:    []byte(jwtSecret),
-		hostToSes:    map[string]*TunnelSession{},
-		logger:       logger,
-		hostRegistry: hostRegistry,
+		jwtSecret:       []byte(jwtSecret),
+		hostToSes:       map[string]*TunnelSession{},
+		logger:          logger,
+		hostRegistry:    hostRegistry,
+		dashboardDomain: canonicalHost(serverDomain),
 	}, nil
 }
 
@@ -121,6 +124,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) DashboardHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.dashboardDomain != "" {
+			reqHost := canonicalHost(r.Host)
+			if reqHost == "" || reqHost != s.dashboardDomain {
+				s.logger.Warn("[dashboard] blocked by host check", zap.String("host", r.Host), zap.String("allowed", s.dashboardDomain))
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+		}
+
 		s.refreshDashboard()
 		s.dashMu.RLock()
 		defer s.dashMu.RUnlock()
@@ -187,6 +199,7 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener,
 				s.logger.Error("[edge] accept tunnel", zap.Error(err))
 				continue
 			}
+
 			go s.handleClientConn(conn)
 		}
 	}()
@@ -341,25 +354,6 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}()
 }
 
-// func (s *Server) handleClientTunnel(conn net.Conn, hostRegistry *registry.HostRegistry) {
-// 	defer conn.Close()
-
-// 	// baca handshake sederhana dari client
-// 	buf := make([]byte, 1024)
-// 	n, _ := conn.Read(buf)
-// 	req := string(buf[:n])
-
-// 	// format handshake sederhana: "DOMAIN:app.vpskamu.com"
-// 	if strings.HasPrefix(req, "DOMAIN:") {
-// 		domain := strings.TrimSpace(strings.TrimPrefix(req, "DOMAIN:"))
-// 		log.Printf("[client] registered domain: %s", domain)
-// 		hostRegistry.Add(domain)
-// 		conn.Write([]byte("OK\n"))
-// 	} else {
-// 		conn.Write([]byte("ERR\n"))
-// 	}
-// }
-
 func (s *Server) cleanup(ts *TunnelSession) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -409,4 +403,17 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, vv)
 		}
 	}
+}
+
+func canonicalHost(hostport string) string {
+	hostport = strings.TrimSpace(hostport)
+	if hostport == "" {
+		return ""
+	}
+	if strings.Contains(hostport, ":") {
+		if h, _, err := net.SplitHostPort(hostport); err == nil {
+			hostport = h
+		}
+	}
+	return strings.ToLower(hostport)
 }
