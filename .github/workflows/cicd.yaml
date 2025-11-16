@@ -10,6 +10,14 @@ on:
         options:
           - dev
           - release
+      acme_env:
+        description: "ACME directory"
+        required: false
+        default: production
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
 
@@ -41,6 +49,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:dev
+            ACME_ENV="${{ github.event.inputs.acme_env }}"
+            if [ -z "$ACME_ENV" ]; then ACME_ENV=production; fi
             sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
             sudo podman pull $IMAGE
 
@@ -52,6 +62,7 @@ jobs:
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e ACME_ENV="$ACME_ENV" \
               $IMAGE
 
 
@@ -109,6 +120,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:${VERSION}
+            ACME_ENV="${{ github.event.inputs.acme_env }}"
+            if [ -z "$ACME_ENV" ]; then ACME_ENV=production; fi
             sudo podman login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.GHCR_TOKEN }}
             sudo podman pull $IMAGE
             
@@ -120,4 +133,5 @@ jobs:
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e ACME_ENV="$ACME_ENV" \
               $IMAGE

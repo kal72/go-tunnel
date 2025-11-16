@@ -16,6 +16,7 @@ import (
 	"gotunnel/internal/registry"
 	"gotunnel/internal/server"
 
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -38,9 +39,17 @@ func main() {
 			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
 	}
+	acmeClient := &acme.Client{}
+	defaultDir := acme.LetsEncryptURL
+	if strings.ToLower(strings.TrimSpace(env.ACMEEnv)) == "staging" {
+		defaultDir = "https://acme-staging-v02.api.letsencrypt.org/directory"
+	}
+	acmeClient.DirectoryURL = defaultDir
+
 	m := &autocert.Manager{
 		Cache:  autocert.DirCache(env.ACMECache),
 		Prompt: autocert.AcceptTOS,
+		Client: acmeClient,
 		HostPolicy: func(_ context.Context, host string) error {
 			if hostRegistry.Exists(host) {
 				return nil

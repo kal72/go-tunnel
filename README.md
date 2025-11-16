@@ -52,6 +52,7 @@ Copy `.env.example` and adjust:
 | `DASHBOARD_PORT` | HTTP dashboard port (default 8080). |
 | `JWT_SECRET` | HS256 key shared with clients. |
 | `ACME_CACHE` | Folder for Let's Encrypt cache. |
+| `ACME_ENV` | `production` (default) or `staging` ACME directory URL. |
 
 > Keep port 80 open when using Let's Encrypt HTTP-01 challenges (see the `Dockerfile`, which exposes 80/443/9443/8080).
 >

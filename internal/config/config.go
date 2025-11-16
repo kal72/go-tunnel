@@ -27,6 +27,7 @@ type ServerConfig struct {
 
 	JWTSecret string
 	ACMECache string
+	ACMEEnv   string
 }
 
 type ClientConfig struct {
@@ -65,6 +66,7 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:     get("ACME_CACHE", "./cert-cache"),
+		ACMEEnv:       get("ACME_ENV", "production"),
 	}
 
 	if strings.TrimSpace(s.GatewayHost) == "" {
