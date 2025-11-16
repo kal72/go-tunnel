@@ -50,7 +50,8 @@ jobs:
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
-              -e SERVER_DOMAIN=tunnel.kristiawan.my.id \
+              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
+              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
               $IMAGE
 
 
@@ -69,9 +70,9 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Tentukan VERSION:
-      # - Jika ref adalah TAG → pakai tag otomatis
-      # - Jika bukan TAG → pakai input version
+      # Specify VERSION:
+      # - If ref is TAG → use auto tag
+      # - If not TAG → use input version
       - name: Tentukan VERSION otomatis/manual
         id: setver
         run: |
@@ -117,5 +118,6 @@ jobs:
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
-              -e SERVER_DOMAIN=tunnel.kristiawan.my.id \
+              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
+              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
               $IMAGE

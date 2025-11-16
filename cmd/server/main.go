@@ -25,15 +25,15 @@ func main() {
 		log.Fatal("load .env:", err)
 	}
 
-	log.Printf("[config] Ports: public=%d tunnel=%d dashboard=%d", env.ServerPort, env.TunnelPort, env.DashboardPort)
-	log.Printf("[config] Domain: %v", env.ServerDomain)
+	log.Printf("[config] Ports: public=%d tunnel=%d dashboard=%d", env.GatewayPort, env.TunnelPort, env.DashboardPort)
+	log.Printf("[config] Domain: %v", env.GatewayHost)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// Setup autocert
 	hostRegistry := registry.NewHostRegistry()
-	if d := strings.TrimSpace(env.ServerDomain); d != "" {
+	if d := strings.TrimSpace(env.GatewayHost); d != "" {
 		if !hostRegistry.Add(d) {
 			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Server init
-	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.ServerDomain)
+	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,10 +59,10 @@ func main() {
 	publicTLS.ClientSessionCache = tls.NewLRUClientSessionCache(128)
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "h2")
 	publicTLS.NextProtos = ensureProto(publicTLS.NextProtos, "http/1.1")
-	ensureDefaultServerName(publicTLS, env.ServerDomain)
+	ensureDefaultServerName(publicTLS, env.GatewayHost)
 
 	httpsSrv := &http.Server{
-		Addr:              fmt.Sprintf("0.0.0.0:%d", env.ServerPort),
+		Addr:              fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
 		TLSConfig:         publicTLS,
 		Handler:           srv,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -85,10 +85,25 @@ func main() {
 	}()
 
 	// HTTP-01 challenge listener (port 80)
+	acmeHandler := m.HTTPHandler(nil)
+	http80Handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
+			target := "https://" + r.Host + r.URL.String()
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
+		}
+
+		acmeHandler.ServeHTTP(w, r)
+	})
+
 	acmeHTTP := &http.Server{
-		Addr:    ":80",
-		Handler: m.HTTPHandler(nil),
+		Addr:         "0.0.0.0:80",
+		Handler:      http80Handler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  30 * time.Second,
 	}
+
 	go func() {
 		if err := acmeHTTP.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Println("[acme-http]", err)
@@ -98,7 +113,7 @@ func main() {
 	tunnelTLS := cloneTLSConfig(m.TLSConfig())
 	tunnelTLS.MinVersion = tls.VersionTLS12
 	tunnelTLS.ClientSessionCache = tls.NewLRUClientSessionCache(64)
-	ensureDefaultServerName(tunnelTLS, env.ServerDomain)
+	ensureDefaultServerName(tunnelTLS, env.TunnelHost)
 	tunnelAddr := fmt.Sprintf("0.0.0.0:%d", env.TunnelPort)
 	tunnelLn, err := srv.ListenTunnelTLS(tunnelAddr, tunnelTLS)
 	if err != nil {
@@ -107,7 +122,7 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("[edge] HTTPS public listening on :%d", env.ServerPort)
+		log.Printf("[edge] HTTPS public listening on :%d", env.GatewayPort)
 		if err := httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 		}

@@ -18,10 +18,12 @@ type TunnelEntry struct {
 }
 
 type ServerConfig struct {
-	ServerDomain  string
-	ServerPort    int
-	TunnelPort    int
+	GatewayHost   string
+	GatewayPort   int
 	DashboardPort int
+
+	TunnelHost string
+	TunnelPort int
 
 	JWTSecret string
 	ACMECache string
@@ -56,16 +58,20 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	}
 
 	s := &ServerConfig{
-		ServerDomain:  get("SERVER_DOMAIN", ""),
-		ServerPort:    parsePort(get("SERVER_PORT", "443"), 443),
-		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		GatewayHost:   get("GATEWAY_HOST", ""),
+		GatewayPort:   parsePort(get("GATEWAY_PORT", "443"), 443),
 		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
+		TunnelHost:    get("TUNNEL_HOST", ""),
+		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:     get("ACME_CACHE", "./cert-cache"),
 	}
 
-	if strings.TrimSpace(s.ServerDomain) == "" {
-		fmt.Println("[Warning] SERVER_DOMAIN not set in .env")
+	if strings.TrimSpace(s.GatewayHost) == "" {
+		fmt.Println("[Warning] GATEWAY_HOST not set in environment")
+	}
+	if strings.TrimSpace(s.TunnelHost) == "" {
+		fmt.Println("[Warning] TUNNEL_HOST not set in environment")
 	}
 
 	return s, nil
