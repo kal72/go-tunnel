@@ -39,7 +39,7 @@ func main() {
 			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
 	}
-	if d := strings.TrimSpace(env.GatewayHost); d != "" {
+	if d := strings.TrimSpace(env.TunnelHost); d != "" {
 		if !hostRegistry.Add(d) {
 			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
