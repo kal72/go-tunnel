@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -158,8 +159,55 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 	}
 
 	// Default HTTP mode
+	if mode == "https" {
+		c.handleHTTPSStream(stream, target)
+		return
+	}
 	c.handleHTTPStream(stream, target)
 
+}
+
+func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
+	defer stream.Close()
+	reader := bufio.NewReader(stream)
+
+	trans := &http.Transport{
+		TLSClientConfig: &tls.Config{CheckRedirect: nil}, // Default safety
+	}
+
+	for {
+		req, err := http.ReadRequest(reader)
+		if err != nil {
+			if err != io.EOF {
+				c.logger.Error("read https request", zap.Error(err))
+			}
+			return
+		}
+
+		// Rewrite for HTTPS target
+		req.URL.Scheme = "https"
+		req.URL.Host = target
+		req.Host = target
+		req.RequestURI = ""
+
+		resp, err := trans.RoundTrip(req)
+		if err != nil {
+			c.logger.Error("https proxy error", zap.Error(err))
+			writeHTTPError(stream, http.StatusBadGateway, "upstream error: "+err.Error())
+			return
+		}
+
+		if err := resp.Write(stream); err != nil {
+			c.logger.Error("write response", zap.Error(err))
+			resp.Body.Close()
+			return
+		}
+		resp.Body.Close()
+
+		if req.Close || resp.Close {
+			return
+		}
+	}
 }
 
 func (c *Client) createJWT() (string, error) {
