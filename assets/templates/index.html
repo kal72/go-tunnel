@@ -1,0 +1,361 @@
+{{define "content"}}
+<div x-data="configApp()" x-init="init()" x-cloak class="flex h-screen">
+
+  <!-- ═══════════════════════════════════════════════
+       SIDEBAR — config file list
+  ════════════════════════════════════════════════ -->
+  <aside class="w-52 bg-white border-r border-gray-200 flex flex-col shrink-0">
+    <div class="px-4 py-3 border-b border-gray-100">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Config Files</p>
+    </div>
+    <ul class="flex-1 p-2 space-y-1 overflow-y-auto">
+      {{range .Configs}}
+      <li>
+        <button @click="selectConfig('{{.}}')" :class="current === '{{.}}'
+            ? 'bg-blue-50 text-blue-700 border-blue-200'
+            : 'text-gray-500 hover:bg-gray-100 border-transparent'"
+          class="w-full text-left px-3 py-2 rounded-md text-xs font-mono border transition-colors duration-100 flex items-center gap-2">
+          <span :class="current === '{{.}}' ? 'bg-blue-500' : 'bg-green-500'"
+            class="w-1.5 h-1.5 rounded-full shrink-0"></span>
+          {{.}}.yaml
+        </button>
+      </li>
+      {{end}}
+    </ul>
+    <div class="p-3 border-t border-gray-100">
+      <p class="text-xs text-gray-400 font-mono leading-relaxed">
+        Auto-backup: <span class="text-gray-500">.yaml.bak</span>
+      </p>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN — form editor
+  ════════════════════════════════════════════════ -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Toolbar -->
+    <div class="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-mono text-gray-400" x-text="current ? 'configs/' + current + '.yaml' : '—'"></span>
+        <span x-show="saved" x-transition class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">saved</span>
+        <span x-show="!current" class="text-xs text-gray-400 italic">select a file</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="saveConfig()" :disabled="!current"
+          :class="current ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+          class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium">
+          Save to YAML
+        </button>
+      </div>
+    </div>
+
+    <!-- Form body + YAML preview split -->
+    <div class="flex-1 flex overflow-hidden">
+
+      <!-- Form -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-7">
+
+        <!-- Empty state -->
+        <div x-show="!current" class="flex items-center justify-center h-full">
+          <p class="text-sm text-gray-400">Select a config file from the sidebar.</p>
+        </div>
+
+        <!-- ── Section: Tunnel Connection ── -->
+        <div x-show="current">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
+            Tunnel connection
+          </p>
+          <div class="space-y-0 divide-y divide-gray-100">
+
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">tunnel_addr</label>
+              <input type="text" x-model="form.tunnel_addr" @input="updatePreview()" placeholder="host:port"
+                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+            </div>
+
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">skip_tls_verify</label>
+              <div class="flex items-center gap-3">
+                <button @click="form.skip_tls_verify = !form.skip_tls_verify; updatePreview()"
+                  :class="form.skip_tls_verify ? 'bg-blue-500 border-blue-500' : 'bg-gray-200 border-gray-300'"
+                  class="relative w-9 h-5 rounded-full border transition-colors duration-200 focus:outline-none shrink-0">
+                  <span :class="form.skip_tls_verify ? 'translate-x-4' : 'translate-x-0.5'"
+                    class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 block"></span>
+                </button>
+                <span class="text-xs font-mono text-gray-500" x-text="form.skip_tls_verify ? 'true' : 'false'"></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Section: JWT Auth ── -->
+        <div x-show="current">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
+            JWT Auth
+          </p>
+          <div class="space-y-0 divide-y divide-gray-100">
+
+            <!-- jwt_secret — masked input -->
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">jwt_secret</label>
+              <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                  <input :type="showSecret ? 'text' : 'password'" x-model="form.jwt_secret" @input="updatePreview()"
+                    autocomplete="new-password" placeholder="secret key"
+                    class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 pr-9 focus:outline-none focus:border-blue-400 bg-white">
+                  <!-- eye toggle -->
+                  <button @click="showSecret = !showSecret" type="button"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <!-- eye-off icon -->
+                    <svg x-show="showSecret" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                    <!-- eye icon -->
+                    <svg x-show="!showSecret" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
+                <span
+                  class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded shrink-0">sensitive</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">jwt_issuer</label>
+              <input type="text" x-model="form.jwt_issuer" @input="updatePreview()"
+                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+            </div>
+
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">jwt_expire_sec</label>
+              <div class="flex items-center gap-2">
+                <input type="number" x-model.number="form.jwt_expire_sec" @input="updatePreview()" min="60"
+                  class="w-32 text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                <span class="text-xs text-gray-400 font-mono"
+                  x-text="form.jwt_expire_sec ? (form.jwt_expire_sec / 3600).toFixed(1) + 'h' : ''"></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Section: Tunnels (dynamic array) ── -->
+        <div x-show="current">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+              Tunnels
+              <span class="text-gray-300 font-normal normal-case tracking-normal ml-1"
+                x-text="'(' + form.tunnels.length + ' ' + (form.tunnels.length === 1 ? 'entry' : 'entries') + ')'">
+              </span>
+            </p>
+            <button @click="addTunnel()"
+              class="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+              + add tunnel
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <template x-for="(tunnel, idx) in form.tunnels" :key="idx">
+              <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <!-- Card header -->
+                <div class="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono text-gray-600" x-text="'#' + (idx+1)"></span>
+                    <span class="text-xs font-mono text-gray-700 font-medium"
+                      x-text="tunnel.hostname || 'new tunnel'"></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      :class="tunnel.mode === 'http' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
+                      class="text-xs px-2 py-0.5 rounded-full border font-mono" x-text="tunnel.mode">
+                    </span>
+                    <button @click="removeTunnel(idx)"
+                      class="text-xs text-red-400 hover:text-red-600 transition-colors px-1">
+                      remove
+                    </button>
+                  </div>
+                </div>
+                <!-- Card fields -->
+                <div class="px-3 py-1 divide-y divide-gray-100">
+
+                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                    <label class="text-xs font-mono text-gray-400">hostname</label>
+                    <input type="text" x-model="tunnel.hostname" @input="updatePreview()" placeholder="app.example.com"
+                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                  </div>
+
+                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                    <label class="text-xs font-mono text-gray-400">target</label>
+                    <input type="text" x-model="tunnel.target" @input="updatePreview()" placeholder="127.0.0.1:8080"
+                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                  </div>
+
+                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                    <label class="text-xs font-mono text-gray-400">mode</label>
+                    <select x-model="tunnel.mode" @change="updatePreview()"
+                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                      <option value="http">http</option>
+                      <option value="tcp">tcp</option>
+                    </select>
+                  </div>
+
+                </div>
+              </div>
+            </template>
+
+            <!-- Empty tunnels hint -->
+            <div x-show="form.tunnels.length === 0"
+              class="border border-dashed border-gray-200 rounded-lg p-4 text-center text-xs text-gray-400">
+              No tunnels configured. Click "add tunnel" to get started.
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /form -->
+
+      <!-- ── YAML Preview panel ── -->
+      <div class="w-72 border-l border-gray-200 bg-gray-50 flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-gray-200">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">YAML Preview</p>
+        </div>
+        <pre class="flex-1 overflow-auto p-4 text-xs font-mono text-gray-500 leading-relaxed whitespace-pre"
+          x-text="yamlPreview"></pre>
+      </div>
+
+    </div><!-- /form + preview split -->
+
+    <!-- Status bar -->
+    <div class="bg-white border-t border-gray-200 px-5 py-2 flex items-center justify-between shrink-0">
+      <span class="text-xs font-mono text-gray-400" x-text="statusText"></span>
+      <span class="text-xs text-gray-400">PUT /api/config/<span x-text="current || '—'"></span></span>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function configApp() {
+    return {
+      current: '',
+      showSecret: false,
+      saved: false,
+      statusText: 'Select a config file to begin',
+      yamlPreview: '',
+
+      form: {
+        tunnel_addr: '',
+        skip_tls_verify: false,
+        jwt_secret: '',
+        jwt_issuer: '',
+        jwt_expire_sec: 3600,
+        tunnels: [],
+      },
+
+      async init() {
+        // Auto-select first config if available
+        const res = await fetch('/api/configs');
+        const configs = await res.json();
+        if (configs && configs.length > 0) {
+          await this.selectConfig(configs[0]);
+        }
+      },
+
+      async selectConfig(name) {
+        this.current = name;
+        this.showSecret = false;
+        this.saved = false;
+
+        const res = await fetch(`/api/config/${name}`);
+        if (!res.ok) {
+          this.statusText = `Error loading ${name}.yaml`;
+          return;
+        }
+        const data = await res.json();
+
+        this.form = {
+          tunnel_addr: data.tunnel_addr ?? '',
+          skip_tls_verify: data.skip_tls_verify ?? false,
+          jwt_secret: data.jwt_secret ?? '',
+          jwt_issuer: data.jwt_issuer ?? '',
+          jwt_expire_sec: data.jwt_expire_sec ?? 3600,
+          tunnels: Array.isArray(data.tunnels)
+            ? data.tunnels.map(t => ({ ...t }))
+            : [],
+        };
+
+        this.statusText = `Loaded configs/${name}.yaml`;
+        this.updatePreview();
+      },
+
+      addTunnel() {
+        this.form.tunnels.push({
+          hostname: 'newhost.example.com',
+          target: '127.0.0.1:3000',
+          mode: 'http',
+        });
+        this.updatePreview();
+      },
+
+      removeTunnel(idx) {
+        this.form.tunnels.splice(idx, 1);
+        this.updatePreview();
+      },
+
+      async saveConfig() {
+        if (!this.current) return;
+
+        const res = await fetch(`/api/config/${this.current}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form),
+        });
+
+        if (res.ok) {
+          this.saved = true;
+          this.statusText = `Saved configs/${this.current}.yaml at ${new Date().toLocaleTimeString()}`;
+          setTimeout(() => { this.saved = false; }, 3000);
+        } else {
+          const err = await res.text();
+          this.statusText = `Save failed: ${err}`;
+        }
+      },
+
+      updatePreview() {
+        this.yamlPreview = this.toYAML(this.form);
+      },
+
+      toYAML(f) {
+        const masked = '*'.repeat(Math.min((f.jwt_secret || '').length, 12));
+        const lines = [];
+        lines.push(`# Koneksi ke listener tunnel (di VPS)`);
+        lines.push(`tunnel_addr: "${f.tunnel_addr}"`);
+        lines.push(`skip_tls_verify: ${f.skip_tls_verify}`);
+        lines.push(`# JWT Auth (harus cocok dengan server)`);
+        lines.push(`jwt_secret: "${masked}"`);
+        lines.push(`jwt_issuer: "${f.jwt_issuer}"`);
+        lines.push(`jwt_expire_sec: ${f.jwt_expire_sec}`);
+        lines.push(`# Mapping host -> target lokal`);
+        lines.push(`tunnels:`);
+        if (f.tunnels && f.tunnels.length > 0) {
+          f.tunnels.forEach(t => {
+            lines.push(`  - hostname: "${t.hostname}"`);
+            lines.push(`    target: "${t.target}"`);
+            lines.push(`    mode: "${t.mode}"`);
+          });
+        } else {
+          lines.push(`  []`);
+        }
+        return lines.join('\n');
+      },
+    };
+  }
+</script>
+{{end}}

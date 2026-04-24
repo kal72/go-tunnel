@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"gotunnel/internal/tunnel/config"
+	"gotunnel/internal/tunnel/protocol"
 	"io"
 	"net"
 	"net/http"
 	"time"
-
-	"gotunnel/internal/config"
-	"gotunnel/internal/protocol"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
@@ -172,7 +171,7 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
 	reader := bufio.NewReader(stream)
 
 	trans := &http.Transport{
-		TLSClientConfig: &tls.Config{CheckRedirect: nil}, // Default safety
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.cfg.SkipTLSVerify},
 	}
 
 	for {

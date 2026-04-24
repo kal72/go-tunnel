@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"gotunnel/internal/tunnel/config"
+	"gotunnel/internal/tunnel/registry"
+	"gotunnel/internal/tunnel/server"
 	"log"
 	"net/http"
 	"os"
@@ -11,10 +14,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"gotunnel/internal/config"
-	"gotunnel/internal/registry"
-	"gotunnel/internal/server"
 
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"

@@ -4,15 +4,14 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"gotunnel/internal/tunnel/protocol"
+	"gotunnel/internal/tunnel/registry"
 	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
-
-	"gotunnel/internal/protocol"
-	"gotunnel/internal/registry"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
