@@ -39,6 +39,11 @@ func main() {
 			log.Printf("[config] duplicate domain ignored: %s", d)
 		}
 	}
+	if d := strings.TrimSpace(env.TunnelHost); d != "" {
+		if !hostRegistry.Add(d) {
+			log.Printf("[config] duplicate domain ignored: %s", d)
+		}
+	}
 	acmeClient := &acme.Client{}
 	defaultDir := acme.LetsEncryptURL
 	if strings.ToLower(strings.TrimSpace(env.ACMEEnv)) == "staging" {
