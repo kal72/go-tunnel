@@ -3,11 +3,14 @@ package handler
 import (
 	"embed"
 	"encoding/json"
+	"gotunnel/internal/tunnel/state"
 	"gotunnel/internal/webui/model"
 	"gotunnel/internal/webui/service"
 
 	"html/template"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"gopkg.in/yaml.v3"
@@ -15,26 +18,67 @@ import (
 
 // Handler holds shared dependencies for HTTP handlers.
 type Handler struct {
-	tmpl *template.Template
+	dashTmpl *template.Template
+	confTmpl *template.Template
+	store    state.Store
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS) *Handler {
-	tmpl := template.Must(template.ParseFS(fs,
+func New(fs embed.FS, store state.Store) *Handler {
+	funcMap := template.FuncMap{
+		"split": strings.Split,
+	}
+
+	dashTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/dashboard.html",
+	))
+
+	confTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
 		"templates/base.html",
 		"templates/index.html",
 	))
-	return &Handler{tmpl: tmpl}
+
+	return &Handler{
+		dashTmpl: dashTmpl,
+		confTmpl: confTmpl,
+		store:    store,
+	}
 }
 
-// Index renders the main config manager page.
+// Index renders the dashboard page.
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
+	var tunnels []map[string]any
+
+	if h.store != nil {
+		infos, err := h.store.ListTunnels(r.Context())
+		if err == nil {
+			for _, info := range infos {
+				tunnels = append(tunnels, map[string]any{
+					"Client":      info.Client,
+					"Hosts":       strings.Join(info.Hosts, ", "),
+					"ConnectedAt": info.ConnectedAt.Format(time.RFC3339),
+					"LastPing":    info.LastPing.Format("15:04:05"),
+				})
+			}
+		}
+	}
+
+	if err := h.dashTmpl.ExecuteTemplate(w, "base", map[string]any{
+		"Tunnels": tunnels,
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Configs renders the main config manager page.
+func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 	configs, err := service.ListConfigs()
 	if err != nil {
 		http.Error(w, "failed to list configs", http.StatusInternalServerError)
 		return
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "base", map[string]any{
+	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
 		"Configs": configs,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

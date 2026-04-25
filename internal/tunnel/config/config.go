@@ -28,6 +28,10 @@ type ServerConfig struct {
 	JWTSecret string
 	ACMECache string
 	ACMEEnv   string
+
+	RedisAddr string
+	RedisPass string
+	RedisDB   int
 }
 
 type ClientConfig struct {
@@ -66,7 +70,10 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:     get("ACME_CACHE", "./cert-cache"),
-		ACMEEnv:       get("ACME_ENV", "production"),
+		ACMEEnv:       get("ACME_ENV", "staging"), // production or staging
+		RedisAddr:     get("REDIS_ADDR", "localhost:6379"),
+		RedisPass:     get("REDIS_PASS", ""),
+		RedisDB:       parsePort(get("REDIS_DB", "0"), 0),
 	}
 
 	if strings.TrimSpace(s.GatewayHost) == "" {
