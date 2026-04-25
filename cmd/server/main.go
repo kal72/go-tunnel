@@ -16,8 +16,8 @@ func main() {
 		log.Fatal("load .env:", err)
 	}
 
-	log.Printf("[config] Ports: public=%d tunnel=%d dashboard=%d",
-		env.GatewayPort, env.TunnelPort, env.DashboardPort)
+	log.Printf("[config] Ports: public=%d tunnel=%d",
+		env.GatewayPort, env.TunnelPort)
 	log.Printf("[config] Domain: %v", env.GatewayHost)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
