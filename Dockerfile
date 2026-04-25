@@ -53,7 +53,5 @@ RUN printf '#!/bin/sh\nset -e\n./gotunnel-webui &\nexec ./gotunnel-server "$@"\n
 # 8080  -> Tunnel Manager (WebUI)
 EXPOSE 80 443 9443 8080
 
-USER gotunnel
-
 # Gunakan array form (lebih aman, tidak wrap shell)
 CMD ["./start.sh"]
