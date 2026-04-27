@@ -24,10 +24,11 @@ type Handler struct {
 	confTmpl     *template.Template
 	store        state.Store
 	masterSecret string
+	tunnelAddr   string
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store, masterSecret string) *Handler {
+func New(fs embed.FS, store state.Store, masterSecret string, tunnelAddr string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -47,6 +48,7 @@ func New(fs embed.FS, store state.Store, masterSecret string) *Handler {
 		confTmpl:     confTmpl,
 		store:        store,
 		masterSecret: masterSecret,
+		tunnelAddr:   tunnelAddr,
 	}
 }
 
@@ -83,7 +85,8 @@ func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
-		"Configs": configs,
+		"Configs":    configs,
+		"TunnelAddr": h.tunnelAddr,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
