@@ -25,6 +25,14 @@ This application includes a Web UI Manager running on port `8080` (default) for 
 - **Config Editor**: Manage client configuration files (`.yaml`) without needing SSH access to the server.
 - **Token Management**: Generate new tokens for clients or instantly **revoke** existing tokens to disconnect specific agents.
 
+## Example DNS Records
+| Type | Hostname | Value | Notes |
+| --- | --- | --- | --- |
+| `A` | `gateway.example.com` | `203.0.113.10` | Public HTTPS gateway + dashboard host (use your server's public IP). |
+| `A` | `tunnel.example.com` | `203.0.113.10` | Agents connect here (`tunnel_addr`, also your server public IP). |
+| `CNAME` | `app.example.com` | `gateway.example.com.` | Routed via gateway to your local target. |
+| `CNAME` | `ssh.example.com` | `gateway.example.com.` | TCP tunnel routed via gateway. |
+
 ## Server Configuration (`.env`)
 Copy `.env.example` and adjust the variables:
 
@@ -42,14 +50,16 @@ Copy `.env.example` and adjust the variables:
 ### 1. Server & Web UI
 Ensure Redis is running before starting the server.
 ```sh
-go run ./cmd/server
+go run ./cmd/server/main.go
+
+go run ./cmd/webui/main.go
 # Web UI Manager will be available at http://localhost:8080
 ```
 
 ### 2. Client/Agent
 Download the configuration from the Web UI or use a local file.
 ```sh
-go run ./cmd/client --config client.yaml
+go run ./cmd/client/main.go
 ```
 
 ## Token Revocation Flow
