@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -16,6 +17,7 @@ type TunnelInfo struct {
 }
 
 type Store interface {
+	Ping(ctx context.Context)
 	SetTunnel(ctx context.Context, sessionID string, info TunnelInfo) error
 	DeleteTunnel(ctx context.Context, sessionID string) error
 	ListTunnels(ctx context.Context) ([]TunnelInfo, error)
@@ -35,6 +37,16 @@ func NewRedisStore(addr, pass string, db int) *RedisStore {
 		}),
 		prefix: "tunnel:",
 	}
+}
+
+func (s *RedisStore) Ping(ctx context.Context) {
+	pong, err := s.client.Ping(ctx).Result()
+	if err != nil {
+		fmt.Println("Redis connection failed:", err)
+		return
+	}
+
+	fmt.Println("Redis connected:", pong)
 }
 
 func (s *RedisStore) SetTunnel(ctx context.Context, sessionID string, info TunnelInfo) error {

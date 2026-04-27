@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"gotunnel/assets"
 	"gotunnel/internal/tunnel/config"
 	"gotunnel/internal/tunnel/state"
@@ -20,7 +21,9 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	env, _ := config.LoadServerConfig(".env")
+
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
+	redisStore.Ping(context.Background())
 
 	h := handler.New(assets.EmbeddedFS, redisStore)
 	authH := handler.NewAuth(assets.EmbeddedFS)

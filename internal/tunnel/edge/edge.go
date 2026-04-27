@@ -31,6 +31,8 @@ func New(env *config.ServerConfig) (*Edge, error) {
 
 	// Server
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
+	redisStore.Ping(context.Background())
+
 	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, redisStore)
 	if err != nil {
 		return nil, fmt.Errorf("init server: %w", err)
