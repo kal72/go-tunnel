@@ -286,7 +286,7 @@
 
   <!-- New Config Modal -->
   <div x-show="showNewModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-transition>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden" @click.away="showNewModal = false">
+    <div class="bg-white rounded-xl shadow-xl w-full max-sm overflow-hidden" @click.away="showNewModal = false">
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="font-bold text-gray-900">New Client Config</h3>
         <button @click="showNewModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
@@ -486,10 +486,33 @@
 
       copyToken() {
         if (!this.form.auth_token) return;
-        navigator.clipboard.writeText(this.form.auth_token).then(() => {
-            this.statusText = 'Token copied to clipboard';
+        
+        const text = this.form.auth_token;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.statusText = 'Token copied to clipboard';
+                setTimeout(() => { this.statusText = `Current: configs/${this.current}.yaml`; }, 2000);
+            });
+        } else {
+            // Fallback for non-secure context (HTTP)
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                this.statusText = 'Token copied to clipboard (fallback)';
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                this.statusText = 'Copy failed. Use manual select.';
+            }
+            document.body.removeChild(textArea);
             setTimeout(() => { this.statusText = `Current: configs/${this.current}.yaml`; }, 2000);
-        });
+        }
       },
 
       updatePreview() {
