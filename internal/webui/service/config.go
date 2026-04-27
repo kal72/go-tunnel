@@ -42,6 +42,16 @@ func ReadConfig(name string) (map[string]any, error) {
 	return result, nil
 }
 
+// ReadConfigRaw reads a YAML config file and returns the raw bytes.
+func ReadConfigRaw(name string) ([]byte, error) {
+	path := filepath.Join(configDir, name+".yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("config not found: %w", err)
+	}
+	return data, nil
+}
+
 // WriteConfig writes a map back to a YAML config file.
 // It automatically creates a .bak backup of the previous version.
 func WriteConfig(name string, data map[string]any) error {

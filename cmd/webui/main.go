@@ -45,6 +45,7 @@ func main() {
 		r.Get("/api/configs", h.ListConfigs)
 		r.Get("/api/config/{name}", h.GetConfig)
 		r.Put("/api/config/{name}", h.UpdateConfig)
+		r.Get("/api/config/{name}/download", h.DownloadConfig)
 	})
 
 	// Static assets

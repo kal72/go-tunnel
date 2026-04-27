@@ -138,6 +138,21 @@ func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "ok", "config": name + ".yaml"})
 }
 
+// DownloadConfig serves the raw YAML file as a downloadable attachment.
+func (h *Handler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	data, err := service.ReadConfigRaw(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	filename := name + ".yaml"
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Write(data)
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
