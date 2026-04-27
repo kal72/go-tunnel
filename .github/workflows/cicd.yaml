@@ -63,7 +63,7 @@ jobs:
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
               -e ACME_ENV="$ACME_ENV" \
-              -e REDIS_ADDR="redis-light:6379" \
+               -e REDIS_ADDR="127.0.0.1:6379" \
               -e REDIS_DB="0" \
               $IMAGE
 
