@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"gotunnel/assets"
 	"gotunnel/internal/tunnel/config"
 	"gotunnel/internal/tunnel/state"
@@ -25,8 +26,13 @@ func main() {
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	redisStore.Ping(context.Background())
 
-	h := handler.New(assets.EmbeddedFS, redisStore, env.JWTSecret)
-	authH := handler.NewAuth(assets.EmbeddedFS)
+	tunnelAddr := env.TunnelHost
+	if env.TunnelPort != 0 && env.TunnelPort != 443 {
+		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelHost, env.TunnelPort)
+	}
+
+	h := handler.New(assets.EmbeddedFS, redisStore, env.JWTSecret, tunnelAddr)
+	authH := handler.NewAuth(assets.EmbeddedFS, redisStore)
 
 	// Auth routes
 	r.Get("/login", authH.LoginPage)
@@ -35,7 +41,7 @@ func main() {
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		r.Use(handler.JWTMiddleware)
+		r.Use(authH.JWTMiddleware)
 
 		// Pages
 		r.Get("/", h.Index)
@@ -47,6 +53,7 @@ func main() {
 		r.Put("/api/config/{name}", h.UpdateConfig)
 		r.Get("/api/config/{name}/download", h.DownloadConfig)
 		r.Get("/api/generate-token", h.GenerateToken)
+		r.Delete("/api/revoke-token", h.RevokeToken)
 	})
 
 	// Static assets

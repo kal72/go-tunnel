@@ -3,6 +3,7 @@ package handler
 import (
 	"embed"
 	"fmt"
+	"gotunnel/internal/tunnel/state"
 	"html/template"
 	"net/http"
 	"time"
@@ -19,15 +20,19 @@ const (
 
 // AuthHandler handles login and session management.
 type AuthHandler struct {
-	tmpl *template.Template
+	tmpl  *template.Template
+	store state.Store
 }
 
-func NewAuth(fs embed.FS) *AuthHandler {
+func NewAuth(fs embed.FS, store state.Store) *AuthHandler {
 	tmpl := template.Must(template.ParseFS(fs,
 		"templates/base.html",
 		"templates/login.html",
 	))
-	return &AuthHandler{tmpl: tmpl}
+	return &AuthHandler{
+		tmpl:  tmpl,
+		store: store,
+	}
 }
 
 func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
@@ -46,9 +51,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate JWT
+	expiration := 24 * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user": user,
-		"exp":  time.Now().Add(24 * time.Hour).Unix(),
+		"exp":  time.Now().Add(expiration).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(jwtSecret))
@@ -57,12 +63,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Save token to Redis
+	err = h.store.SetToken(r.Context(), tokenString, expiration)
+	if err != nil {
+		http.Error(w, "failed to save session", http.StatusInternalServerError)
+		return
+	}
+
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     jwtCookieName,
 		Value:    tokenString,
 		Path:     "/",
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  time.Now().Add(expiration),
 		HttpOnly: true,
 	})
 
@@ -70,6 +83,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(jwtCookieName)
+	if err == nil {
+		// Revoke token in Redis
+		_ = h.store.RevokeToken(r.Context(), cookie.Value)
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     jwtCookieName,
 		Value:    "",
@@ -80,8 +99,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// Middleware handles JWT validation
-func JWTMiddleware(next http.Handler) http.Handler {
+// JWTMiddleware handles JWT validation and revocation check
+func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow login page and assets
 		if r.URL.Path == "/login" || r.URL.Path == "/static" {
@@ -91,6 +110,13 @@ func JWTMiddleware(next http.Handler) http.Handler {
 
 		cookie, err := r.Cookie(jwtCookieName)
 		if err != nil {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Check if token is revoked in Redis
+		revoked, err := h.store.IsTokenRevoked(r.Context(), cookie.Value)
+		if err != nil || revoked {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}

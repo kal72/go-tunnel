@@ -61,6 +61,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			for _, info := range infos {
 				tunnels = append(tunnels, map[string]any{
+					"ClientID":    info.ClientID,
 					"Client":      info.Client,
 					"Hosts":       strings.Join(info.Hosts, ", "),
 					"ConnectedAt": info.ConnectedAt.Format(time.RFC3339),
@@ -115,6 +116,7 @@ func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 // UpdateConfig accepts a typed JSON payload (ClientConfig),
 // converts it to a YAML-serialisable map, and writes to disk.
+// After successful write, it saves the auth_token to Redis.
 func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -142,6 +144,16 @@ func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Save the auth_token to Redis if present
+	if cfg.AuthToken != "" && h.store != nil {
+		// Valid for 1 year by default, or until revoked
+		err := h.store.SetToken(r.Context(), cfg.AuthToken, 365*24*time.Hour)
+		if err != nil {
+			// Log error but don't fail the request as config is already saved
+			fmt.Printf("Warning: failed to save token to redis: %v\n", err)
+		}
+	}
+
 	writeJSON(w, map[string]string{"status": "ok", "config": name + ".yaml"})
 }
 
@@ -160,6 +172,7 @@ func (h *Handler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 // GenerateToken generates an HMAC authtoken for a given client_id.
+// It NO LONGER saves it to Redis; that happens during UpdateConfig.
 func (h *Handler) GenerateToken(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
 	if clientID == "" {
@@ -171,7 +184,24 @@ func (h *Handler) GenerateToken(w http.ResponseWriter, r *http.Request) {
 	mac.Write([]byte(clientID))
 	token := fmt.Sprintf("%x", mac.Sum(nil))
 
-	writeJSON(w, map[string]string{"token": token})
+	writeJSON(w, map[string]string{"token": token, "client_id": clientID})
+}
+
+// RevokeToken removes a token from Redis.
+func (h *Handler) RevokeToken(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "token required", http.StatusBadRequest)
+		return
+	}
+
+	err := h.store.RevokeToken(r.Context(), token)
+	if err != nil {
+		http.Error(w, "failed to revoke token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok", "message": "token revoked"})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -10,6 +10,7 @@ import (
 )
 
 type TunnelInfo struct {
+	ClientID    string    `json:"client_id"`
 	Client      string    `json:"client"`
 	Hosts       []string  `json:"hosts"`
 	ConnectedAt time.Time `json:"connected_at"`
@@ -21,11 +22,17 @@ type Store interface {
 	SetTunnel(ctx context.Context, sessionID string, info TunnelInfo) error
 	DeleteTunnel(ctx context.Context, sessionID string) error
 	ListTunnels(ctx context.Context) ([]TunnelInfo, error)
+
+	// Token management
+	SetToken(ctx context.Context, token string, expiration time.Duration) error
+	IsTokenRevoked(ctx context.Context, token string) (bool, error)
+	RevokeToken(ctx context.Context, token string) error
 }
 
 type RedisStore struct {
 	client *redis.Client
 	prefix string
+	authPrefix string
 }
 
 func NewRedisStore(addr, pass string, db int) *RedisStore {
@@ -36,6 +43,7 @@ func NewRedisStore(addr, pass string, db int) *RedisStore {
 			DB:       db,
 		}),
 		prefix: "tunnel:",
+		authPrefix: "auth:",
 	}
 }
 
@@ -84,4 +92,27 @@ func (s *RedisStore) ListTunnels(ctx context.Context) ([]TunnelInfo, error) {
 		}
 	}
 	return infos, nil
+}
+
+func (s *RedisStore) SetToken(ctx context.Context, token string, expiration time.Duration) error {
+	return s.client.Set(ctx, s.authPrefix+token, "valid", expiration).Err()
+}
+
+func (s *RedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, error) {
+	val, err := s.client.Get(ctx, s.authPrefix+token).Result()
+	if err == redis.Nil {
+		return true, nil // If not in redis, consider it revoked or expired
+	}
+	if err != nil {
+		return false, err
+	}
+	return val == "revoked", nil
+}
+
+func (s *RedisStore) RevokeToken(ctx context.Context, token string) error {
+	// We could either delete it or set it to "revoked".
+	// Setting to "revoked" is better if we want to keep track of revoked tokens before they expire.
+	// But deleting it also works as IsTokenRevoked returns true if not found.
+	// For "revoke anytime", deleting is simplest.
+	return s.client.Del(ctx, s.authPrefix+token).Err()
 }

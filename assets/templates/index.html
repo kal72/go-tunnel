@@ -1,5 +1,5 @@
 {{define "content"}}
-<div x-data="configApp()" x-init="init()" x-cloak class="flex h-screen">
+<div x-data="configApp()" x-init="init('{{.TunnelAddr}}')" x-cloak class="flex h-screen">
 
   <!-- ═══════════════════════════════════════════════
        SIDEBAR — config file list
@@ -89,8 +89,11 @@
 
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
               <label class="text-xs font-mono text-gray-500">tunnel_addr</label>
-              <input type="text" x-model="form.tunnel_addr" @input="updatePreview()" placeholder="host:port"
-                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+              <div class="flex items-center gap-2">
+                  <input type="text" x-model="form.tunnel_addr" disabled
+                    class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 text-gray-500 cursor-not-allowed">
+                  <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 font-medium">from env</span>
+              </div>
             </div>
 
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
@@ -148,10 +151,23 @@
                     </svg>
                   </button>
                 </div>
+                <button @click="copyToken()" title="Copy token to clipboard" :disabled="!form.auth_token"
+                  class="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors border border-gray-200 disabled:opacity-50">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
                 <button @click="generateToken()" title="Generate token from client_id"
                   class="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors border border-blue-200">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                </button>
+                <button @click="revokeToken()" title="Revoke this token from Redis" :disabled="!form.auth_token"
+                  class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
                   </svg>
                 </button>
                 <span
@@ -281,17 +297,18 @@
       saved: false,
       statusText: 'Select a config file to begin',
       yamlPreview: '',
+      tunnelAddrEnv: '',
 
       form: {
         tunnel_addr: '',
         skip_tls_verify: false,
-        jwt_secret: '',
-        jwt_issuer: '',
-        jwt_expire_sec: 3600,
+        client_id: '',
+        auth_token: '',
         tunnels: [],
       },
 
-      async init() {
+      async init(tunnelAddr) {
+        this.tunnelAddrEnv = tunnelAddr;
         // Auto-select first config if available
         const res = await fetch('/api/configs');
         const configs = await res.json();
@@ -313,7 +330,7 @@
         const data = await res.json();
 
         this.form = {
-          tunnel_addr: data.tunnel_addr ?? '',
+          tunnel_addr: this.tunnelAddrEnv || data.tunnel_addr || '',
           skip_tls_verify: data.skip_tls_verify ?? false,
           client_id: data.client_id ?? '',
           auth_token: data.auth_token ?? '',
@@ -375,8 +392,37 @@
           const data = await res.json();
           this.form.auth_token = data.token;
           this.updatePreview();
-          this.statusText = 'Generated new auth_token';
+          this.statusText = 'Generated new auth_token (save to activate)';
         }
+      },
+
+      async revokeToken() {
+        if (!this.form.auth_token) return;
+        if (!confirm('Are you sure you want to revoke this token? The client using it will be disconnected.')) {
+            return;
+        }
+        
+        const res = await fetch(`/api/revoke-token?token=${this.form.auth_token}`, {
+            method: 'DELETE'
+        });
+        
+        if (res.ok) {
+            this.form.auth_token = '';
+            this.updatePreview();
+            this.statusText = 'Token revoked successfully';
+            await this.saveConfig();
+        } else {
+            const err = await res.text();
+            this.statusText = `Revoke failed: ${err}`;
+        }
+      },
+
+      copyToken() {
+        if (!this.form.auth_token) return;
+        navigator.clipboard.writeText(this.form.auth_token).then(() => {
+            this.statusText = 'Token copied to clipboard';
+            setTimeout(() => { this.statusText = `Current: configs/${this.current}.yaml`; }, 2000);
+        });
       },
 
       updatePreview() {

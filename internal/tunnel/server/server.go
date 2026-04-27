@@ -23,6 +23,7 @@ import (
 
 type TunnelSession struct {
 	Session   *yamux.Session
+	ClientID  string
 	Hostnames map[string]struct{}
 	Modes     map[string]string
 	Ctrl      *yamux.Stream
@@ -48,6 +49,7 @@ type Server struct {
 }
 
 type dashItem struct {
+	ClientID    string
 	Client      string
 	Hosts       string
 	ConnectedAt string
@@ -135,6 +137,7 @@ func (s *Server) updateState(ts *TunnelSession) {
 		hosts = append(hosts, h)
 	}
 	info := state.TunnelInfo{
+		ClientID:    ts.ClientID,
 		Client:      ts.ClientIP,
 		Hosts:       hosts,
 		ConnectedAt: ts.Connected,
@@ -217,6 +220,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 
 	ts := &TunnelSession{
 		Session:   session,
+		ClientID:  clientID,
 		Hostnames: map[string]struct{}{},
 		Modes:     map[string]string{},
 		Ctrl:      ctrl,
@@ -362,7 +366,18 @@ func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
 		return fmt.Errorf("client_id required")
 	}
 
-	// Derive expected token: HMAC-SHA256(MasterSecret, ClientID)
+	// 1. Check if token is valid in Redis
+	if s.store != nil {
+		revoked, err := s.store.IsTokenRevoked(context.Background(), providedToken)
+		if err != nil {
+			return fmt.Errorf("failed to check token status: %v", err)
+		}
+		if revoked {
+			return fmt.Errorf("token is revoked or expired")
+		}
+	}
+
+	// 2. Derive expected token: HMAC-SHA256(MasterSecret, ClientID)
 	h := hmac.New(sha256.New, s.jwtSecret)
 	h.Write([]byte(clientID))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
