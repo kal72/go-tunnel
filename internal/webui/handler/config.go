@@ -204,6 +204,54 @@ func (h *Handler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "ok", "message": "token revoked"})
 }
 
+// CreateConfig creates a new configuration file.
+func (h *Handler) CreateConfig(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	if name == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+
+	// Basic validation for filename
+	if strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		http.Error(w, "invalid name", http.StatusBadRequest)
+		return
+	}
+
+	if err := service.CreateConfig(name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok", "config": name})
+}
+
+// DeleteConfig removes a config file and revokes its token.
+func (h *Handler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	if name == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+
+	// 1. Read config to get the token
+	cfg, err := service.ReadConfig(name)
+	if err == nil {
+		// 2. Revoke token if it exists
+		if token, ok := cfg["auth_token"].(string); ok && token != "" && h.store != nil {
+			_ = h.store.RevokeToken(r.Context(), token)
+		}
+	}
+
+	// 3. Delete the file
+	if err := service.DeleteConfig(name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok", "message": "config deleted and token revoked"})
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)

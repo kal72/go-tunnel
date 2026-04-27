@@ -49,8 +49,10 @@ func main() {
 
 		// API
 		r.Get("/api/configs", h.ListConfigs)
+		r.Post("/api/config/{name}", h.CreateConfig)
 		r.Get("/api/config/{name}", h.GetConfig)
 		r.Put("/api/config/{name}", h.UpdateConfig)
+		r.Delete("/api/config/{name}", h.DeleteConfig)
 		r.Get("/api/config/{name}/download", h.DownloadConfig)
 		r.Get("/api/generate-token", h.GenerateToken)
 		r.Delete("/api/revoke-token", h.RevokeToken)
@@ -67,3 +69,4 @@ func main() {
 	log.Printf("Tunnel Manager running on http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
+
