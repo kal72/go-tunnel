@@ -25,7 +25,7 @@ func main() {
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	redisStore.Ping(context.Background())
 
-	h := handler.New(assets.EmbeddedFS, redisStore)
+	h := handler.New(assets.EmbeddedFS, redisStore, env.JWTSecret)
 	authH := handler.NewAuth(assets.EmbeddedFS)
 
 	// Auth routes
@@ -46,6 +46,7 @@ func main() {
 		r.Get("/api/config/{name}", h.GetConfig)
 		r.Put("/api/config/{name}", h.UpdateConfig)
 		r.Get("/api/config/{name}/download", h.DownloadConfig)
+		r.Get("/api/generate-token", h.GenerateToken)
 	})
 
 	// Static assets

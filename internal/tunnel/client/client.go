@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -85,18 +84,13 @@ func (c *Client) runOnce() error {
 		return err
 	}
 
-	// Buat JWT
-	jwtStr, err := c.createJWT()
-	if err != nil {
-		return err
-	}
-
 	// REGISTER
 	if err := protocol.SendJSON(ctrl, protocol.RegisterMessage{
-		Type:   protocol.MsgTypeRegister,
-		Token:  jwtStr,
-		Routes: c.routes,
-		Modes:  c.modes,
+		Type:      protocol.MsgTypeRegister,
+		ClientID:  c.cfg.ClientID,
+		AuthToken: c.cfg.AuthToken,
+		Routes:    c.routes,
+		Modes:     c.modes,
 	}); err != nil {
 		return err
 	}
@@ -228,19 +222,6 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelHost stri
 			return
 		}
 	}
-}
-
-func (c *Client) createJWT() (string, error) {
-	if c.cfg.JWTExpireSec <= 0 {
-		c.cfg.JWTExpireSec = 3600
-	}
-	claims := jwt.MapClaims{
-		"iss": c.cfg.JWTIssuer,
-		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(time.Duration(c.cfg.JWTExpireSec) * time.Second).Unix(),
-	}
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return t.SignedString([]byte(c.cfg.JWTSecret))
 }
 
 func writeHTTPError(w io.Writer, code int, msg string) {

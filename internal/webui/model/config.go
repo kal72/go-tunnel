@@ -11,8 +11,7 @@ type TunnelEntry struct {
 type ClientConfig struct {
 	TunnelAddr    string        `yaml:"tunnel_addr"     json:"tunnel_addr"`
 	SkipTLSVerify bool          `yaml:"skip_tls_verify" json:"skip_tls_verify"`
-	JWTSecret     string        `yaml:"jwt_secret"      json:"jwt_secret"`
-	JWTIssuer     string        `yaml:"jwt_issuer"      json:"jwt_issuer"`
-	JWTExpireSec  int           `yaml:"jwt_expire_sec"  json:"jwt_expire_sec"`
+	ClientID      string        `yaml:"client_id"       json:"client_id"`
+	AuthToken     string        `yaml:"auth_token"      json:"auth_token"`
 	Tunnels       []TunnelEntry `yaml:"tunnels"         json:"tunnels"`
 }

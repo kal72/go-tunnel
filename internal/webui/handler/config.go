@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"gotunnel/internal/tunnel/state"
 	"gotunnel/internal/webui/model"
 	"gotunnel/internal/webui/service"
@@ -16,15 +19,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Handler holds shared dependencies for HTTP handlers.
 type Handler struct {
-	dashTmpl *template.Template
-	confTmpl *template.Template
-	store    state.Store
+	dashTmpl     *template.Template
+	confTmpl     *template.Template
+	store        state.Store
+	masterSecret string
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store) *Handler {
+func New(fs embed.FS, store state.Store, masterSecret string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -40,9 +43,10 @@ func New(fs embed.FS, store state.Store) *Handler {
 	))
 
 	return &Handler{
-		dashTmpl: dashTmpl,
-		confTmpl: confTmpl,
-		store:    store,
+		dashTmpl:     dashTmpl,
+		confTmpl:     confTmpl,
+		store:        store,
+		masterSecret: masterSecret,
 	}
 }
 
@@ -138,7 +142,6 @@ func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "ok", "config": name + ".yaml"})
 }
 
-// DownloadConfig serves the raw YAML file as a downloadable attachment.
 func (h *Handler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	data, err := service.ReadConfigRaw(name)
@@ -151,6 +154,21 @@ func (h *Handler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	w.Write(data)
+}
+
+// GenerateToken generates an HMAC authtoken for a given client_id.
+func (h *Handler) GenerateToken(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("client_id")
+	if clientID == "" {
+		http.Error(w, "client_id required", http.StatusBadRequest)
+		return
+	}
+
+	mac := hmac.New(sha256.New, []byte(h.masterSecret))
+	mac.Write([]byte(clientID))
+	token := fmt.Sprintf("%x", mac.Sum(nil))
+
+	writeJSON(w, map[string]string{"token": token})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

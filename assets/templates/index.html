@@ -109,20 +109,26 @@
           </div>
         </div>
 
-        <!-- ── Section: JWT Auth ── -->
+        <!-- ── Section: Authentication ── -->
         <div x-show="current">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
-            JWT Auth
+            Authentication
           </p>
           <div class="space-y-0 divide-y divide-gray-100">
-
-            <!-- jwt_secret — masked input -->
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">jwt_secret</label>
+              <label class="text-xs font-mono text-gray-500">client_id</label>
+              <input type="text" x-model="form.client_id" @input="updatePreview()" placeholder="unique-client-id"
+                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+            </div>
+
+
+            <!-- auth_token — masked input -->
+            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
+              <label class="text-xs font-mono text-gray-500">auth_token</label>
               <div class="flex items-center gap-2">
                 <div class="relative flex-1">
-                  <input :type="showSecret ? 'text' : 'password'" x-model="form.jwt_secret" @input="updatePreview()"
-                    autocomplete="new-password" placeholder="secret key"
+                  <input :type="showSecret ? 'text' : 'password'" x-model="form.auth_token" @input="updatePreview()"
+                    autocomplete="new-password" placeholder="authtoken"
                     class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 pr-9 focus:outline-none focus:border-blue-400 bg-white">
                   <!-- eye toggle -->
                   <button @click="showSecret = !showSecret" type="button"
@@ -142,6 +148,12 @@
                     </svg>
                   </button>
                 </div>
+                <button @click="generateToken()" title="Generate token from client_id"
+                  class="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors border border-blue-200">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                </button>
                 <span
                   class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded shrink-0">sensitive</span>
               </div>
@@ -303,9 +315,8 @@
         this.form = {
           tunnel_addr: data.tunnel_addr ?? '',
           skip_tls_verify: data.skip_tls_verify ?? false,
-          jwt_secret: data.jwt_secret ?? '',
-          jwt_issuer: data.jwt_issuer ?? '',
-          jwt_expire_sec: data.jwt_expire_sec ?? 3600,
+          client_id: data.client_id ?? '',
+          auth_token: data.auth_token ?? '',
           tunnels: Array.isArray(data.tunnels)
             ? data.tunnels.map(t => ({ ...t }))
             : [],
@@ -354,20 +365,33 @@
         this.statusText = `Downloading ${this.current}.yaml`;
       },
 
+      async generateToken() {
+        if (!this.form.client_id) {
+          alert('Please enter a Client ID first.');
+          return;
+        }
+        const res = await fetch(`/api/generate-token?client_id=${this.form.client_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.form.auth_token = data.token;
+          this.updatePreview();
+          this.statusText = 'Generated new auth_token';
+        }
+      },
+
       updatePreview() {
         this.yamlPreview = this.toYAML(this.form);
       },
 
       toYAML(f) {
-        const masked = '*'.repeat(Math.min((f.jwt_secret || '').length, 12));
+        const masked = '*'.repeat(Math.min((f.auth_token || '').length, 12));
         const lines = [];
         lines.push(`# Koneksi ke listener tunnel (di VPS)`);
         lines.push(`tunnel_addr: "${f.tunnel_addr}"`);
         lines.push(`skip_tls_verify: ${f.skip_tls_verify}`);
-        lines.push(`# JWT Auth (harus cocok dengan server)`);
-        lines.push(`jwt_secret: "${masked}"`);
-        lines.push(`jwt_issuer: "${f.jwt_issuer}"`);
-        lines.push(`jwt_expire_sec: ${f.jwt_expire_sec}`);
+        lines.push(`# Authentication`);
+        lines.push(`client_id: "${f.client_id}"`);
+        lines.push(`auth_token: "${masked}"`);
         lines.push(`# Mapping host -> target lokal`);
         lines.push(`tunnels:`);
         if (f.tunnels && f.tunnels.length > 0) {

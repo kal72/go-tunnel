@@ -3,6 +3,8 @@ package server
 import (
 	"bufio"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
 	"gotunnel/internal/tunnel/protocol"
@@ -15,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 )
@@ -198,8 +199,11 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		session.Close()
 		return
 	}
-	tokenStr, _ := protocol.GetString(msg, "token")
-	if err := s.verifyJWT(tokenStr); err != nil {
+	authToken, _ := protocol.GetString(msg, "auth_token")
+	clientID, _ := protocol.GetString(msg, "client_id")
+
+	if err := s.verifyAuthToken(authToken, clientID); err != nil {
+		s.logger.Warn("[edge] auth failed", zap.String("client_id", clientID), zap.Error(err))
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "auth failed"})
 		session.Close()
 		return
@@ -353,14 +357,20 @@ func (ts *TunnelSession) modeForHost(host string) string {
 	return "http"
 }
 
-func (s *Server) verifyJWT(tokenStr string) error {
-	_, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
-		}
-		return s.jwtSecret, nil
-	})
-	return err
+func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
+	if clientID == "" {
+		return fmt.Errorf("client_id required")
+	}
+
+	// Derive expected token: HMAC-SHA256(MasterSecret, ClientID)
+	h := hmac.New(sha256.New, s.jwtSecret)
+	h.Write([]byte(clientID))
+	expected := fmt.Sprintf("%x", h.Sum(nil))
+
+	if providedToken != expected {
+		return fmt.Errorf("invalid auth token")
+	}
+	return nil
 }
 
 func copyHeader(dst, src http.Header) {
