@@ -26,5 +26,9 @@ go.work.sum
 config.yaml
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.antigravity/
+.idea/
+.vscode/
+.DS_Store
+
+tmp

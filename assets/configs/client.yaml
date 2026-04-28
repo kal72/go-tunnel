@@ -1,0 +1,11 @@
+auth_token: c4098941a68de270be1022181dd212585a6f6a418538084c54f79d0791e9b075
+client_id: qwerty
+skip_tls_verify: false
+tunnel_addr: tunnel.vpskamu.com:9443
+tunnels:
+    - hostname: app.vpskamu.com
+      mode: http
+      target: 127.0.0.1:8080
+    - hostname: ssh.vpskamu.com
+      mode: tcp
+      target: 127.0.0.1:22

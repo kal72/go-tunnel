@@ -4,15 +4,13 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"gotunnel/internal/tunnel/config"
+	"gotunnel/internal/tunnel/protocol"
 	"io"
 	"net"
 	"net/http"
 	"time"
 
-	"gotunnel/internal/config"
-	"gotunnel/internal/protocol"
-
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -86,18 +84,13 @@ func (c *Client) runOnce() error {
 		return err
 	}
 
-	// Buat JWT
-	jwtStr, err := c.createJWT()
-	if err != nil {
-		return err
-	}
-
 	// REGISTER
 	if err := protocol.SendJSON(ctrl, protocol.RegisterMessage{
-		Type:   protocol.MsgTypeRegister,
-		Token:  jwtStr,
-		Routes: c.routes,
-		Modes:  c.modes,
+		Type:      protocol.MsgTypeRegister,
+		ClientID:  c.cfg.ClientID,
+		AuthToken: c.cfg.AuthToken,
+		Routes:    c.routes,
+		Modes:     c.modes,
 	}); err != nil {
 		return err
 	}
@@ -160,19 +153,40 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 
 	// Default HTTP mode
 	if mode == "https" {
-		c.handleHTTPSStream(stream, target)
+		c.handleHTTPSStream(stream, target, hostname)
 		return
 	}
 	c.handleHTTPStream(stream, target)
 
 }
 
-func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
+func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelHost string) {
 	defer stream.Close()
 	reader := bufio.NewReader(stream)
 
-	trans := &http.Transport{
-		TLSClientConfig: &tls.Config{CheckRedirect: nil}, // Default safety
+	// Extract host without port for Host header.
+	targetHost := target
+	if h, _, err := net.SplitHostPort(target); err == nil {
+		targetHost = h
+	} else {
+		// No port specified — default to 443 for HTTPS.
+		target = target + ":443"
+	}
+
+	// Use http.Client so redirects (e.g. google.com → www.google.com)
+	// are followed internally instead of being sent back to the browser.
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: c.cfg.SkipTLSVerify,
+			},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
 	}
 
 	for {
@@ -184,13 +198,13 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
 			return
 		}
 
-		// Rewrite for HTTPS target
+		// Upstream must see its own Host to serve the right content.
 		req.URL.Scheme = "https"
 		req.URL.Host = target
-		req.Host = target
+		req.Host = targetHost
 		req.RequestURI = ""
 
-		resp, err := trans.RoundTrip(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			c.logger.Error("https proxy error", zap.Error(err))
 			writeHTTPError(stream, http.StatusBadGateway, "upstream error: "+err.Error())
@@ -208,19 +222,6 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
 			return
 		}
 	}
-}
-
-func (c *Client) createJWT() (string, error) {
-	if c.cfg.JWTExpireSec <= 0 {
-		c.cfg.JWTExpireSec = 3600
-	}
-	claims := jwt.MapClaims{
-		"iss": c.cfg.JWTIssuer,
-		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(time.Duration(c.cfg.JWTExpireSec) * time.Second).Unix(),
-	}
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return t.SignedString([]byte(c.cfg.JWTSecret))
 }
 
 func writeHTTPError(w io.Writer, code int, msg string) {

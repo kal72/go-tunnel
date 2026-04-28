@@ -18,9 +18,8 @@ type TunnelEntry struct {
 }
 
 type ServerConfig struct {
-	GatewayHost   string
-	GatewayPort   int
-	DashboardPort int
+	GatewayHost string
+	GatewayPort int
 
 	TunnelHost string
 	TunnelPort int
@@ -28,15 +27,19 @@ type ServerConfig struct {
 	JWTSecret string
 	ACMECache string
 	ACMEEnv   string
+
+	RedisAddr string
+	RedisPass string
+	RedisDB   int
 }
 
 type ClientConfig struct {
 	TunnelAddr    string `yaml:"tunnel_addr"`
 	SkipTLSVerify bool   `yaml:"skip_tls_verify"`
 
-	JWTSecret    string `yaml:"jwt_secret"`
-	JWTIssuer    string `yaml:"jwt_issuer"`
-	JWTExpireSec int    `yaml:"jwt_expire_sec"`
+	ClientID  string `yaml:"client_id"`
+	JWTSecret string `yaml:"jwt_secret"`
+	AuthToken string `yaml:"auth_token"`
 
 	Tunnels []TunnelEntry `yaml:"tunnels"`
 }
@@ -59,14 +62,16 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	}
 
 	s := &ServerConfig{
-		GatewayHost:   get("GATEWAY_HOST", ""),
-		GatewayPort:   parsePort(get("GATEWAY_PORT", "443"), 443),
-		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
-		TunnelHost:    get("TUNNEL_HOST", ""),
-		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
-		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
-		ACMECache:     get("ACME_CACHE", "./cert-cache"),
-		ACMEEnv:       get("ACME_ENV", "production"),
+		GatewayHost: get("GATEWAY_HOST", ""),
+		GatewayPort: parsePort(get("GATEWAY_PORT", "443"), 443),
+		TunnelHost:  get("TUNNEL_HOST", ""),
+		TunnelPort:  parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		JWTSecret:   get("JWT_SECRET", "defaultjwtsecret"),
+		ACMECache:   get("ACME_CACHE", "./cert-cache"),
+		ACMEEnv:     get("ACME_ENV", "staging"), // production or staging
+		RedisAddr:   get("REDIS_ADDR", "localhost:6379"),
+		RedisPass:   get("REDIS_PASS", ""),
+		RedisDB:     parsePort(get("REDIS_DB", "0"), 0),
 	}
 
 	if strings.TrimSpace(s.GatewayHost) == "" {

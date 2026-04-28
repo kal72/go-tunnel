@@ -2,8 +2,14 @@ package server
 
 import (
 	"bufio"
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
+	"gotunnel/internal/tunnel/protocol"
+	"gotunnel/internal/tunnel/registry"
+	"gotunnel/internal/tunnel/state"
 	"io"
 	"net"
 	"net/http"
@@ -11,16 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"gotunnel/internal/protocol"
-	"gotunnel/internal/registry"
-
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 )
 
 type TunnelSession struct {
 	Session   *yamux.Session
+	ClientID  string
 	Hostnames map[string]struct{}
 	Modes     map[string]string
 	Ctrl      *yamux.Stream
@@ -42,16 +45,18 @@ type Server struct {
 	summary []dashItem
 
 	dashboardDomain string
+	store           state.Store
 }
 
 type dashItem struct {
+	ClientID    string
 	Client      string
 	Hosts       string
 	ConnectedAt string
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string, store state.Store) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -59,6 +64,7 @@ func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverD
 		logger:          logger,
 		hostRegistry:    hostRegistry,
 		dashboardDomain: canonicalHost(serverDomain),
+		store:           store,
 	}, nil
 }
 
@@ -122,66 +128,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn.Close()
 }
 
-func (s *Server) DashboardHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.dashboardDomain != "" {
-			reqHost := canonicalHost(r.Host)
-			if reqHost == "" || reqHost != s.dashboardDomain {
-				s.logger.Warn("[dashboard] blocked by host check", zap.String("host", r.Host), zap.String("allowed", s.dashboardDomain))
-				http.Error(w, "forbidden", http.StatusForbidden)
-				return
-			}
-		}
-
-		s.refreshDashboard()
-		s.dashMu.RLock()
-		defer s.dashMu.RUnlock()
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, `<html><head><title>Tunnel Dashboard</title><style>
-		body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:24px}
-		table{border-collapse:collapse;width:100%}
-		th,td{border:1px solid #ddd;padding:8px}
-		th{background:#f3f4f6;text-align:left}
-		</style></head><body>`)
-		fmt.Fprint(w, "<h1>Active Tunnels</h1><table><tr><th>Client</th><th>Hosts</th><th>Connected</th><th>Last Ping</th></tr>")
-		for _, it := range s.summary {
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
-				html(it.Client), html(it.Hosts), html(it.ConnectedAt), html(it.LastPing))
-		}
-		fmt.Fprint(w, "</table></body></html>")
-	})
-}
-
-func html(s string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(s, "&", "&amp;"), "<", "&lt;")
-}
-
-func (s *Server) refreshDashboard() {
-	s.dashMu.Lock()
-	defer s.dashMu.Unlock()
-
-	var out []dashItem
-	s.mu.RLock()
-	for hn, ses := range s.hostToSes {
-		_ = hn // we’ll aggregate per session
-		_ = ses
+func (s *Server) updateState(ts *TunnelSession) {
+	if s.store == nil {
+		return
 	}
-	// Aggregate per session:
-	type key struct{ ptr *TunnelSession }
-	uniq := map[*TunnelSession][]string{}
-	for hn, ses := range s.hostToSes {
-		uniq[ses] = append(uniq[ses], hn)
+	var hosts []string
+	for h := range ts.Hostnames {
+		hosts = append(hosts, h)
 	}
-	for ses, hosts := range uniq {
-		out = append(out, dashItem{
-			Client:      ses.ClientIP,
-			Hosts:       strings.Join(hosts, ", "),
-			ConnectedAt: ses.Connected.Format(time.RFC3339),
-			LastPing:    "~15s", // simple static info; could be tracked precisely
-		})
+	info := state.TunnelInfo{
+		ClientID:    ts.ClientID,
+		Client:      ts.ClientIP,
+		Hosts:       hosts,
+		ConnectedAt: ts.Connected,
+		LastPing:    time.Now(),
 	}
-	s.mu.RUnlock()
-	s.summary = out
+	if err := s.store.SetTunnel(context.Background(), fmt.Sprintf("%p", ts), info); err != nil {
+		s.logger.Error("failed to update tunnel state in store", zap.Error(err))
+	}
 }
 
 // client listening
@@ -238,8 +202,11 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		session.Close()
 		return
 	}
-	tokenStr, _ := protocol.GetString(msg, "token")
-	if err := s.verifyJWT(tokenStr); err != nil {
+	authToken, _ := protocol.GetString(msg, "auth_token")
+	clientID, _ := protocol.GetString(msg, "client_id")
+
+	if err := s.verifyAuthToken(authToken, clientID); err != nil {
+		s.logger.Warn("[edge] auth failed", zap.String("client_id", clientID), zap.Error(err))
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "auth failed"})
 		session.Close()
 		return
@@ -253,6 +220,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 
 	ts := &TunnelSession{
 		Session:   session,
+		ClientID:  clientID,
 		Hostnames: map[string]struct{}{},
 		Modes:     map[string]string{},
 		Ctrl:      ctrl,
@@ -313,6 +281,8 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}
 	s.mu.Unlock()
 
+	s.updateState(ts)
+
 	_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: true})
 
 	// Heartbeat: server → ping; client balas → pong
@@ -339,6 +309,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 				return
 			}
 			_ = ctrl.SetReadDeadline(time.Time{})
+			s.updateState(ts)
 		}
 	}()
 
@@ -367,6 +338,9 @@ func (s *Server) cleanup(ts *TunnelSession) {
 			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
 		}
 	}
+	if s.store != nil {
+		_ = s.store.DeleteTunnel(context.Background(), fmt.Sprintf("%p", ts))
+	}
 }
 
 func (s *Server) sessionForHost(host string) *TunnelSession {
@@ -387,14 +361,31 @@ func (ts *TunnelSession) modeForHost(host string) string {
 	return "http"
 }
 
-func (s *Server) verifyJWT(tokenStr string) error {
-	_, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
+func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
+	if clientID == "" {
+		return fmt.Errorf("client_id required")
+	}
+
+	// 1. Check if token is valid in Redis
+	if s.store != nil {
+		revoked, err := s.store.IsTokenRevoked(context.Background(), providedToken)
+		if err != nil {
+			return fmt.Errorf("failed to check token status: %v", err)
 		}
-		return s.jwtSecret, nil
-	})
-	return err
+		if revoked {
+			return fmt.Errorf("token is revoked or expired")
+		}
+	}
+
+	// 2. Derive expected token: HMAC-SHA256(MasterSecret, ClientID)
+	h := hmac.New(sha256.New, s.jwtSecret)
+	h.Write([]byte(clientID))
+	expected := fmt.Sprintf("%x", h.Sum(nil))
+
+	if providedToken != expected {
+		return fmt.Errorf("invalid auth token")
+	}
+	return nil
 }
 
 func copyHeader(dst, src http.Header) {

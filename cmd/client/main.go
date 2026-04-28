@@ -1,10 +1,9 @@
 package main
 
 import (
+	"gotunnel/internal/tunnel/client"
+	"gotunnel/internal/tunnel/config"
 	"log"
-
-	"gotunnel/internal/client"
-	"gotunnel/internal/config"
 )
 
 func main() {
