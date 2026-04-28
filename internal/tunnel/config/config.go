@@ -65,13 +65,13 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	}
 
 	s := &ServerConfig{
-		GatewayHost: get("GATEWAY_HOST", ""),
-		GatewayPort: parsePort(get("GATEWAY_PORT", "443"), 443),
-		TunnelHost:  get("TUNNEL_HOST", ""),
-		TunnelPort:  parsePort(get("TUNNEL_PORT", "9443"), 9443),
-		JWTSecret:   get("JWT_SECRET", "defaultjwtsecret"),
-		ACMECache:   get("ACME_CACHE", "./cert-cache"),
-		ACMEEnv:     get("ACME_ENV", "staging"), // production or staging
+		GatewayHost:    get("GATEWAY_HOST", ""),
+		GatewayPort:    parsePort(get("GATEWAY_PORT", "443"), 443),
+		TunnelHost:     get("TUNNEL_HOST", ""),
+		TunnelPort:     parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		JWTSecret:      get("JWT_SECRET", "defaultjwtsecret"),
+		ACMECache:      get("ACME_CACHE", "./cert-cache"),
+		ACMEEnv:        get("ACME_ENV", "staging"), // production or staging
 		RedisAddr:      get("REDIS_ADDR", "localhost:6379"),
 		RedisPass:      get("REDIS_PASS", ""),
 		RedisDB:        parsePort(get("REDIS_DB", "0"), 0),
