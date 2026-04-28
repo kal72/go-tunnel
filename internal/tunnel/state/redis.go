@@ -27,12 +27,18 @@ type Store interface {
 	SetToken(ctx context.Context, token string, expiration time.Duration) error
 	IsTokenRevoked(ctx context.Context, token string) (bool, error)
 	RevokeToken(ctx context.Context, token string) error
+
+	// Domain management
+	AddDomain(ctx context.Context, domain string) error
+	RemoveDomain(ctx context.Context, domain string) error
+	ListDomains(ctx context.Context) ([]string, error)
 }
 
 type RedisStore struct {
-	client *redis.Client
-	prefix string
+	client     *redis.Client
+	prefix     string
 	authPrefix string
+	domainKey  string
 }
 
 func NewRedisStore(addr, pass string, db int) *RedisStore {
@@ -42,8 +48,9 @@ func NewRedisStore(addr, pass string, db int) *RedisStore {
 			Password: pass,
 			DB:       db,
 		}),
-		prefix: "tunnel:",
+		prefix:     "tunnel:",
 		authPrefix: "auth:",
+		domainKey:  "allowed_domains",
 	}
 }
 
@@ -115,4 +122,16 @@ func (s *RedisStore) RevokeToken(ctx context.Context, token string) error {
 	// But deleting it also works as IsTokenRevoked returns true if not found.
 	// For "revoke anytime", deleting is simplest.
 	return s.client.Del(ctx, s.authPrefix+token).Err()
+}
+
+func (s *RedisStore) AddDomain(ctx context.Context, domain string) error {
+	return s.client.SAdd(ctx, s.domainKey, domain).Err()
+}
+
+func (s *RedisStore) RemoveDomain(ctx context.Context, domain string) error {
+	return s.client.SRem(ctx, s.domainKey, domain).Err()
+}
+
+func (s *RedisStore) ListDomains(ctx context.Context) ([]string, error) {
+	return s.client.SMembers(ctx, s.domainKey).Result()
 }

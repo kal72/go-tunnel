@@ -26,12 +26,15 @@ func main() {
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	redisStore.Ping(context.Background())
 
+	domainStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
+	domainStore.Ping(context.Background())
+
 	tunnelAddr := env.TunnelHost
 	if env.TunnelPort != 0 && env.TunnelPort != 443 {
 		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelHost, env.TunnelPort)
 	}
 
-	h := handler.New(assets.EmbeddedFS, redisStore, env.JWTSecret, tunnelAddr)
+	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, env.JWTSecret, tunnelAddr, env.WildcardDomain)
 	authH := handler.NewAuth(assets.EmbeddedFS, redisStore)
 
 	// Auth routes
@@ -46,6 +49,7 @@ func main() {
 		// Pages
 		r.Get("/", h.Index)
 		r.Get("/configs", h.Configs)
+		r.Get("/domains", h.Domains)
 
 		// API
 		r.Get("/api/configs", h.ListConfigs)
@@ -56,6 +60,10 @@ func main() {
 		r.Get("/api/config/{name}/download", h.DownloadConfig)
 		r.Get("/api/generate-token", h.GenerateToken)
 		r.Delete("/api/revoke-token", h.RevokeToken)
+
+		r.Get("/api/domains", h.ListDomains)
+		r.Post("/api/domains", h.AddDomain)
+		r.Delete("/api/domains/{domain}", h.RemoveDomain)
 	})
 
 	// Static assets

@@ -31,6 +31,9 @@ type ServerConfig struct {
 	RedisAddr string
 	RedisPass string
 	RedisDB   int
+
+	WildcardDomain string
+	DomainRedisDB  int
 }
 
 type ClientConfig struct {
@@ -69,9 +72,11 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		JWTSecret:   get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:   get("ACME_CACHE", "./cert-cache"),
 		ACMEEnv:     get("ACME_ENV", "staging"), // production or staging
-		RedisAddr:   get("REDIS_ADDR", "localhost:6379"),
-		RedisPass:   get("REDIS_PASS", ""),
-		RedisDB:     parsePort(get("REDIS_DB", "0"), 0),
+		RedisAddr:      get("REDIS_ADDR", "localhost:6379"),
+		RedisPass:      get("REDIS_PASS", ""),
+		RedisDB:        parsePort(get("REDIS_DB", "0"), 0),
+		WildcardDomain: get("WILDCARD_DOMAIN", ""),
+		DomainRedisDB:  parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
 	}
 
 	if strings.TrimSpace(s.GatewayHost) == "" {

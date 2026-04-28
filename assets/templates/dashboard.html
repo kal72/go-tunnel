@@ -11,6 +11,11 @@
       <h1 class="text-sm font-semibold tracking-tight">Tunnel Dashboard</h1>
     </div>
     <div class="flex items-center gap-4">
+      {{if .DomainEnabled}}
+      <a href="/domains" class="text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors">
+        Manage Domains
+      </a>
+      {{end}}
       <a href="/configs" class="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors">
         Manage Configs
       </a>

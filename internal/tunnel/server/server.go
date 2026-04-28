@@ -249,11 +249,18 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		conflict   string
 	)
 	for hn := range rawRoutes {
+		// 1. Check if authorized
+		if s.hostRegistry != nil && !s.hostRegistry.IsAuthorized(hn) {
+			conflict = fmt.Sprintf("%s (not authorized)", hn)
+			break
+		}
+
+		// 2. Check if already active
 		if _, exists := s.hostToSes[hn]; exists {
 			conflict = hn
 			break
 		}
-		if s.hostRegistry != nil && !s.hostRegistry.Add(hn) {
+		if s.hostRegistry != nil && !s.hostRegistry.Register(hn) {
 			conflict = hn
 			break
 		}
@@ -271,7 +278,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 				delete(s.hostToSes, hn)
 			}
 			if s.hostRegistry != nil {
-				s.hostRegistry.Remove(hn)
+				s.hostRegistry.Unregister(hn)
 			}
 		}
 		s.mu.Unlock()
@@ -332,7 +339,7 @@ func (s *Server) cleanup(ts *TunnelSession) {
 		if cur, ok := s.hostToSes[hn]; ok && cur == ts {
 			delete(s.hostToSes, hn)
 			if s.hostRegistry != nil {
-				s.hostRegistry.Remove(hn)
+				s.hostRegistry.Unregister(hn)
 			}
 			delete(ts.Modes, hn)
 			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
@@ -346,7 +353,22 @@ func (s *Server) cleanup(ts *TunnelSession) {
 func (s *Server) sessionForHost(host string) *TunnelSession {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.hostToSes[host]
+	
+	// Exact match
+	if ts, ok := s.hostToSes[host]; ok {
+		return ts
+	}
+	
+	// Wildcard match
+	parts := strings.SplitN(host, ".", 2)
+	if len(parts) == 2 {
+		wildcard := "*." + parts[1]
+		if ts, ok := s.hostToSes[wildcard]; ok {
+			return ts
+		}
+	}
+	
+	return nil
 }
 
 func (ts *TunnelSession) modeForHost(host string) string {
@@ -354,8 +376,17 @@ func (ts *TunnelSession) modeForHost(host string) string {
 		return "http"
 	}
 	if ts.Modes != nil {
+		// Exact match
 		if mode, ok := ts.Modes[host]; ok && mode != "" {
 			return mode
+		}
+		// Wildcard match
+		parts := strings.SplitN(host, ".", 2)
+		if len(parts) == 2 {
+			wildcard := "*." + parts[1]
+			if mode, ok := ts.Modes[wildcard]; ok && mode != "" {
+				return mode
+			}
 		}
 	}
 	return "http"

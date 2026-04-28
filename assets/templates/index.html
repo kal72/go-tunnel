@@ -56,6 +56,12 @@
           class="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors">
           Dashboard
         </a>
+        {{if .DomainEnabled}}
+        <a href="/domains"
+          class="text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors">
+          Manage Domains
+        </a>
+        {{end}}
         <span class="text-xs font-mono text-gray-400" x-text="current ? 'configs/' + current + '.yaml' : '—'"></span>
         <span x-show="saved" x-transition class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">saved</span>
         <span x-show="!current" class="text-xs text-gray-400 italic">select a file</span>

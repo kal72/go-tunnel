@@ -11,6 +11,7 @@ import (
 	"gotunnel/internal/webui/service"
 
 	"html/template"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -20,15 +21,18 @@ import (
 )
 
 type Handler struct {
-	dashTmpl     *template.Template
-	confTmpl     *template.Template
-	store        state.Store
-	masterSecret string
-	tunnelAddr   string
+	dashTmpl       *template.Template
+	confTmpl       *template.Template
+	domainTmpl     *template.Template
+	store          state.Store
+	domainStore    state.Store
+	masterSecret   string
+	tunnelAddr     string
+	wildcardDomain string
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store, masterSecret string, tunnelAddr string) *Handler {
+func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret string, tunnelAddr string, wildcardDomain string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -43,12 +47,20 @@ func New(fs embed.FS, store state.Store, masterSecret string, tunnelAddr string)
 		"templates/index.html",
 	))
 
+	domainTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/domains.html",
+	))
+
 	return &Handler{
-		dashTmpl:     dashTmpl,
-		confTmpl:     confTmpl,
-		store:        store,
-		masterSecret: masterSecret,
-		tunnelAddr:   tunnelAddr,
+		dashTmpl:       dashTmpl,
+		confTmpl:       confTmpl,
+		domainTmpl:     domainTmpl,
+		store:          store,
+		domainStore:    domainStore,
+		masterSecret:   masterSecret,
+		tunnelAddr:     tunnelAddr,
+		wildcardDomain: wildcardDomain,
 	}
 }
 
@@ -64,16 +76,33 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 					"ClientID":    info.ClientID,
 					"Client":      info.Client,
 					"Hosts":       strings.Join(info.Hosts, ", "),
-					"ConnectedAt": info.ConnectedAt.Format(time.RFC3339),
+					"ConnectedAt": info.ConnectedAt.Format("01-02-2006 15:04:05"),
 					"LastPing":    info.LastPing.Format("15:04:05"),
 				})
 			}
 		}
 	}
 
-	if err := h.dashTmpl.ExecuteTemplate(w, "base", map[string]any{
-		"Tunnels": tunnels,
-	}); err != nil {
+	data := map[string]any{
+		"Tunnels":       tunnels,
+		"DomainEnabled": h.wildcardDomain != "",
+	}
+
+	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Domains renders the domain management page.
+func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
+	if h.wildcardDomain == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	data := map[string]any{
+		"DomainEnabled": true,
+	}
+	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -86,8 +115,9 @@ func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
-		"Configs":    configs,
-		"TunnelAddr": h.tunnelAddr,
+		"Configs":       configs,
+		"TunnelAddr":    h.tunnelAddr,
+		"DomainEnabled": h.wildcardDomain != "",
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -250,6 +280,106 @@ func (h *Handler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"status": "ok", "message": "config deleted and token revoked"})
+}
+
+// ListDomains returns all domains from Redis.
+func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {
+	if h.wildcardDomain == "" {
+		http.Error(w, "Domain management is disabled (WILDCARD_DOMAIN is empty)", http.StatusForbidden)
+		return
+	}
+	if h.domainStore == nil {
+		writeJSON(w, []any{})
+		return
+	}
+	domains, err := h.domainStore.ListDomains(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{
+		"domains":         domains,
+		"wildcard_domain": h.wildcardDomain,
+	})
+}
+
+// AddDomain adds a new domain to Redis.
+func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
+	if h.wildcardDomain == "" {
+		http.Error(w, "Domain management is disabled", http.StatusForbidden)
+		return
+	}
+	if h.domainStore == nil {
+		http.Error(w, "domain store not configured", http.StatusInternalServerError)
+		return
+	}
+	var payload struct {
+		Prefix string `json:"prefix"`
+		Random bool   `json:"random"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	prefix := strings.TrimSpace(strings.ToLower(payload.Prefix))
+	if payload.Random {
+		prefix = generateRandomString(8)
+	}
+
+	if prefix == "" {
+		http.Error(w, "prefix required", http.StatusBadRequest)
+		return
+	}
+
+	// Validate prefix
+	for _, char := range prefix {
+		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-') {
+			http.Error(w, "invalid characters in prefix", http.StatusBadRequest)
+			return
+		}
+	}
+
+	base := strings.TrimPrefix(h.wildcardDomain, "*.")
+	if base == "" {
+		http.Error(w, "wildcard domain base not configured in .env", http.StatusInternalServerError)
+		return
+	}
+
+	fullDomain := prefix + "." + base
+	if err := h.domainStore.AddDomain(r.Context(), fullDomain); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]string{"status": "ok", "domain": fullDomain})
+}
+
+// RemoveDomain removes a domain from Redis.
+func (h *Handler) RemoveDomain(w http.ResponseWriter, r *http.Request) {
+	if h.domainStore == nil {
+		http.Error(w, "domain store not configured", http.StatusInternalServerError)
+		return
+	}
+	domain := chi.URLParam(r, "domain")
+	if domain == "" {
+		http.Error(w, "domain required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.domainStore.RemoveDomain(r.Context(), domain); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]string{"status": "ok", "message": "domain removed"})
+}
+
+func generateRandomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		ret[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(ret)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

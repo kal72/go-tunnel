@@ -20,6 +20,7 @@ type Edge struct {
 	httpsSrv *http.Server
 	acmeSrv  *http.Server
 	tunnelLn net.Listener
+	store    state.Store
 }
 
 func New(env *config.ServerConfig) (*Edge, error) {
@@ -29,11 +30,30 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// Autocert
 	m := NewAutocertManager(env, hostRegistry)
 
-	// Server
-	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
-	redisStore.Ping(context.Background())
+	// Stores
+	tunnelStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
+	tunnelStore.Ping(context.Background())
 
-	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, redisStore)
+	// Load domains from Redis (only if wildcard base is configured)
+	if env.WildcardDomain != "" {
+		domainStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
+		domainStore.Ping(context.Background())
+
+		domains, err := domainStore.ListDomains(context.Background())
+		if err == nil {
+			for _, d := range domains {
+				hostRegistry.Authorize(d)
+			}
+			log.Printf("[edge] loaded %d domains from redis", len(domains))
+		} else {
+			log.Printf("[edge] failed to load domains from redis: %v", err)
+		}
+		hostRegistry.Authorize(env.WildcardDomain)
+	} else {
+		log.Printf("[edge] Domain Management disabled (WILDCARD_DOMAIN is empty)")
+	}
+
+	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore)
 	if err != nil {
 		return nil, fmt.Errorf("init server: %w", err)
 	}
@@ -57,6 +77,7 @@ func New(env *config.ServerConfig) (*Edge, error) {
 		httpsSrv: httpsSrv,
 		acmeSrv:  acmeSrv,
 		tunnelLn: tunnelLn,
+		store:    tunnelStore,
 	}, nil
 }
 
@@ -112,9 +133,7 @@ func buildHostRegistry(env *config.ServerConfig) *registry.HostRegistry {
 	hr := registry.NewHostRegistry()
 	for _, d := range []string{env.GatewayHost, env.TunnelHost} {
 		if d = strings.TrimSpace(d); d != "" {
-			if !hr.Add(d) {
-				log.Printf("[config] duplicate domain ignored: %s", d)
-			}
+			hr.Authorize(d)
 		}
 	}
 	return hr

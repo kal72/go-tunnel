@@ -21,7 +21,12 @@ func NewAutocertManager(env *config.ServerConfig, hostRegistry *registry.HostReg
 		Prompt: autocert.AcceptTOS,
 		Client: acmeClient,
 		HostPolicy: func(_ context.Context, host string) error {
-			if hostRegistry.Exists(host) {
+			// 1. Authorized in allowlist
+			if hostRegistry.IsAuthorized(host) {
+				return nil
+			}
+			// 2. Currently active tunnel
+			if hostRegistry.IsActive(host) {
 				return nil
 			}
 			return fmt.Errorf("unauthorized host: %s", host)
