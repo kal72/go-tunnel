@@ -56,13 +56,22 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	if env.WebUIDomain != "" {
 		target, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
 		proxy := httputil.NewSingleHostReverseProxy(target)
+		
+		// Ensure Host header is updated for the backend using Rewrite
+		proxy.Rewrite = func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Host = target.Host
+		}
+		
 		webuiProxy = proxy
 	}
 
 	// Route based on Host
 	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := strings.Split(r.Host, ":")[0]
-		if env.WebUIDomain != "" && host == env.WebUIDomain {
+		host := strings.ToLower(strings.Split(r.Host, ":")[0])
+		webuiDomain := strings.ToLower(env.WebUIDomain)
+		
+		if webuiDomain != "" && host == webuiDomain {
 			webuiProxy.ServeHTTP(w, r)
 			return
 		}
