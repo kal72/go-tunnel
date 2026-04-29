@@ -253,21 +253,20 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		conflict   string
 	)
 	for hn := range rawRoutes {
-		// 1. Check if authorized
-		if s.hostRegistry != nil && !s.hostRegistry.IsAuthorized(hn) {
-			conflict = fmt.Sprintf("%s (not authorized)", hn)
-			break
-		}
-
-		// 1.5 Strict wildcard check: if it matches wildcard, it MUST be in domainStore
-		if s.wildcardDomain != "" && s.domainStore != nil {
-			if matchWildcard(hn, s.wildcardDomain) {
-				allowed, err := s.domainStore.IsDomainAllowed(context.Background(), hn)
-				if err != nil || !allowed {
-					conflict = fmt.Sprintf("%s (not in allowed list)", hn)
-					break
-				}
+		// 1. Check if it's a system domain (Dashboard/Gateway)
+		if hn == s.dashboardDomain {
+			// Allowed automatically
+		} else if s.domainStore != nil {
+			// 2. Check Redis allowlist
+			allowed, err := s.domainStore.IsDomainAllowed(context.Background(), hn)
+			if err != nil || !allowed {
+				conflict = fmt.Sprintf("%s (not authorized)", hn)
+				break
 			}
+		} else {
+			// No domain store and not dashboard domain
+			conflict = fmt.Sprintf("%s (no authorization store)", hn)
+			break
 		}
 
 		// 2. Check if already active

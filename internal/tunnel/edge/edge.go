@@ -34,14 +34,11 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	tunnelStore.Ping(context.Background())
 
 	var domainStore state.Store
+	// Initialize domain store if wildcard base is configured
 	if env.WildcardDomain != "" {
 		domainStore = state.NewRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
 		domainStore.Ping(context.Background())
-
-		// Note: We only authorize the wildcard pattern itself in hostRegistry
-		// to allow for SSL issuance/Autocert logic.
 		// Specific subdomain validation for tunnels is handled in server.go via domainStore.
-		hostRegistry.Authorize(env.WildcardDomain)
 	} else {
 		log.Printf("[edge] Domain Management disabled (WILDCARD_DOMAIN is empty)")
 	}

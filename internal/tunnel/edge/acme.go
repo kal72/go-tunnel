@@ -22,30 +22,27 @@ func NewAutocertManager(env *config.ServerConfig, hostRegistry *registry.HostReg
 		Prompt: autocert.AcceptTOS,
 		Client: acmeClient,
 		HostPolicy: func(ctx context.Context, host string) error {
-			// 1. Check direct authorization (e.g. GatewayHost)
-			if hostRegistry.IsAuthorized(host) {
-				// If it matched via wildcard pattern in registry, we STILL need to check Redis
-				// unless it's an exact match for Gateway/Tunnel host.
-				if !isPattern(host) && !hostRegistry.IsActive(host) {
-					// Check if it's a subdomain of our wildcard
-					if wildcardDomain != "" && matchWildcard(host, wildcardDomain) {
-						if domainStore != nil {
-							allowed, err := domainStore.IsDomainAllowed(ctx, host)
-							if err != nil || !allowed {
-								return fmt.Errorf("subdomain not in allowed list: %s", host)
-							}
-						}
-					}
+			h := strings.ToLower(strings.TrimSpace(host))
+			
+			// 1. System domains (Gateway & Tunnel)
+			if h == strings.ToLower(env.GatewayHost) || h == strings.ToLower(env.TunnelHost) {
+				return nil
+			}
+
+			// 2. Redis allowlist
+			if domainStore != nil {
+				allowed, err := domainStore.IsDomainAllowed(ctx, h)
+				if err == nil && allowed {
+					return nil
 				}
+			}
+
+			// 3. Currently active tunnel
+			if hostRegistry.IsActive(h) {
 				return nil
 			}
 
-			// 2. Currently active tunnel
-			if hostRegistry.IsActive(host) {
-				return nil
-			}
-
-			return fmt.Errorf("unauthorized host: %s", host)
+			return fmt.Errorf("unauthorized host: %s", h)
 		},
 	}
 }
