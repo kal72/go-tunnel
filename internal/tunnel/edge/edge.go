@@ -54,22 +54,20 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// WebUI Reverse Proxy
 	var webuiProxy http.Handler
 	if env.WebUIDomain != "" {
-		target, _ := url.Parse(fmt.Sprintf("http://localhost:%d", env.WebUIPort))
-		proxy := httputil.NewSingleHostReverseProxy(target)
-		
-		// Ensure Host header is updated for the backend using Rewrite
-		proxy.Rewrite = func(pr *httputil.ProxyRequest) {
-			pr.SetURL(target)
-			pr.Out.Host = target.Host
+		target, _ := url.Parse(fmt.Sprintf("http://0.0.0.0:%d", env.WebUIPort))
+
+		proxy := &httputil.ReverseProxy{
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				pr.SetURL(target)
+				pr.Out.Host = target.Host
+			},
+			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+				log.Printf("[edge] WebUI Proxy error: %v", err)
+				w.WriteHeader(http.StatusBadGateway)
+				fmt.Fprintf(w, "WebUI Proxy Error: %v", err)
+			},
 		}
-		
-		// Catch and log proxy errors
-		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			log.Printf("[edge] WebUI Proxy error: %v", err)
-			w.WriteHeader(http.StatusBadGateway)
-			fmt.Fprintf(w, "WebUI Proxy Error: %v", err)
-		}
-		
+
 		webuiProxy = proxy
 	}
 
