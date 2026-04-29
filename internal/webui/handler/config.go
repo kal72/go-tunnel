@@ -332,21 +332,23 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate prefix
+	// Validate prefix/domain
 	for _, char := range prefix {
-		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-') {
-			http.Error(w, "invalid characters in prefix", http.StatusBadRequest)
+		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-' || char == '.') {
+			http.Error(w, "invalid characters in domain", http.StatusBadRequest)
 			return
 		}
 	}
 
-	base := strings.TrimPrefix(h.wildcardDomain, "*.")
-	if base == "" {
-		http.Error(w, "wildcard domain base not configured in .env", http.StatusInternalServerError)
-		return
+	fullDomain := prefix
+	// If it doesn't contain a dot, treat it as a prefix for the wildcard domain
+	if !strings.Contains(prefix, ".") && h.wildcardDomain != "" {
+		base := strings.TrimPrefix(h.wildcardDomain, "*.")
+		if base != "" {
+			fullDomain = prefix + "." + base
+		}
 	}
 
-	fullDomain := prefix + "." + base
 	if err := h.domainStore.AddDomain(r.Context(), fullDomain); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

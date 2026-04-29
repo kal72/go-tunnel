@@ -27,8 +27,8 @@
   <main class="flex-1 overflow-auto p-6 bg-gray-50/50">
     <div class="max-w-4xl mx-auto">
       <div class="mb-6">
-        <h2 class="text-xl font-bold text-gray-900">Allowed Subdomains</h2>
-        <p class="text-sm text-gray-500 mt-1">Manage subdomains for the configured wildcard base.</p>
+        <h2 class="text-xl font-bold text-gray-900">Allowed Domains</h2>
+        <p class="text-sm text-gray-500 mt-1">Manage subdomains or custom external domains.</p>
         <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-mono">
             <span>Base Domain:</span>
             <span class="font-bold" x-text="wildcardBase || 'Loading...'"></span>
@@ -47,11 +47,11 @@
                 </div>
                 <input type="text" x-model="newPrefix" :disabled="autoGen"
                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400" 
-                  placeholder="Subdomain prefix (e.g. app-staging)">
+                  placeholder="Subdomain or Full Domain (e.g. app-staging or example.com)">
               </div>
               <button @click="addDomain()" 
                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                Add Subdomain
+                Add Domain
               </button>
             </div>
             
@@ -62,7 +62,7 @@
             
             <div x-show="!autoGen" class="p-3 bg-amber-50 border border-amber-100 rounded-lg">
                 <p class="text-xs text-amber-700">
-                    <strong>Preview:</strong> <span class="font-mono" x-text="(newPrefix || 'sub') + '.' + (wildcardBase ? wildcardBase.replace('*.', '') : 'domain.com')"></span>
+                    <strong>Preview:</strong> <span class="font-mono" x-text="newPrefix.includes('.') ? newPrefix : (newPrefix || 'sub') + '.' + (wildcardBase ? wildcardBase.replace('*.', '') : 'domain.com')"></span>
                 </p>
             </div>
         </div>
@@ -81,7 +81,7 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-gray-50 border-b border-gray-200">
-              <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Subdomain</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Domain</th>
               <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
               <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">Actions</th>
             </tr>
@@ -95,13 +95,13 @@
                 <td class="px-6 py-4">
                   <span x-show="domain.includes('.')" 
                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                    Generated
+                    Authorized
                   </span>
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button @click="removeDomain(domain)" 
                     class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 focus:outline-none"
-                    title="Remove Subdomain">
+                    title="Remove Domain">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
@@ -117,7 +117,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
                   </div>
-                  <p class="text-sm text-gray-500">No subdomains registered. Create one above to get started.</p>
+                  <p class="text-sm text-gray-500">No domains registered. Create one above to get started.</p>
                 </div>
               </td>
             </tr>
@@ -177,7 +177,7 @@
             await this.fetchDomains();
           } else {
             const err = await res.text();
-            alert(`Failed to add subdomain: ${err}`);
+            alert(`Failed to add domain: ${err}`);
           }
         } catch (e) {
           alert(`Error: ${e.message}`);
@@ -198,7 +198,7 @@
             await this.fetchDomains();
           } else {
             const err = await res.text();
-            alert(`Failed to remove subdomain: ${err}`);
+            alert(`Failed to remove domain: ${err}`);
           }
         } catch (e) {
           alert(`Error: ${e.message}`);
