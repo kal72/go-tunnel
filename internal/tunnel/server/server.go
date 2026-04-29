@@ -46,6 +46,8 @@ type Server struct {
 
 	dashboardDomain string
 	store           state.Store
+	domainStore     state.Store
+	wildcardDomain  string
 }
 
 type dashItem struct {
@@ -56,7 +58,7 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string, store state.Store) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string, store state.Store, domainStore state.Store, wildcardDomain string) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -65,6 +67,8 @@ func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverD
 		hostRegistry:    hostRegistry,
 		dashboardDomain: canonicalHost(serverDomain),
 		store:           store,
+		domainStore:     domainStore,
+		wildcardDomain:  wildcardDomain,
 	}, nil
 }
 
@@ -255,6 +259,17 @@ func (s *Server) handleClientConn(conn net.Conn) {
 			break
 		}
 
+		// 1.5 Strict wildcard check: if it matches wildcard, it MUST be in domainStore
+		if s.wildcardDomain != "" && s.domainStore != nil {
+			if matchWildcard(hn, s.wildcardDomain) {
+				allowed, err := s.domainStore.IsDomainAllowed(context.Background(), hn)
+				if err != nil || !allowed {
+					conflict = fmt.Sprintf("%s (not in allowed list)", hn)
+					break
+				}
+			}
+		}
+
 		// 2. Check if already active
 		if _, exists := s.hostToSes[hn]; exists {
 			conflict = hn
@@ -438,4 +453,11 @@ func canonicalHost(hostport string) string {
 		}
 	}
 	return strings.ToLower(hostport)
+}
+func matchWildcard(host, pattern string) bool {
+	if !strings.HasPrefix(pattern, "*.") {
+		return host == pattern
+	}
+	base := strings.TrimPrefix(pattern, "*.")
+	return strings.HasSuffix(host, "."+base) && !strings.Contains(strings.TrimSuffix(host, "."+base), ".")
 }

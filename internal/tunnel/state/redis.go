@@ -28,10 +28,10 @@ type Store interface {
 	IsTokenRevoked(ctx context.Context, token string) (bool, error)
 	RevokeToken(ctx context.Context, token string) error
 
-	// Domain management
 	AddDomain(ctx context.Context, domain string) error
 	RemoveDomain(ctx context.Context, domain string) error
 	ListDomains(ctx context.Context) ([]string, error)
+	IsDomainAllowed(ctx context.Context, domain string) (bool, error)
 }
 
 type RedisStore struct {
@@ -134,4 +134,7 @@ func (s *RedisStore) RemoveDomain(ctx context.Context, domain string) error {
 
 func (s *RedisStore) ListDomains(ctx context.Context) ([]string, error) {
 	return s.client.SMembers(ctx, s.domainKey).Result()
+}
+func (s *RedisStore) IsDomainAllowed(ctx context.Context, domain string) (bool, error) {
+	return s.client.SIsMember(ctx, s.domainKey, domain).Result()
 }

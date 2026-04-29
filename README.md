@@ -86,8 +86,7 @@ go run ./cmd/client/main.go
    - **Manual**: Enter `myapp` -> `myapp.example.com` is added to Redis DB 1.
    - **Random**: System generates `a1b2c3d4` -> `a1b2c3d4.example.com` is added to Redis DB 1.
 3. When a Client tries to register a host, the Server checks:
-   - Is the host in the Redis DB 1 allowlist?
-   - Does the host match the `WILDCARD_DOMAIN` pattern?
+   - Is the host explicitly in the Redis DB 1 allowlist? (Required even if it matches the wildcard pattern).
 4. If authorized, the tunnel is established and ACME SSL issuance is permitted.
 
 ## Architecture Overview

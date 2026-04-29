@@ -34,26 +34,20 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	tunnelStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())
 
-	// Load domains from Redis (only if wildcard base is configured)
+	var domainStore state.Store
 	if env.WildcardDomain != "" {
-		domainStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
+		domainStore = state.NewRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
 		domainStore.Ping(context.Background())
 
-		domains, err := domainStore.ListDomains(context.Background())
-		if err == nil {
-			for _, d := range domains {
-				hostRegistry.Authorize(d)
-			}
-			log.Printf("[edge] loaded %d domains from redis", len(domains))
-		} else {
-			log.Printf("[edge] failed to load domains from redis: %v", err)
-		}
+		// Note: We only authorize the wildcard pattern itself in hostRegistry
+		// to allow for SSL issuance/Autocert logic.
+		// Specific subdomain validation for tunnels is handled in server.go via domainStore.
 		hostRegistry.Authorize(env.WildcardDomain)
 	} else {
 		log.Printf("[edge] Domain Management disabled (WILDCARD_DOMAIN is empty)")
 	}
 
-	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore)
+	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore, domainStore, env.WildcardDomain)
 	if err != nil {
 		return nil, fmt.Errorf("init server: %w", err)
 	}
