@@ -10,7 +10,6 @@ import (
 
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -69,12 +68,8 @@ func main() {
 	// Static assets
 	r.Handle("/static/*", http.FileServer(http.FS(assets.EmbeddedFS)))
 
-	port := os.Getenv("WEBUI_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Tunnel Manager running on http://localhost:%s", port)
+	port := fmt.Sprintf("%d", env.WebUIPort)
+	log.Printf("Tunnel Manager running on http://%s:%s", env.WebUIDomain, port)
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 

@@ -11,6 +11,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -26,8 +28,6 @@ type Edge struct {
 func New(env *config.ServerConfig) (*Edge, error) {
 	// Registry
 	hostRegistry := buildHostRegistry(env)
-
-
 
 	// Stores
 	tunnelStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
@@ -51,11 +51,29 @@ func New(env *config.ServerConfig) (*Edge, error) {
 		return nil, fmt.Errorf("init server: %w", err)
 	}
 
+	// WebUI Reverse Proxy
+	var webuiProxy http.Handler
+	if env.WebUIDomain != "" {
+		target, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		webuiProxy = proxy
+	}
+
+	// Route based on Host
+	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := strings.Split(r.Host, ":")[0]
+		if env.WebUIDomain != "" && host == env.WebUIDomain {
+			webuiProxy.ServeHTTP(w, r)
+			return
+		}
+		srv.ServeHTTP(w, r)
+	})
+
 	// Public HTTPS
-	httpsSrv := buildHTTPSServer(env, m, srv)
+	httpsSrv := buildHTTPSServer(env, m, mainHandler)
 
 	// ACME HTTP-01
-	acmeSrv := buildACMEServer(m)
+	acmeSrv := buildACMEServer(m, env.ACMEPort)
 
 	// Tunnel TLS listener
 	tunnelTLS := buildTunnelTLS(m, env.TunnelHost)
@@ -79,7 +97,7 @@ func (e *Edge) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 
 	go func() {
-		log.Printf("[edge] acme-http listening on :80")
+		log.Printf("[edge] acme-http listening on :%d", e.cfg.ACMEPort)
 		if err := e.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Println("[acme-http]", err)
 		}
@@ -124,7 +142,7 @@ func (e *Edge) shutdown() error {
 
 func buildHostRegistry(env *config.ServerConfig) *registry.HostRegistry {
 	hr := registry.NewHostRegistry()
-	for _, d := range []string{env.GatewayHost, env.TunnelHost} {
+	for _, d := range []string{env.GatewayHost, env.TunnelHost, env.WebUIDomain} {
 		if d = strings.TrimSpace(d); d != "" {
 			hr.Authorize(d)
 		}
@@ -152,7 +170,7 @@ func buildHTTPSServer(env *config.ServerConfig, m interface{ TLSConfig() *tls.Co
 
 func buildACMEServer(m interface {
 	HTTPHandler(http.Handler) http.Handler
-}) *http.Server {
+}, port int) *http.Server {
 	acmeHandler := m.HTTPHandler(nil)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
@@ -163,7 +181,7 @@ func buildACMEServer(m interface {
 	})
 
 	return &http.Server{
-		Addr:         "0.0.0.0:80",
+		Addr:         fmt.Sprintf("0.0.0.0:%d", port),
 		Handler:      handler,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,

@@ -24,9 +24,13 @@ type ServerConfig struct {
 	TunnelHost string
 	TunnelPort int
 
+	WebUIDomain string
+	WebUIPort   int
+
 	JWTSecret string
 	ACMECache string
 	ACMEEnv   string
+	ACMEPort  int
 
 	RedisAddr string
 	RedisPass string
@@ -69,9 +73,12 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		GatewayPort:    parsePort(get("GATEWAY_PORT", "443"), 443),
 		TunnelHost:     get("TUNNEL_HOST", ""),
 		TunnelPort:     parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		WebUIDomain:    get("WEBUI_DOMAIN", "localhost"),
+		WebUIPort:      parsePort(get("WEBUI_PORT", "8080"), 8080),
 		JWTSecret:      get("JWT_SECRET", "defaultjwtsecret"),
 		ACMECache:      get("ACME_CACHE", "./cert-cache"),
 		ACMEEnv:        get("ACME_ENV", "staging"), // production or staging
+		ACMEPort:       parsePort(get("ACME_PORT", "80"), 80),
 		RedisAddr:      get("REDIS_ADDR", "localhost:6379"),
 		RedisPass:      get("REDIS_PASS", ""),
 		RedisDB:        parsePort(get("REDIS_DB", "0"), 0),
