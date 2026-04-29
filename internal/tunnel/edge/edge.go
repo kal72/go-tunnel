@@ -54,7 +54,7 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// WebUI Reverse Proxy
 	var webuiProxy http.Handler
 	if env.WebUIDomain != "" {
-		target, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
+		target, _ := url.Parse(fmt.Sprintf("http://localhost:%d", env.WebUIPort))
 		proxy := httputil.NewSingleHostReverseProxy(target)
 		
 		// Ensure Host header is updated for the backend using Rewrite
@@ -78,7 +78,9 @@ func New(env *config.ServerConfig) (*Edge, error) {
 		host := strings.ToLower(strings.Split(r.Host, ":")[0])
 		webuiDomain := strings.ToLower(strings.TrimSpace(env.WebUIDomain))
 
-		if webuiDomain != "" && host == webuiDomain {
+		isWebUI := (webuiDomain != "" && host == webuiDomain) || host == "localhost" || host == "127.0.0.1"
+
+		if isWebUI {
 			if webuiProxy == nil {
 				log.Printf("[edge] WebUI Domain matched (%s) but proxy is nil", host)
 				http.Error(w, "WebUI Proxy not initialized", http.StatusInternalServerError)
