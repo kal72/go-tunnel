@@ -63,6 +63,13 @@ func New(env *config.ServerConfig) (*Edge, error) {
 			pr.Out.Host = target.Host
 		}
 		
+		// Catch and log proxy errors
+		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			log.Printf("[edge] WebUI Proxy error: %v", err)
+			w.WriteHeader(http.StatusBadGateway)
+			fmt.Fprintf(w, "WebUI Proxy Error: %v", err)
+		}
+		
 		webuiProxy = proxy
 	}
 
@@ -77,6 +84,7 @@ func New(env *config.ServerConfig) (*Edge, error) {
 				http.Error(w, "WebUI Proxy not initialized", http.StatusInternalServerError)
 				return
 			}
+			log.Printf("[edge] Proxying request for %s to WebUI", host)
 			webuiProxy.ServeHTTP(w, r)
 			return
 		}
