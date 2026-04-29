@@ -69,9 +69,14 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// Route based on Host
 	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := strings.ToLower(strings.Split(r.Host, ":")[0])
-		webuiDomain := strings.ToLower(env.WebUIDomain)
-		
+		webuiDomain := strings.ToLower(strings.TrimSpace(env.WebUIDomain))
+
 		if webuiDomain != "" && host == webuiDomain {
+			if webuiProxy == nil {
+				log.Printf("[edge] WebUI Domain matched (%s) but proxy is nil", host)
+				http.Error(w, "WebUI Proxy not initialized", http.StatusInternalServerError)
+				return
+			}
 			webuiProxy.ServeHTTP(w, r)
 			return
 		}
