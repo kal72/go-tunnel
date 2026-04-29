@@ -27,8 +27,7 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// Registry
 	hostRegistry := buildHostRegistry(env)
 
-	// Autocert
-	m := NewAutocertManager(env, hostRegistry)
+
 
 	// Stores
 	tunnelStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
@@ -46,6 +45,9 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	} else {
 		log.Printf("[edge] Domain Management disabled (WILDCARD_DOMAIN is empty)")
 	}
+
+	// Autocert
+	m := NewAutocertManager(env, hostRegistry, domainStore, env.WildcardDomain)
 
 	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore, domainStore, env.WildcardDomain)
 	if err != nil {
