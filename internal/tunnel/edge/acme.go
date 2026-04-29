@@ -23,9 +23,9 @@ func NewAutocertManager(env *config.ServerConfig, hostRegistry *registry.HostReg
 		Client: acmeClient,
 		HostPolicy: func(ctx context.Context, host string) error {
 			h := strings.ToLower(strings.TrimSpace(host))
-			
-			// 1. System domains (Gateway & Tunnel)
-			if h == strings.ToLower(env.GatewayHost) || h == strings.ToLower(env.TunnelHost) {
+
+			// 1. System domains (Gateway, Tunnel & WebUI)
+			if h == strings.ToLower(env.GatewayHost) || h == strings.ToLower(env.TunnelHost) || h == strings.ToLower(env.WebUIDomain) {
 				return nil
 			}
 
