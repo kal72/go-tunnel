@@ -1,0 +1,105 @@
+{{define "content"}}
+<div class="h-screen flex justify-center bg-[#1e293b] selection:bg-blue-500/30 overflow-y-auto relative font-sans py-8 md:py-12">
+  <!-- Soft background glows -->
+  <div class="fixed top-[-5%] left-[-5%] w-[40%] h-[40%] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+  <div class="fixed bottom-[-5%] right-[-5%] w-[40%] h-[40%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+  <div class="max-w-4xl w-full mx-4 h-fit bg-slate-900/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/5 z-10 p-8 md:p-12 relative overflow-hidden">
+    <!-- Subtle Grid -->
+    <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 24px 24px;"></div>
+    
+    <div class="relative z-10">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3 mb-8 pb-6 border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <h2 class="text-xl md:text-2xl font-bold text-white tracking-tight">Panduan Penggunaan Go-Tunnel</h2>
+        </div>
+        
+        <div class="sm:ml-auto flex gap-3">
+          <a href="javascript:history.back()" class="text-xs font-medium text-slate-400 hover:text-white px-3 py-1.5 transition-colors bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back
+          </a>
+        </div>
+      </div>
+      
+      <p class="mb-10 text-sm md:text-base leading-relaxed text-slate-400">Dokumentasi ini menjelaskan langkah-langkah untuk menghubungkan layanan lokal Anda ke internet menggunakan <strong class="text-white font-medium">go-tunnel</strong>, mulai dari konfigurasi di sisi server (Web UI) hingga menjalankan client.</p>
+
+      <div class="space-y-12">
+        <!-- Section 1 -->
+        <div>
+          <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+            <span class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-black shadow-inner border border-blue-500/20 shrink-0">1</span>
+            Persiapan di Web UI (Server)
+          </h3>
+          <p class="text-sm text-slate-400 mb-5">Sebelum client dapat terhubung, Anda harus menyiapkan akses dan mendaftarkan subdomain di server melalui Web UI.</p>
+          <ul class="space-y-4 text-sm text-slate-400 ml-1">
+            <li class="flex gap-3 items-start">
+              <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span><strong class="text-slate-200">Daftarkan Subdomain</strong>: Gunakan fitur <em>Domain Manager</em> untuk mendaftarkan subdomain secara manual, atau biarkan sistem menghasilkan subdomain secara otomatis (auto-generate).</span>
+            </li>
+            <li class="flex gap-3 items-start">
+              <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span><strong class="text-slate-200">Generate Auth Token</strong>: Di menu <em>Manage Configs</em>, buat file config baru. Masukkan <code class="bg-white/5 border border-white/10 text-blue-300 px-1.5 py-0.5 rounded text-[11px] font-mono">client_id</code>, dan klik tombol <em>generate token</em> (ikon <i>refresh</i> atau kunci).</span>
+            </li>
+            <li class="flex gap-3 items-start">
+              <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span><strong class="text-slate-200">Simpan Konfigurasi</strong>: Download file konfigurasi <code class="bg-white/5 border border-white/10 text-blue-300 px-1.5 py-0.5 rounded text-[11px] font-mono">.yaml</code> yang dihasilkan untuk digunakan di sisi client.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Section 2 -->
+        <div>
+          <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+            <span class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-black shadow-inner border border-indigo-500/20 shrink-0">2</span>
+            Membuat File Konfigurasi (Client)
+          </h3>
+          <p class="text-sm text-slate-400 mb-5">Jika Anda lebih memilih untuk membuat file <code class="bg-white/5 border border-white/10 text-indigo-300 px-1.5 py-0.5 rounded text-[11px] font-mono">config.yaml</code> secara manual di sisi client Anda, silakan buat file tersebut dan sesuaikan isinya sebagai berikut:</p>
+          <div class="bg-[#0f172a] border border-white/5 rounded-xl p-5 md:p-6 font-mono text-[11px] md:text-xs overflow-x-auto text-slate-300 shadow-inner">
+<pre><code><span class="text-slate-500"># Koneksi ke listener tunnel di server</span>
+<span class="text-blue-400">tunnel_addr:</span> <span class="text-emerald-400">"{{.TunnelAddr}}"</span>
+<span class="text-blue-400">skip_tls_verify:</span> <span class="text-amber-400">false</span>
+
+<span class="text-slate-500"># Autentikasi dari Web UI</span>
+<span class="text-blue-400">client_id:</span> <span class="text-emerald-400">"office-laptop"</span>
+<span class="text-blue-400">auth_token:</span> <span class="text-emerald-400">"token-anda-disini"</span>
+
+<span class="text-slate-500"># Mapping host -> target layanan lokal</span>
+<span class="text-blue-400">tunnels:</span>
+  <span class="text-slate-500"># Contoh untuk mengekspos layanan HTTP (Web)</span>
+  - <span class="text-blue-400">hostname:</span> <span class="text-emerald-400">"app.domainanda.com"</span>
+    <span class="text-blue-400">target:</span> <span class="text-emerald-400">"127.0.0.1:8080"</span>
+    <span class="text-blue-400">mode:</span> <span class="text-emerald-400">"http"</span>
+    
+  <span class="text-slate-500"># Contoh untuk mengekspos layanan raw TCP (misal: SSH/Database)</span>
+  - <span class="text-blue-400">hostname:</span> <span class="text-emerald-400">"ssh.domainanda.com"</span>
+    <span class="text-blue-400">target:</span> <span class="text-emerald-400">"127.0.0.1:22"</span>
+    <span class="text-blue-400">mode:</span> <span class="text-emerald-400">"tcp"</span></code></pre>
+          </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div>
+          <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+            <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-black shadow-inner border border-emerald-500/20 shrink-0">3</span>
+            Menjalankan Client
+          </h3>
+          <p class="text-sm text-slate-400 mb-5">Langkah terakhir adalah menjalankan aplikasi client. Buka terminal Anda dan jalankan perintah berikut di dalam direktori tempat file konfigurasi Anda berada:</p>
+          <div class="bg-[#0f172a] border border-emerald-500/20 rounded-xl p-4 md:p-5 font-mono text-[11px] md:text-xs overflow-x-auto text-emerald-400 shadow-inner mb-5 flex items-center gap-3">
+            <span class="text-slate-600 select-none">$</span>
+            <code>./client-binary -config config.yaml</code>
+          </div>
+          <p class="text-sm text-slate-400 bg-white/5 border border-white/5 p-4 rounded-xl leading-relaxed">
+            Client akan otomatis membentuk koneksi yang aman ke server. Jika autentikasi berhasil, layanan lokal Anda dapat langsung diakses secara publik melalui <strong class="text-white">URL / Hostname</strong> yang telah Anda tentukan.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

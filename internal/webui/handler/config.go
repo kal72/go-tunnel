@@ -24,6 +24,7 @@ type Handler struct {
 	dashTmpl       *template.Template
 	confTmpl       *template.Template
 	domainTmpl     *template.Template
+	docsTmpl       *template.Template
 	store          state.Store
 	domainStore    state.Store
 	masterSecret   string
@@ -52,10 +53,16 @@ func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret s
 		"templates/domains.html",
 	))
 
+	docsTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/docs.html",
+	))
+
 	return &Handler{
 		dashTmpl:       dashTmpl,
 		confTmpl:       confTmpl,
 		domainTmpl:     domainTmpl,
+		docsTmpl:       docsTmpl,
 		store:          store,
 		domainStore:    domainStore,
 		masterSecret:   masterSecret,
@@ -103,6 +110,17 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 		"DomainEnabled": true,
 	}
 	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Docs renders the documentation page.
+func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
+	data := map[string]any{
+		"TunnelAddr":    h.tunnelAddr,
+		"DomainEnabled": h.wildcardDomain != "",
+	}
+	if err := h.docsTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

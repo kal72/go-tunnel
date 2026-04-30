@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"gotunnel/assets"
 	"gotunnel/internal/tunnel/config"
@@ -20,7 +21,15 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	env, _ := config.LoadServerConfig(".env")
+	var configPath string
+	flag.StringVar(&configPath, "config", ".env", "Path to the .env configuration file")
+	flag.StringVar(&configPath, "c", ".env", "Path to the .env configuration file (shorthand)")
+	flag.Parse()
+
+	env, err := config.LoadServerConfig(configPath)
+	if err != nil {
+		log.Printf("Warning: failed to load config from %s: %v", configPath, err)
+	}
 
 	redisStore := state.NewRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	redisStore.Ping(context.Background())
@@ -40,6 +49,7 @@ func main() {
 	r.Get("/login", authH.LoginPage)
 	r.Post("/login", authH.Login)
 	r.Get("/logout", authH.Logout)
+	r.Get("/docs", h.Docs)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {

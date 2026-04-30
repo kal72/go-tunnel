@@ -10,7 +10,7 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 - **Domain Management**: Centrally manage authorized subdomains under a base wildcard domain (e.g., `*.apps.com`) via Web UI.
 - **Dynamic Configuration**: Add, edit, and delete agent configurations directly from the Web UI.
 - **Wildcard Subdomain Support**: Flexible routing using manual or auto-generated random subdomains stored in Redis.
-- **Supports HTTP & TCP**: Tunneling for web applications and raw TCP protocols (SSH, DB, etc.).
+- **Supports HTTP, HTTPS & TCP**: Tunneling for web applications and raw TCP protocols (SSH, DB, etc.).
 
 ## Tech Stack
 - **Language**: Go 1.25
@@ -43,14 +43,20 @@ Copy `.env.example` and adjust the variables:
 | Variable | Description |
 | --- | --- |
 | `GATEWAY_HOST` | Domain for the public HTTPS gateway. |
+| `GATEWAY_PORT` | Port for the public HTTPS gateway (default `443`). |
+| `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
+| `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `localhost`). |
 | `TUNNEL_HOST` | Domain for agent TLS connections (SNI). |
+| `TUNNEL_PORT` | Port for agent TLS connections (default `9443`). |
+| `JWT_SECRET` | Master secret used to generate client tokens and JWTs. |
+| `ACME_CACHE` | Directory to store Let's Encrypt certificates (default `./cert-cache`). |
+| `ACME_ENV` | Let's Encrypt environment: `production` or `staging`. |
+| `ACME_PORT` | Port used for the ACME HTTP-01 challenge (default `80`). |
 | `REDIS_ADDR` | Redis server address (default `localhost:6379`). |
 | `REDIS_PASS` | Redis password (optional). |
 | `REDIS_DB` | Redis database for sessions/auth (default `0`). |
 | `DOMAIN_REDIS_DB` | Redis database for allowed subdomains (default `1`). |
 | `WILDCARD_DOMAIN` | The base wildcard pattern (e.g., `*.yourdomain.com`). |
-| `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
-| `JWT_SECRET` | Master secret used to generate client tokens and JWTs. |
 
 ## How to Run
 
@@ -71,7 +77,11 @@ docker run -p 80:80 -p 443:443 -p 8080:8080 -p 9443:9443 --env-file .env gotunne
 ### 3. Client/Agent
 Download the configuration from the Web UI or use a local file.
 ```sh
+# Run with default config (config.yaml)
 go run ./cmd/client/main.go
+
+# Or run with a custom config file path
+go run ./cmd/client/main.go --config /path/to/my-config.yaml
 ```
 
 ## Token Revocation Flow
