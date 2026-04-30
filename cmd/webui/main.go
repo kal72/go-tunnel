@@ -42,7 +42,7 @@ func main() {
 		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelHost, env.TunnelPort)
 	}
 
-	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, env.JWTSecret, tunnelAddr, env.WildcardDomain)
+	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost)
 	authH := handler.NewAuth(assets.EmbeddedFS, redisStore)
 
 	// Auth routes

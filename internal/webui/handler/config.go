@@ -30,10 +30,11 @@ type Handler struct {
 	masterSecret   string
 	tunnelAddr     string
 	wildcardDomain string
+	gatewayHost    string
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret string, tunnelAddr string, wildcardDomain string) *Handler {
+func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -68,6 +69,7 @@ func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret s
 		masterSecret:   masterSecret,
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
+		gatewayHost:    gatewayHost,
 	}
 }
 
@@ -91,8 +93,10 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"Tunnels":       tunnels,
-		"DomainEnabled": h.wildcardDomain != "",
+		"Tunnels":        tunnels,
+		"DomainEnabled":  h.wildcardDomain != "",
+		"TunnelAddr":     h.tunnelAddr,
+		"WildcardDomain": h.wildcardDomain,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -107,7 +111,9 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := map[string]any{
-		"DomainEnabled": true,
+		"DomainEnabled":  true,
+		"WildcardDomain": h.wildcardDomain,
+		"GatewayHost":    h.gatewayHost,
 	}
 	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
