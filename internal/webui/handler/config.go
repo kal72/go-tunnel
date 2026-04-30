@@ -348,7 +348,7 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 
 	prefix := strings.TrimSpace(strings.ToLower(payload.Prefix))
 	if payload.Random {
-		prefix = generateRandomString(8)
+		prefix = generateRandomString(16)
 	}
 
 	if prefix == "" {
