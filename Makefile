@@ -35,6 +35,13 @@ build:
 	$(GOBUILD) -o $(WEBUI_BINARY) ./cmd/webui/main.go
 	$(GOBUILD) -o $(CLIENT_BINARY) ./cmd/client/main.go
 
+build-clients:
+	@echo "Building cross-platform clients to ./downloads..."
+	@mkdir -p ./downloads
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=https://tun.yourdomain.com" -o ./downloads/gotunnel-darwin-amd64 ./cmd/client/main.go
+	GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=https://tun.yourdomain.com" -o ./downloads/gotunnel-linux-amd64 ./cmd/client/main.go
+	GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=https://tun.yourdomain.com" -o ./downloads/gotunnel-windows-amd64.exe ./cmd/client/main.go
+
 
 test:
 	@echo "Running unit tests..."

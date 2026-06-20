@@ -115,6 +115,12 @@
           </a>
           {{end}}
 
+          <!-- Download Client -->
+          <a href="/downloads" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-orange-700 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors group relative" title="Download Client">
+            <svg class="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span x-show="$store.app.sidebarOpen" x-transition class="whitespace-nowrap">Download Client</span>
+          </a>
+
           <!-- Manage Users -->
           {{if eq .UserRole 1}}
           <a href="/users" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors group relative" title="System Users">

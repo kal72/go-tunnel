@@ -70,6 +70,11 @@ func main() {
 		r.Get("/", h.Index)
 		r.Get("/configs", h.Configs)
 		r.Get("/domains", h.Domains)
+		r.Get("/downloads", h.Downloads)
+
+		// Serve static binaries inside the protected group
+		fs := http.FileServer(http.Dir("./downloads"))
+		r.Handle("/dl/*", http.StripPrefix("/dl/", fs))
 
 		// API
 		r.Get("/api/configs", h.ListConfigs)

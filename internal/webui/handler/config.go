@@ -19,6 +19,7 @@ type Handler struct {
 	confTmpl       *template.Template
 	domainTmpl     *template.Template
 	docsTmpl       *template.Template
+	downTmpl       *template.Template
 	store          state.Store
 	domainStore    state.Store
 	configRepo     state.ConfigRepository
@@ -54,11 +55,17 @@ func New(fs embed.FS, store state.Store, domainStore state.Store, configRepo sta
 		"templates/docs.html",
 	))
 
+	downTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/downloads.html",
+	))
+
 	return &Handler{
 		dashTmpl:       dashTmpl,
 		confTmpl:       confTmpl,
 		domainTmpl:     domainTmpl,
 		docsTmpl:       docsTmpl,
+		downTmpl:       downTmpl,
 		store:          store,
 		domainStore:    domainStore,
 		configRepo:     configRepo,
@@ -101,6 +108,21 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Downloads renders the client downloads page.
+func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+
+	data := map[string]any{
+		"DomainEnabled":  h.wildcardDomain != "",
+		"UserRole":       role,
+		"UserName":       username,
+	}
+	if err := h.downTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
