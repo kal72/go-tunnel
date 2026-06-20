@@ -366,7 +366,7 @@ func (h *Handler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
 
 // ClientGetConfig returns the ClientConfig payload for the CLI.
 func (h *Handler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+	name := chi.URLParam(r, "name")
 	if name == "" {
 		http.Error(w, "name required", http.StatusBadRequest)
 		return

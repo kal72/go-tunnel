@@ -83,8 +83,8 @@ func main() {
 		r.Put("/api/configs/{id}", h.UpdateConfig)
 		r.Delete("/api/configs/{id}", h.DeleteConfig)
 
-		r.Get("/api/client/config", h.ClientGetConfig)
-		r.Get("/api/client/configs", h.ClientGetConfigs)
+		r.Get("/api/cli/config/{name}", h.ClientGetConfig)
+		r.Get("/api/cli/configs", h.ClientGetConfigs)
 
 		r.Get("/api/domains", h.ListDomains)
 		r.Post("/api/domains", h.AddDomain)
