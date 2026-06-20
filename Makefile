@@ -1,4 +1,4 @@
-.PHONY: all build test generate run-server run-webui podman-build podman-run podman-stop clean
+.PHONY: all build test generate run-server run-webui podman-build podman-run podman-stop clean migrate-up migrate-down
 
 # Go parameters
 GOCMD=go
@@ -12,6 +12,20 @@ CLIENT_BINARY=./bin/gotunnel-client
 # Podman parameters
 IMAGE_NAME=gotunnel
 CONTAINER_NAME=tunnel
+
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
+DB_HOST ?= localhost
+DB_PORT ?= 5432
+DB_USER ?= postgres
+DB_PASS ?= postgres
+DB_NAME ?= gotunnel
+
+# DB parameters
+DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
 
 all: generate build test
 
@@ -60,4 +74,12 @@ podman-stop:
 
 clean:
 	@echo "Cleaning up binaries..."
-	rm -f $(SERVER_BINARY) $(WEBUI_BINARY)
+	rm -f $(SERVER_BINARY) $(WEBUI_BINARY) $(CLIENT_BINARY)
+
+migrate-up:
+	@echo "Running migrations up..."
+	migrate -path db/migrations -database $(DB_URL) up
+
+migrate-down:
+	@echo "Running migrations down..."
+	migrate -path db/migrations -database $(DB_URL) down -all

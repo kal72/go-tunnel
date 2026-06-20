@@ -25,7 +25,7 @@ type Edge struct {
 	store    state.Store
 }
 
-func New(env *config.ServerConfig) (*Edge, error) {
+func New(env *config.ServerConfig, userRepo state.UserRepository) (*Edge, error) {
 	// Registry
 	hostRegistry := buildHostRegistry(env)
 
@@ -46,7 +46,7 @@ func New(env *config.ServerConfig) (*Edge, error) {
 	// Autocert
 	m := NewAutocertManager(env, hostRegistry, domainStore, env.WildcardDomain)
 
-	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore, domainStore, env.WildcardDomain)
+	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore, domainStore, env.WildcardDomain, userRepo)
 	if err != nil {
 		return nil, fmt.Errorf("init server: %w", err)
 	}

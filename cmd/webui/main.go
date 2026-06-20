@@ -42,12 +42,22 @@ func main() {
 		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelHost, env.TunnelPort)
 	}
 
+	db, err := state.InitDB(env)
+	if err != nil {
+		log.Fatal("init db:", err)
+	}
+	defer db.Close()
+
+	userRepo := state.NewUserRepository(db)
+
 	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost)
-	authH := handler.NewAuth(assets.EmbeddedFS, redisStore)
+	authH := handler.NewAuth(assets.EmbeddedFS, redisStore, userRepo)
+	userH := handler.NewUserHandler(assets.EmbeddedFS, userRepo)
 
 	// Auth routes
 	r.Get("/login", authH.LoginPage)
 	r.Post("/login", authH.Login)
+	r.Post("/api/cli/login", authH.APILogin)
 	r.Get("/logout", authH.Logout)
 	r.Get("/docs", h.Docs)
 
@@ -73,6 +83,17 @@ func main() {
 		r.Get("/api/domains", h.ListDomains)
 		r.Post("/api/domains", h.AddDomain)
 		r.Delete("/api/domains/{domain}", h.RemoveDomain)
+
+		// Admin only routes
+		r.Group(func(r chi.Router) {
+			r.Use(handler.AdminMiddleware)
+			r.Get("/users", userH.UsersPage)
+			r.Get("/api/users", userH.ListUsers)
+			r.Post("/api/users", userH.CreateUser)
+			r.Put("/api/users/{id}/status", userH.UpdateStatus)
+			r.Put("/api/users/{id}/password", userH.UpdatePassword)
+			r.Delete("/api/users/{id}", userH.DeleteUser)
+		})
 	})
 
 	// Static assets

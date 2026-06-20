@@ -38,6 +38,24 @@ func main() {
 		os.Exit(0)
 	}
 
+	if len(flag.Args()) > 0 && flag.Args()[0] == "login" {
+		loginCmd := flag.NewFlagSet("login", flag.ExitOnError)
+		server := loginCmd.String("server", "http://localhost:8080", "WebUI server URL")
+		username := loginCmd.String("username", "", "Username")
+		password := loginCmd.String("password", "", "Password")
+		loginCmd.Parse(flag.Args()[1:])
+
+		if *username == "" || *password == "" {
+			fmt.Println("Error: --username and --password are required")
+			os.Exit(1)
+		}
+
+		if err := client.Login(*server, *username, *password); err != nil {
+			log.Fatalf("Login failed: %v", err)
+		}
+		os.Exit(0)
+	}
+
 	log.Printf("Starting client using config: %s\n", *configPath)
 
 	cfg, err := config.LoadClientConfig(*configPath)

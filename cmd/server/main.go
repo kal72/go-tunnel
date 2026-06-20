@@ -4,6 +4,7 @@ import (
 	"context"
 	"gotunnel/internal/tunnel/config"
 	"gotunnel/internal/tunnel/edge"
+	"gotunnel/internal/tunnel/state"
 	"log"
 	"os"
 	"os/signal"
@@ -23,7 +24,16 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	e, err := edge.New(env)
+	db, err := state.InitDB(env)
+	if err != nil {
+		log.Fatal("init db:", err)
+	}
+	defer db.Close()
+
+	userRepo := state.NewUserRepository(db)
+
+
+	e, err := edge.New(env, userRepo)
 	if err != nil {
 		log.Fatal("init edge:", err)
 	}

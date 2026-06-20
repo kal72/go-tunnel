@@ -84,11 +84,16 @@ func (c *Client) runOnce() error {
 		return err
 	}
 
+	token, err := ReadToken()
+	if err != nil {
+		return fmt.Errorf("auth error: %w", err)
+	}
+
 	// REGISTER
 	if err := protocol.SendJSON(ctrl, protocol.RegisterMessage{
 		Type:      protocol.MsgTypeRegister,
 		ClientID:  c.cfg.ClientID,
-		AuthToken: c.cfg.AuthToken,
+		AuthToken: token,
 		Routes:    c.routes,
 		Modes:     c.modes,
 	}); err != nil {

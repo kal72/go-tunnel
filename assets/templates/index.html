@@ -4,10 +4,10 @@
   <!-- ═══════════════════════════════════════════════
        SIDEBAR — config file list
   ════════════════════════════════════════════════ -->
-  <aside class="w-52 bg-white border-r border-gray-200 flex flex-col shrink-0">
-    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+  <aside class="w-52 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col shrink-0 transition-colors">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
       <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Client Configs</p>
-      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 p-0.5" title="Add new config">
+      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-0.5" title="Add new config">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -18,8 +18,8 @@
       <template x-for="name in configs" :key="name">
         <li class="group relative">
           <button @click="selectConfig(name)" :class="current === name
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'text-gray-500 hover:bg-gray-100 border-transparent'"
+              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 border-transparent'"
             class="w-full text-left px-3 py-2 rounded-md text-xs font-mono border transition-colors duration-100 flex items-center gap-2 pr-8">
             <span :class="current === name ? 'bg-blue-500' : 'bg-green-500'"
               class="w-1.5 h-1.5 rounded-full shrink-0"></span>
@@ -37,9 +37,9 @@
         </li>
       </template>
     </ul>
-    <div class="p-3 border-t border-gray-100">
-      <p class="text-xs text-gray-400 font-mono leading-relaxed">
-        Auto-backup: <span class="text-gray-500">.yaml.bak</span>
+    <div class="p-3 border-t border-gray-100 dark:border-slate-700">
+      <p class="text-xs text-gray-400 dark:text-gray-500 font-mono leading-relaxed">
+        Auto-backup: <span class="text-gray-500 dark:text-gray-400">.yaml.bak</span>
       </p>
     </div>
   </aside>
@@ -50,32 +50,17 @@
   <main class="flex-1 flex flex-col overflow-hidden">
 
     <!-- Toolbar -->
-    <div class="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+    <div class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-5 py-3 flex items-center justify-between shrink-0 transition-colors">
       <div class="flex items-center gap-3">
-        <a href="/"
-          class="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors">
-          Dashboard
-        </a>
-        {{if .DomainEnabled}}
-        <a href="/domains"
-          class="text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 transition-colors">
-          Manage Domains
-        </a>
-        {{end}}
-        <span class="text-xs font-mono text-gray-400" x-text="current ? 'configs/' + current + '.yaml' : '—'"></span>
-        <span x-show="saved" x-transition class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">saved</span>
-        <span x-show="!current" class="text-xs text-gray-400 italic">select a file</span>
+
+        <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="current ? 'configs/' + current + '.yaml' : '—'"></span>
+        <span x-show="saved" x-transition class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">saved</span>
+        <span x-show="!current" class="text-xs text-gray-400 dark:text-gray-500 italic">select a file</span>
       </div>
       <div class="flex items-center gap-2">
-        <a href="/docs" class="text-xs font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 transition-colors">
-          Documentation
-        </a>
-        <a href="/logout"
-          class="text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors">
-          Logout
-        </a>
+
         <button @click="downloadConfig()" :disabled="!current"
-          :class="current ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+          :class="current ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
           class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium flex items-center gap-1.5">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -86,7 +71,7 @@
           Download
         </button>
         <button @click="saveConfig()" :disabled="!current"
-          :class="current ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+          :class="current ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
           class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium">
           Save to YAML
         </button>
@@ -101,32 +86,32 @@
 
         <!-- Empty state -->
         <div x-show="!current" class="flex items-center justify-center h-full">
-          <p class="text-sm text-gray-400">Select a config file from the sidebar.</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500">Select a config file from the sidebar.</p>
         </div>
 
         <!-- ── Section: Tunnel Connection ── -->
         <div x-show="current">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100 dark:border-slate-700">
             Tunnel connection
           </p>
-          <div class="space-y-0 divide-y divide-gray-100">
+          <div class="space-y-0 divide-y divide-gray-100 dark:divide-slate-700">
 
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">tunnel_addr</label>
+              <label class="text-xs font-mono text-gray-500 dark:text-gray-400">tunnel_addr</label>
               <input type="text" x-model="form.tunnel_addr" disabled
-                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 text-gray-500 cursor-not-allowed">
+                class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-colors">
             </div>
 
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">skip_tls_verify</label>
+              <label class="text-xs font-mono text-gray-500 dark:text-gray-400">skip_tls_verify</label>
               <div class="flex items-center gap-3">
                 <button @click="form.skip_tls_verify = !form.skip_tls_verify; updatePreview()"
-                  :class="form.skip_tls_verify ? 'bg-blue-500 border-blue-500' : 'bg-gray-200 border-gray-300'"
+                  :class="form.skip_tls_verify ? 'bg-blue-500 border-blue-500' : 'bg-gray-200 dark:bg-slate-700 border-gray-300 dark:border-slate-600'"
                   class="relative w-9 h-5 rounded-full border transition-colors duration-200 focus:outline-none shrink-0">
                   <span :class="form.skip_tls_verify ? 'translate-x-4' : 'translate-x-0.5'"
                     class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 block"></span>
                 </button>
-                <span class="text-xs font-mono text-gray-500" x-text="form.skip_tls_verify ? 'true' : 'false'"></span>
+                <span class="text-xs font-mono text-gray-500 dark:text-gray-400" x-text="form.skip_tls_verify ? 'true' : 'false'"></span>
               </div>
             </div>
 
@@ -135,25 +120,25 @@
 
         <!-- ── Section: Authentication ── -->
         <div x-show="current">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100 dark:border-slate-700">
             Authentication
           </p>
-          <div class="space-y-0 divide-y divide-gray-100">
+          <div class="space-y-0 divide-y divide-gray-100 dark:divide-slate-700">
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">client_id</label>
+              <label class="text-xs font-mono text-gray-500 dark:text-gray-400">client_id</label>
               <input type="text" x-model="form.client_id" disabled
-                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 text-gray-500 cursor-not-allowed">
+                class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-colors">
             </div>
 
 
             <!-- auth_token — masked input -->
             <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">auth_token</label>
+              <label class="text-xs font-mono text-gray-500 dark:text-gray-400">auth_token</label>
               <div class="flex items-center gap-2">
                 <div class="relative flex-1">
                   <input :type="showSecret ? 'text' : 'password'" x-model="form.auth_token" @input="updatePreview()"
                     autocomplete="new-password" placeholder="authtoken"
-                    class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 pr-9 focus:outline-none focus:border-blue-400 bg-white">
+                    class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-1.5 pr-9 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                   <!-- eye toggle -->
                   <button @click="showSecret = !showSecret" type="button"
                     class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -173,26 +158,26 @@
                   </button>
                 </div>
                 <button @click="copyToken()" title="Copy token to clipboard" :disabled="!form.auth_token"
-                  class="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors border border-gray-200 disabled:opacity-50">
+                  class="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 rounded transition-colors border border-gray-200 dark:border-slate-600 disabled:opacity-50">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
                 </button>
                 <button @click="generateToken()" title="Generate token from client_id"
-                  class="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors border border-blue-200">
+                  class="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded transition-colors border border-blue-200 dark:border-blue-500/30">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
                   </svg>
                 </button>
                 <button @click="revokeToken()" title="Revoke this token from Redis" :disabled="!form.auth_token"
-                  class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                  class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors border border-red-200 dark:border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
                   </svg>
                 </button>
                 <span
-                  class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded shrink-0">sensitive</span>
+                  class="text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded shrink-0 transition-colors">sensitive</span>
               </div>
             </div>
 
@@ -201,33 +186,33 @@
 
         <!-- ── Section: Tunnels (dynamic array) ── -->
         <div x-show="current">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-slate-700">
+            <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
               Tunnels
-              <span class="text-gray-300 font-normal normal-case tracking-normal ml-1"
+              <span class="text-gray-300 dark:text-gray-600 font-normal normal-case tracking-normal ml-1"
                 x-text="'(' + form.tunnels.length + ' ' + (form.tunnels.length === 1 ? 'entry' : 'entries') + ')'">
               </span>
             </p>
             <button @click="addTunnel()"
-              class="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+              class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors">
               + add tunnel
             </button>
           </div>
 
           <div class="space-y-3">
             <template x-for="(tunnel, idx) in form.tunnels" :key="idx">
-              <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
                 <!-- Card header -->
-                <div class="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
+                <div class="bg-gray-50 dark:bg-slate-800/50 px-3 py-2 flex items-center justify-between border-b border-gray-200 dark:border-slate-700">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono text-gray-600" x-text="'#' + (idx+1)"></span>
-                    <span class="text-xs font-mono text-gray-700 font-medium"
+                    <span class="text-xs font-mono text-gray-600 dark:text-gray-400" x-text="'#' + (idx+1)"></span>
+                    <span class="text-xs font-mono text-gray-700 dark:text-gray-300 font-medium"
                       x-text="tunnel.hostname || 'new tunnel'"></span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span
-                      :class="tunnel.mode === 'http' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
-                      class="text-xs px-2 py-0.5 rounded-full border font-mono" x-text="tunnel.mode">
+                      :class="tunnel.mode === 'http' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 border-amber-200 dark:border-amber-500/30'"
+                      class="text-xs px-2 py-0.5 rounded-full border font-mono transition-colors" x-text="tunnel.mode">
                     </span>
                     <button @click="removeTunnel(idx)"
                       class="text-xs text-red-400 hover:text-red-600 transition-colors px-1">
@@ -236,24 +221,24 @@
                   </div>
                 </div>
                 <!-- Card fields -->
-                <div class="px-3 py-1 divide-y divide-gray-100">
+                <div class="px-3 py-1 divide-y divide-gray-100 dark:divide-slate-700/50">
 
                   <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">hostname</label>
+                    <label class="text-xs font-mono text-gray-400 dark:text-gray-500">hostname</label>
                     <input type="text" x-model="tunnel.hostname" @input="updatePreview()" placeholder="app.example.com"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                      class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                   </div>
 
                   <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">target</label>
+                    <label class="text-xs font-mono text-gray-400 dark:text-gray-500">target</label>
                     <input type="text" x-model="tunnel.target" @input="updatePreview()" placeholder="127.0.0.1:8080"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                      class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                   </div>
 
                   <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">mode</label>
+                    <label class="text-xs font-mono text-gray-400 dark:text-gray-500">mode</label>
                     <select x-model="tunnel.mode" @change="updatePreview()"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
+                      class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                       <option value="http">http</option>
                       <option value="https">https</option>
                       <option value="tcp">tcp</option>
@@ -266,7 +251,7 @@
 
             <!-- Empty tunnels hint -->
             <div x-show="form.tunnels.length === 0"
-              class="border border-dashed border-gray-200 rounded-lg p-4 text-center text-xs text-gray-400">
+              class="border border-dashed border-gray-200 dark:border-slate-700 rounded-lg p-4 text-center text-xs text-gray-400 dark:text-gray-500">
               No tunnels configured. Click "add tunnel" to get started.
             </div>
           </div>
@@ -275,43 +260,43 @@
       </div><!-- /form -->
 
       <!-- ── YAML Preview panel ── -->
-      <div class="w-72 border-l border-gray-200 bg-gray-50 flex flex-col shrink-0">
-        <div class="px-4 py-3 border-b border-gray-200">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">YAML Preview</p>
+      <div class="w-72 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">YAML Preview</p>
         </div>
-        <pre class="flex-1 overflow-auto p-4 text-xs font-mono text-gray-500 leading-relaxed whitespace-pre"
+        <pre class="flex-1 overflow-auto p-4 text-xs font-mono text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre"
           x-text="yamlPreview"></pre>
       </div>
 
     </div><!-- /form + preview split -->
 
     <!-- Status bar -->
-    <div class="bg-white border-t border-gray-200 px-5 py-2 flex items-center justify-between shrink-0">
-      <span class="text-xs font-mono text-gray-400" x-text="statusText"></span>
-      <span class="text-xs text-gray-400">PUT /api/config/<span x-text="current || '—'"></span></span>
+    <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-5 py-2 flex items-center justify-between shrink-0 transition-colors">
+      <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="statusText"></span>
+      <span class="text-xs text-gray-400 dark:text-gray-500">PUT /api/config/<span x-text="current || '—'"></span></span>
     </div>
 
   </main>
 
   <!-- New Config Modal -->
   <div x-show="showNewModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-transition>
-    <div class="bg-white rounded-xl shadow-xl w-full max-sm overflow-hidden" @click.away="showNewModal = false">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="font-bold text-gray-900">New Client Config</h3>
-        <button @click="showNewModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-sm overflow-hidden transition-colors" @click.away="showNewModal = false">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="font-bold text-gray-900 dark:text-white">New Client Config</h3>
+        <button @click="showNewModal = false" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
       </div>
       <div class="p-6">
-        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Config Name</label>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Config Name</label>
         <div class="flex items-center gap-2">
             <input type="text" x-model="newName" placeholder="e.g. staging-server" 
-                   class="flex-1 text-sm font-mono border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:border-blue-400"
+                   class="flex-1 text-sm font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors"
                    @keyup.enter="createNewConfig()">
-            <span class="text-gray-400 text-sm font-mono">.yaml</span>
+            <span class="text-gray-400 dark:text-gray-500 text-sm font-mono">.yaml</span>
         </div>
-        <p class="text-[10px] text-gray-400 mt-2 italic">Special characters and spaces are not allowed.</p>
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 italic">Special characters and spaces are not allowed.</p>
       </div>
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-        <button @click="showNewModal = false" class="text-xs font-medium text-gray-600 hover:text-gray-800">Cancel</button>
+      <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showNewModal = false" class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
         <button @click="createNewConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors">
           Create Config
         </button>

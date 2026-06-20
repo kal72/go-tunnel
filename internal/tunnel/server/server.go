@@ -3,9 +3,8 @@ package server
 import (
 	"bufio"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"gotunnel/internal/tunnel/protocol"
 	"gotunnel/internal/tunnel/registry"
@@ -17,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 )
@@ -48,6 +48,7 @@ type Server struct {
 	store           state.Store
 	domainStore     state.Store
 	wildcardDomain  string
+	userRepo        state.UserRepository
 }
 
 type dashItem struct {
@@ -58,7 +59,7 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string, store state.Store, domainStore state.Store, wildcardDomain string) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverDomain string, store state.Store, domainStore state.Store, wildcardDomain string, userRepo state.UserRepository) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -69,6 +70,7 @@ func NewServerJWT(jwtSecret string, hostRegistry *registry.HostRegistry, serverD
 		store:           store,
 		domainStore:     domainStore,
 		wildcardDomain:  wildcardDomain,
+		userRepo:        userRepo,
 	}, nil
 }
 
@@ -164,6 +166,9 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener,
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection") {
+					break
+				}
 				s.logger.Error("[edge] accept tunnel", zap.Error(err))
 				continue
 			}
@@ -407,8 +412,16 @@ func (ts *TunnelSession) modeForHost(host string) string {
 }
 
 func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
-	if clientID == "" {
-		return fmt.Errorf("client_id required")
+	// Parse JWT Token
+	token, err := jwt.Parse(providedToken, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return s.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		return fmt.Errorf("invalid auth token: %v", err)
 	}
 
 	// 1. Check if token is valid in Redis
@@ -422,14 +435,6 @@ func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
 		}
 	}
 
-	// 2. Derive expected token: HMAC-SHA256(MasterSecret, ClientID)
-	h := hmac.New(sha256.New, s.jwtSecret)
-	h.Write([]byte(clientID))
-	expected := fmt.Sprintf("%x", h.Sum(nil))
-
-	if providedToken != expected {
-		return fmt.Errorf("invalid auth token")
-	}
 	return nil
 }
 

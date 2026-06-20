@@ -92,11 +92,16 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+
 	data := map[string]any{
 		"Tunnels":        tunnels,
 		"DomainEnabled":  h.wildcardDomain != "",
 		"TunnelAddr":     h.tunnelAddr,
 		"WildcardDomain": h.wildcardDomain,
+		"UserRole":       role,
+		"UserName":       username,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -110,10 +115,14 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
 	data := map[string]any{
 		"DomainEnabled":  true,
 		"WildcardDomain": h.wildcardDomain,
 		"GatewayHost":    h.gatewayHost,
+		"UserRole":       role,
+		"UserName":       username,
 	}
 	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -122,9 +131,14 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 
 // Docs renders the documentation page.
 func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
 	data := map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
+		"UserRole":      role,
+		"UserName":      username,
+		"HideSidebar":   true,
 	}
 	if err := h.docsTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -138,10 +152,14 @@ func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to list configs", http.StatusInternalServerError)
 		return
 	}
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
 		"Configs":       configs,
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
+		"UserRole":      role,
+		"UserName":      username,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

@@ -38,6 +38,12 @@ type ServerConfig struct {
 
 	WildcardDomain string
 	DomainRedisDB  int
+
+	DBHost string
+	DBPort int
+	DBUser string
+	DBPass string
+	DBName string
 }
 
 type ClientConfig struct {
@@ -84,6 +90,11 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		RedisDB:        parsePort(get("REDIS_DB", "0"), 0),
 		WildcardDomain: get("WILDCARD_DOMAIN", ""),
 		DomainRedisDB:  parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
+		DBHost:         get("DB_HOST", "localhost"),
+		DBPort:         parsePort(get("DB_PORT", "5432"), 5432),
+		DBUser:         get("DB_USER", "postgres"),
+		DBPass:         get("DB_PASS", "postgres"),
+		DBName:         get("DB_NAME", "gotunnel"),
 	}
 
 	if strings.TrimSpace(s.GatewayHost) == "" {
