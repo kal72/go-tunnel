@@ -1,23 +1,17 @@
 package handler
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"embed"
 	"encoding/json"
-	"fmt"
+	"github.com/google/uuid"
 	"gotunnel/internal/tunnel/state"
 	"gotunnel/internal/webui/model"
-	"gotunnel/internal/webui/service"
-
 	"html/template"
 	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"gopkg.in/yaml.v3"
 )
 
 type Handler struct {
@@ -27,6 +21,7 @@ type Handler struct {
 	docsTmpl       *template.Template
 	store          state.Store
 	domainStore    state.Store
+	configRepo     state.ConfigRepository
 	masterSecret   string
 	tunnelAddr     string
 	wildcardDomain string
@@ -34,7 +29,7 @@ type Handler struct {
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string) *Handler {
+func New(fs embed.FS, store state.Store, domainStore state.Store, configRepo state.ConfigRepository, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -66,6 +61,7 @@ func New(fs embed.FS, store state.Store, domainStore state.Store, masterSecret s
 		docsTmpl:       docsTmpl,
 		store:          store,
 		domainStore:    domainStore,
+		configRepo:     configRepo,
 		masterSecret:   masterSecret,
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
@@ -147,15 +143,10 @@ func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 
 // Configs renders the main config manager page.
 func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
-	configs, err := service.ListConfigs()
-	if err != nil {
-		http.Error(w, "failed to list configs", http.StatusInternalServerError)
-		return
-	}
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
-		"Configs":       configs,
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
 		"UserRole":      role,
@@ -165,9 +156,21 @@ func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListConfigs returns all available config file names as JSON.
+// ListConfigs returns all configs based on user role.
 func (h *Handler) ListConfigs(w http.ResponseWriter, r *http.Request) {
-	configs, err := service.ListConfigs()
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
+
+	var configs []state.ClientConfig
+	var err error
+
+	if role == 1 {
+		configs, err = h.configRepo.GetAllConfigs(r.Context())
+	} else {
+		configs, err = h.configRepo.GetConfigsByUserID(r.Context(), uid)
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -175,154 +178,215 @@ func (h *Handler) ListConfigs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, configs)
 }
 
-// GetConfig reads and returns a YAML config as JSON.
+// GetConfig returns a config by id.
 func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	data, err := service.ReadConfig(name)
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	writeJSON(w, data)
-}
-
-// UpdateConfig accepts a typed JSON payload (ClientConfig),
-// converts it to a YAML-serialisable map, and writes to disk.
-// After successful write, it saves the auth_token to Redis.
-func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-
-	var cfg model.ClientConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	// Round-trip through yaml marshal → unmarshal to get a clean map
-	// preserving YAML field names defined via struct tags.
-	raw, err := yaml.Marshal(cfg)
+	cfg, err := h.configRepo.GetConfigByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, "marshal error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var asMap map[string]any
-	if err := yaml.Unmarshal(raw, &asMap); err != nil {
-		http.Error(w, "unmarshal error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := service.WriteConfig(name, asMap); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Save the auth_token to Redis if present
-	if cfg.AuthToken != "" && h.store != nil {
-		// Valid for 1 year by default, or until revoked
-		err := h.store.SetToken(r.Context(), cfg.AuthToken, 365*24*time.Hour)
-		if err != nil {
-			// Log error but don't fail the request as config is already saved
-			fmt.Printf("Warning: failed to save token to redis: %v\n", err)
-		}
-	}
-
-	writeJSON(w, map[string]string{"status": "ok", "config": name + ".yaml"})
-}
-
-func (h *Handler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	data, err := service.ReadConfigRaw(name)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+	if cfg == nil {
+		http.Error(w, "config not found", http.StatusNotFound)
 		return
 	}
 
-	filename := name + ".yaml"
-	w.Header().Set("Content-Type", "application/x-yaml")
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	w.Write(data)
-}
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
 
-// GenerateToken generates an HMAC authtoken for a given client_id.
-// It NO LONGER saves it to Redis; that happens during UpdateConfig.
-func (h *Handler) GenerateToken(w http.ResponseWriter, r *http.Request) {
-	clientID := r.URL.Query().Get("client_id")
-	if clientID == "" {
-		http.Error(w, "client_id required", http.StatusBadRequest)
+	if role != 1 && cfg.UserID != uid {
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
-	mac := hmac.New(sha256.New, []byte(h.masterSecret))
-	mac.Write([]byte(clientID))
-	token := fmt.Sprintf("%x", mac.Sum(nil))
-
-	writeJSON(w, map[string]string{"token": token, "client_id": clientID})
+	writeJSON(w, cfg)
 }
 
-// RevokeToken removes a token from Redis.
-func (h *Handler) RevokeToken(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		http.Error(w, "token required", http.StatusBadRequest)
-		return
-	}
-
-	err := h.store.RevokeToken(r.Context(), token)
-	if err != nil {
-		http.Error(w, "failed to revoke token", http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"status": "ok", "message": "token revoked"})
-}
-
-// CreateConfig creates a new configuration file.
+// CreateConfig creates a new configuration.
 func (h *Handler) CreateConfig(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	if name == "" {
+	var payload state.ClientConfig
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Name == "" {
 		http.Error(w, "name required", http.StatusBadRequest)
 		return
 	}
 
-	// Basic validation for filename
-	if strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
-		http.Error(w, "invalid name", http.StatusBadRequest)
-		return
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
+
+	cfg := &state.ClientConfig{
+		ID:      uuid.New(),
+		UserID:  uid,
+		Name:    payload.Name,
+		Tunnels: payload.Tunnels,
 	}
 
-	if err := service.CreateConfig(name); err != nil {
+	if err := h.configRepo.CreateConfig(r.Context(), cfg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, map[string]string{"status": "ok", "config": name})
+	writeJSON(w, map[string]any{"status": "ok", "config": cfg})
 }
 
-// DeleteConfig removes a config file and revokes its token.
+// UpdateConfig updates an existing configuration.
+func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	cfg, err := h.configRepo.GetConfigByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "config not found", http.StatusNotFound)
+		return
+	}
+
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
+
+	if role != 1 && cfg.UserID != uid {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	var payload state.ClientConfig
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	cfg.Name = payload.Name
+	cfg.Tunnels = payload.Tunnels
+
+	if err := h.configRepo.UpdateConfig(r.Context(), cfg); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]any{"status": "ok", "config": cfg})
+}
+
+// DeleteConfig deletes a configuration.
 func (h *Handler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	cfg, err := h.configRepo.GetConfigByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "config not found", http.StatusNotFound)
+		return
+	}
+
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
+
+	if role != 1 && cfg.UserID != uid {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	if err := h.configRepo.DeleteConfig(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok", "message": "config deleted"})
+}
+
+// Client API Handlers
+
+// ClientGetConfigs returns a list of config names for the CLI.
+func (h *Handler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
+
+	configs, err := h.configRepo.GetConfigsByUserID(r.Context(), uid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var names []string
+	for _, c := range configs {
+		names = append(names, c.Name)
+	}
+
+	writeJSON(w, names)
+}
+
+// ClientGetConfig returns the ClientConfig payload for the CLI.
+func (h *Handler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
 	if name == "" {
 		http.Error(w, "name required", http.StatusBadRequest)
 		return
 	}
 
-	// 1. Read config to get the token
-	cfg, err := service.ReadConfig(name)
-	if err == nil {
-		// 2. Revoke token if it exists
-		if token, ok := cfg["auth_token"].(string); ok && token != "" && h.store != nil {
-			_ = h.store.RevokeToken(r.Context(), token)
-		}
-	}
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	uid, _ := uuid.Parse(userID)
 
-	// 3. Delete the file
-	if err := service.DeleteConfig(name); err != nil {
+	cfg, err := h.configRepo.GetConfigByName(r.Context(), uid, name)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if cfg == nil {
+		http.Error(w, "config not found", http.StatusNotFound)
+		return
+	}
 
-	writeJSON(w, map[string]string{"status": "ok", "message": "config deleted and token revoked"})
+	// Transform to model.ClientConfig format that the client binary expects
+	var tunnels []model.TunnelEntry
+	for _, t := range cfg.Tunnels {
+		tunnels = append(tunnels, model.TunnelEntry{
+			Hostname: t.Hostname,
+			Target:   t.Target,
+			Mode:     t.Mode,
+		})
+	}
+
+	// We pass the JWT token itself back to the client as the AuthToken?
+	// The client already HAS the token because it sent it via Authorization.
+	// But let's construct the payload.
+	clientConfig := model.ClientConfig{
+		TunnelAddr:    h.tunnelAddr,
+		SkipTLSVerify: false,
+		ClientID:      cfg.ID.String(),
+		AuthToken:     "", // Client uses its own JWT
+		Tunnels:       tunnels,
+	}
+
+	writeJSON(w, clientConfig)
 }
+
 
 // ListDomains returns all domains from Redis.
 func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {

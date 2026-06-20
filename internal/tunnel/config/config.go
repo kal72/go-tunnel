@@ -12,9 +12,9 @@ import (
 )
 
 type TunnelEntry struct {
-	Hostname string `yaml:"hostname"`
-	Target   string `yaml:"target"`
-	Mode     string `yaml:"mode"`
+	Hostname string `yaml:"hostname" json:"hostname"`
+	Target   string `yaml:"target" json:"target"`
+	Mode     string `yaml:"mode" json:"mode"`
 }
 
 type ServerConfig struct {
@@ -47,14 +47,14 @@ type ServerConfig struct {
 }
 
 type ClientConfig struct {
-	TunnelAddr    string `yaml:"tunnel_addr"`
-	SkipTLSVerify bool   `yaml:"skip_tls_verify"`
+	TunnelAddr    string `yaml:"tunnel_addr" json:"tunnel_addr"`
+	SkipTLSVerify bool   `yaml:"skip_tls_verify" json:"skip_tls_verify"`
 
-	ClientID  string `yaml:"client_id"`
-	JWTSecret string `yaml:"jwt_secret"`
-	AuthToken string `yaml:"auth_token"`
+	ClientID  string `yaml:"client_id" json:"client_id"`
+	JWTSecret string `yaml:"jwt_secret" json:"jwt_secret"`
+	AuthToken string `yaml:"auth_token" json:"auth_token"`
 
-	Tunnels []TunnelEntry `yaml:"tunnels"`
+	Tunnels []TunnelEntry `yaml:"tunnels" json:"tunnels"`
 }
 
 func LoadServerConfig(path string) (*ServerConfig, error) {

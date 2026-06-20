@@ -49,8 +49,9 @@ func main() {
 	defer db.Close()
 
 	userRepo := state.NewUserRepository(db)
+	configRepo := state.NewConfigRepository(db)
 
-	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost)
+	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, configRepo, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost)
 	authH := handler.NewAuth(assets.EmbeddedFS, redisStore, userRepo)
 	userH := handler.NewUserHandler(assets.EmbeddedFS, userRepo)
 
@@ -72,13 +73,13 @@ func main() {
 
 		// API
 		r.Get("/api/configs", h.ListConfigs)
-		r.Post("/api/config/{name}", h.CreateConfig)
-		r.Get("/api/config/{name}", h.GetConfig)
-		r.Put("/api/config/{name}", h.UpdateConfig)
-		r.Delete("/api/config/{name}", h.DeleteConfig)
-		r.Get("/api/config/{name}/download", h.DownloadConfig)
-		r.Get("/api/generate-token", h.GenerateToken)
-		r.Delete("/api/revoke-token", h.RevokeToken)
+		r.Post("/api/configs", h.CreateConfig)
+		r.Get("/api/configs/{id}", h.GetConfig)
+		r.Put("/api/configs/{id}", h.UpdateConfig)
+		r.Delete("/api/configs/{id}", h.DeleteConfig)
+
+		r.Get("/api/client/config", h.ClientGetConfig)
+		r.Get("/api/client/configs", h.ClientGetConfigs)
 
 		r.Get("/api/domains", h.ListDomains)
 		r.Post("/api/domains", h.AddDomain)

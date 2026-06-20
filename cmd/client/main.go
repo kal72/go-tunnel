@@ -7,26 +7,22 @@ import (
 	"os"
 
 	"gotunnel/internal/tunnel/client"
-	"gotunnel/internal/tunnel/config"
 )
 
 var (
-	version = "dev"
+	version   = "dev"
+	ServerURL = "http://localhost:8080"
 )
 
 func main() {
-	// Define command-line flags
-	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
 	showVersion := flag.Bool("version", false, "Print version information and exit")
-	
-	// Shorthand aliases
-	flag.StringVar(configPath, "c", "config.yaml", "Path to the configuration file (shorthand)")
 	flag.BoolVar(showVersion, "v", false, "Print version information and exit (shorthand)")
 
-	// Custom usage message (optional, but recommended for better UX)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of go-tunnel client:\n")
-		fmt.Fprintf(os.Stderr, "  client [options]\n\n")
+		fmt.Fprintf(os.Stderr, "  client login                      Login to the WebUI server\n")
+		fmt.Fprintf(os.Stderr, "  client list                       List available remote configurations\n")
+		fmt.Fprintf(os.Stderr, "  client run <config_name>          Run a remote configuration\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 	}
@@ -38,32 +34,48 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(flag.Args()) > 0 && flag.Args()[0] == "login" {
+	if len(flag.Args()) == 0 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	command := flag.Args()[0]
+
+	switch command {
+	case "login":
 		loginCmd := flag.NewFlagSet("login", flag.ExitOnError)
-		server := loginCmd.String("server", "http://localhost:8080", "WebUI server URL")
 		username := loginCmd.String("username", "", "Username")
 		password := loginCmd.String("password", "", "Password")
 		loginCmd.Parse(flag.Args()[1:])
 
-		if *username == "" || *password == "" {
-			fmt.Println("Error: --username and --password are required")
-			os.Exit(1)
-		}
-
-		if err := client.Login(*server, *username, *password); err != nil {
+		if err := client.Login(ServerURL, *username, *password); err != nil {
 			log.Fatalf("Login failed: %v", err)
 		}
-		os.Exit(0)
-	}
 
-	log.Printf("Starting client using config: %s\n", *configPath)
+	case "list":
+		if err := client.ListConfigs(); err != nil {
+			log.Fatalf("Failed to list configs: %v", err)
+		}
 
-	cfg, err := config.LoadClientConfig(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config from %s: %v", *configPath, err)
+	case "run":
+		if len(flag.Args()) < 2 {
+			fmt.Println("Error: config_name is required. Usage: client run <config_name>")
+			os.Exit(1)
+		}
+		configName := flag.Args()[1]
+		
+		log.Printf("Fetching configuration: %s\n", configName)
+		cfg, err := client.FetchConfig(configName)
+		if err != nil {
+			log.Fatalf("Failed to fetch config %s: %v", configName, err)
+		}
+		
+		c := client.NewClient(cfg)
+		c.RunForever()
+
+	default:
+		fmt.Printf("Unknown command: %s\n", command)
+		flag.Usage()
+		os.Exit(1)
 	}
-	
-	c := client.NewClient(cfg)
-	c.RunForever()
 }
-

@@ -22,6 +22,7 @@ type contextKey string
 const (
 	UserRoleKey contextKey = "user_role"
 	UserNameKey contextKey = "user_name"
+	UserIDKey   contextKey = "user_id"
 )
 
 // AuthHandler handles login and session management.
@@ -81,6 +82,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT
 	expiration := 24 * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  u.ID.String(),
 		"user": userStr,
 		"role": u.Role,
 		"exp":  time.Now().Add(expiration).Unix(),
@@ -170,6 +172,9 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 			if userStr, ok := claims["user"].(string); ok {
 				ctx = context.WithValue(ctx, UserNameKey, userStr)
 			}
+			if subStr, ok := claims["sub"].(string); ok {
+				ctx = context.WithValue(ctx, UserIDKey, subStr)
+			}
 			r = r.WithContext(ctx)
 		}
 
@@ -206,6 +211,7 @@ func (h *AuthHandler) APILogin(w http.ResponseWriter, r *http.Request) {
 	// 30 days token for CLI
 	expiration := 30 * 24 * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  u.ID.String(),
 		"user": userStr,
 		"role": u.Role,
 		"exp":  time.Now().Add(expiration).Unix(),

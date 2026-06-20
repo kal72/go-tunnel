@@ -84,10 +84,8 @@ func (c *Client) runOnce() error {
 		return err
 	}
 
-	token, err := ReadToken()
-	if err != nil {
-		return fmt.Errorf("auth error: %w", err)
-	}
+	// Use token provided in config
+	token := c.cfg.AuthToken
 
 	// REGISTER
 	if err := protocol.SendJSON(ctrl, protocol.RegisterMessage{
