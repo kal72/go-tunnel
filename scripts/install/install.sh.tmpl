@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -e
+
+DL_URL="{{DL_URL}}"
+
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+
+if [ "$ARCH" = "x86_64" ]; then
+    ARCH="amd64"
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    ARCH="arm64"
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+if [ "$OS" = "darwin" ]; then
+    OS="darwin"
+elif [ "$OS" = "linux" ]; then
+    OS="linux"
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi
+
+BINARY_NAME="gotunnel-${OS}-${ARCH}"
+
+echo "Downloading gotunnel from ${DL_URL}/${BINARY_NAME}..."
+curl -fsSL "${DL_URL}/${BINARY_NAME}" -o gotunnel
+
+chmod +x gotunnel
+
+INSTALL_DIR="/usr/local/bin"
+echo "Installing gotunnel to ${INSTALL_DIR}..."
+if [ -w "$INSTALL_DIR" ]; then
+    mv gotunnel "${INSTALL_DIR}/gotunnel"
+else
+    echo "Root privileges required to install to ${INSTALL_DIR}."
+    sudo mv gotunnel "${INSTALL_DIR}/gotunnel"
+fi
+
+echo "✅ gotunnel installed successfully."
+echo "You can now run it from anywhere using: gotunnel login"

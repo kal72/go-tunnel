@@ -42,6 +42,18 @@ jobs:
     needs: build-dev
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Build Clients
+        run: |
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+      - name: Copy binaries to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "downloads/"
+          target: "."
       - uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -60,6 +72,7 @@ jobs:
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
+              -v "$(pwd)/downloads:/app/downloads:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
               -e ACME_ENV="$ACME_ENV" \
@@ -120,6 +133,18 @@ jobs:
     needs: build-release
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Build Clients
+        run: |
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+      - name: Copy binaries to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "downloads/"
+          target: "."
       - uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -138,6 +163,7 @@ jobs:
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
+              -v "$(pwd)/downloads:/app/downloads:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
               -e ACME_ENV="$ACME_ENV" \

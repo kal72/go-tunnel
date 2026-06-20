@@ -5,16 +5,18 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 ## Key Features
 - **Automatic TLS termination** via ACME/Let's Encrypt using `autocert.Manager`.
 - **Multiplexing**: Many logical streams over a single TLS connection with `hashicorp/yamux`.
+- **PostgreSQL Config Management**: Client configs are stored in PostgreSQL per user. Create, list, and manage configurations directly from the WebUI.
+- **Interactive CLI & Seamless Downloads**: The client CLI supports interactive login (`gotunnel login`), configuration listing (`gotunnel list`), and execution (`gotunnel run <name>`).
+- **One-liner Installations**: The Web UI serves pre-compiled binaries for MacOS, Linux, and Windows with dynamic `curl` install scripts.
 - **Redis-backed Auth**: Web UI sessions and Client tokens are stored in Redis with **instant revocation** support.
-- **Web UI Manager**: Modern dashboard to manage client configurations, generate tokens, and monitor active tunnels in real-time.
 - **Domain Management**: Centrally manage authorized subdomains under a base wildcard domain (e.g., `*.apps.com`) via Web UI.
-- **Dynamic Configuration**: Add, edit, and delete agent configurations directly from the Web UI.
 - **Wildcard Subdomain Support**: Flexible routing using manual or auto-generated random subdomains stored in Redis.
 - **Supports HTTP, HTTPS & TCP**: Tunneling for web applications and raw TCP protocols (SSH, DB, etc.).
 
 ## Tech Stack
 - **Language**: Go 1.25
 - **Multiplexing**: `github.com/hashicorp/yamux`
+- **Database (Config)**: PostgreSQL (`github.com/jackc/pgx/v5`)
 - **State & Session**: Redis (`github.com/redis/go-redis/v9`)
 - **Web UI**: Alpine.js, Tailwind CSS (via CDN), Go Templates.
 - **Auth**: JWT (`github.com/golang-jwt/jwt/v5`) & HMAC-SHA256 for client tokens.
@@ -25,7 +27,8 @@ This application includes a Web UI Manager running on port `8080` (default) for 
 - **Login**: Secure authentication with sessions stored in Redis. (Default: `admin` / `admin123`).
 - **Dashboard**: View the list of currently connected tunnels, including **Client ID**, source IP, assigned hosts, and connection time.
 - **Domain Manager**: Register manual subdomains or **auto-generate random strings** under your base wildcard domain.
-- **Config Editor**: Manage client configuration files (`.yaml`) without needing SSH access to the server.
+- **Config Editor**: Manage client configurations per user, saved securely to PostgreSQL.
+- **Client Downloads**: Download pre-compiled, auto-configured agent binaries for MacOS, Linux, and Windows straight from the dashboard.
 - **Token Management**: Generate new tokens for clients or instantly **revoke** existing tokens to disconnect specific agents.
 
 ## Example DNS Records
@@ -75,13 +78,21 @@ docker run -p 80:80 -p 443:443 -p 8080:8080 -p 9443:9443 --env-file .env gotunne
 ```
 
 ### 3. Client/Agent
-Download the configuration from the Web UI or use a local file.
+Download and install the pre-compiled client from the Web UI `Downloads` page. You can easily install it on Linux/macOS via the terminal:
 ```sh
-# Run with default config (config.yaml)
-go run ./cmd/client/main.go
+curl -fsSL https://<YOUR_WEBUI_DOMAIN>/dl/install.sh | bash
+```
 
-# Or run with a custom config file path
-go run ./cmd/client/main.go --config /path/to/my-config.yaml
+Once installed, use the interactive CLI:
+```sh
+# 1. Login to retrieve your authentication token (prompts for username/password)
+gotunnel login
+
+# 2. List all available configurations attached to your account
+gotunnel list
+
+# 3. Run a specific configuration by name
+gotunnel run my-web-app
 ```
 
 ## Token Revocation Flow

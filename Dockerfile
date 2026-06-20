@@ -11,8 +11,8 @@ COPY . .
 
 # Build binaries
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o gotunnel-server ./cmd/server/main.go
-
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o gotunnel-webui ./cmd/webui/main.go
+
 
 # ---------- Runtime stage ----------
 FROM alpine:3.20
@@ -25,6 +25,7 @@ WORKDIR /app
 # Copy binaries dari builder
 COPY --from=builder --chown=gotunnel:gotunnel /app/gotunnel-server .
 COPY --from=builder --chown=gotunnel:gotunnel /app/gotunnel-webui .
+
 
 RUN mkdir -p /app/assets/configs
 COPY --from=builder /app/assets/configs/client.yaml /app/assets/configs/client.yaml
