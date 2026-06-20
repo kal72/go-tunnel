@@ -118,4 +118,28 @@ gotunnel run my-web-app
 | **Web UI Handler** | Provides the API and interface for configuration management. |
 | **Agent** | The client that opens the outbound tunnel to the server. |
 
+## Production Architecture (Reverse Proxy)
+
+For production deployments, it is highly recommended to run `go-tunnel` behind a reverse proxy like **Nginx** or **HAProxy**. This allows you to expose **only** ports `80` and `443` to the internet, while multiplexing all services through Server Name Indication (SNI) routing on the proxy level.
+
+```mermaid
+graph TD
+    Client[Web/API Client] -->|"HTTPS (Port 443)"| RP[Reverse Proxy<br>Nginx / HAProxy]
+    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| RP
+    Admin[Admin/User] -->|"HTTPS (Port 443)"| RP
+
+    subgraph Internal Network
+        RP -- "Host: *.example.com" --> Server["Go-Tunnel Server<br>(Port 80/443)"]
+        RP -- "SNI: tunnel.example.com<br>(TCP Passthrough)" --> Tunnel["Tunnel Listener<br>(Port 9443)"]
+        RP -- "Host: webui.example.com" --> WebUI["Web UI Manager<br>(Port 8080)"]
+    end
+```
+
+### Key Considerations
+1. **Single Port Exposure**: The firewall only needs to open ports `80` and `443`.
+2. **Domain-Based Filtering**: The reverse proxy routes traffic strictly based on the domain name (Host/SNI), despite sharing the same public port:
+   - Requests to `webui.example.com` are forwarded via standard HTTP proxy to the Web UI container (`:8080`).
+   - Requests to `gateway.example.com` or `*.example.com` are forwarded to the Gateway Server.
+   - Requests to `tunnel.example.com` **MUST** be forwarded using **TCP Stream Proxy (SNI Passthrough)** to the Tunnel Listener (`:9443`), because the tunnel uses raw multiplexed TLS (yamux) instead of standard HTTP.
+
 Happy tunneling!
