@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS client_configs (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(25) NOT NULL,
     tunnels JSONB NOT NULL DEFAULT '[]'::jsonb,

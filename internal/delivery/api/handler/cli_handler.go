@@ -7,14 +7,10 @@ import (
 	"gotunnel/internal/domain/config"
 	usecaseConfig "gotunnel/internal/usecase/config"
 
+	webhandler "gotunnel/internal/delivery/web/handler"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-)
-
-type contextKey string
-
-const (
-	UserIDKey contextKey = "user_id"
 )
 
 type CLIHandler struct {
@@ -33,7 +29,7 @@ func NewCLIHandler(configUsecase usecaseConfig.ConfigUsecase, tunnelAddr string,
 
 // ClientGetConfigs returns a list of config names for the CLI.
 func (h *CLIHandler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
-	userID, _ := r.Context().Value(UserIDKey).(string)
+	userID, _ := r.Context().Value(webhandler.UserIDKey).(string)
 	uid, _ := uuid.Parse(userID)
 
 	configs, err := h.configUsecase.GetConfigsByUserID(r.Context(), uid)
@@ -42,9 +38,9 @@ func (h *CLIHandler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var names []string
+	names := make([]map[string]string, 0)
 	for _, c := range configs {
-		names = append(names, c.Name)
+		names = append(names, map[string]string{"name": c.Name})
 	}
 
 	writeJSON(w, names)
@@ -58,7 +54,7 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := r.Context().Value(UserIDKey).(string)
+	userID, _ := r.Context().Value(webhandler.UserIDKey).(string)
 	uid, _ := uuid.Parse(userID)
 
 	cfg, err := h.configUsecase.GetConfigByName(r.Context(), uid, name)

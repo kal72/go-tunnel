@@ -67,7 +67,7 @@ func (r *sqlxConfigRepository) GetAllConfigs(ctx context.Context) ([]domainConfi
 }
 
 func (r *sqlxConfigRepository) CreateConfig(ctx context.Context, cfg *domainConfig.ClientConfig) error {
-	query := `INSERT INTO client_configs (id, user_id, name, tunnels) VALUES (:id, :user_id, :name, :tunnels)`
+	query := `INSERT INTO client_configs (user_id, name, tunnels) VALUES (:user_id, :name, :tunnels)`
 	_, err := r.db.NamedExecContext(ctx, query, cfg)
 	if err != nil {
 		return fmt.Errorf("CreateConfig error: %w", err)

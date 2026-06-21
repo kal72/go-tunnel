@@ -31,7 +31,7 @@ func (r *sqlxUserRepository) GetUserByUsername(ctx context.Context, username str
 }
 
 func (r *sqlxUserRepository) CreateUser(ctx context.Context, user *domainUser.User) error {
-	query := `INSERT INTO users (id, username, password, role, status) VALUES (:id, :username, :password, :role, :status)`
+	query := `INSERT INTO users (username, password, role, status) VALUES (:username, :password, :role, :status)`
 	_, err := r.db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		return fmt.Errorf("CreateUser error: %w", err)

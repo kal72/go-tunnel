@@ -116,9 +116,10 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 		}
 
 		if tokenString == "" {
-			// If it's an API/CLI request, return 401 instead of redirecting
-			if strings.HasPrefix(r.URL.Path, "/api/cli/") {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"error":"unauthorized"}`))
 				return
 			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -127,6 +128,12 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 
 		user, err := h.authUsecase.VerifyToken(r.Context(), tokenString)
 		if err != nil {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"error":"unauthorized"}`))
+				return
+			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
