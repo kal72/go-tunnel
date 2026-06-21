@@ -37,8 +37,10 @@ type ServerConfig struct {
 	RedisPass string
 	RedisDB   int
 
-	WildcardDomain string
-	DomainRedisDB  int
+	WildcardDomain   string
+	WildcardCertPath string
+	WildcardKeyPath  string
+	DomainRedisDB    int
 
 	DBHost string
 	DBPort int
@@ -90,8 +92,10 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		RedisAddr:      get("REDIS_ADDR", "localhost:6379"),
 		RedisPass:      get("REDIS_PASS", ""),
 		RedisDB:        parsePort(get("REDIS_DB", "0"), 0),
-		WildcardDomain: get("WILDCARD_DOMAIN", ""),
-		DomainRedisDB:  parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
+		WildcardDomain:   get("WILDCARD_DOMAIN", ""),
+		WildcardCertPath: get("WILDCARD_CERT_PATH", ""),
+		WildcardKeyPath:  get("WILDCARD_KEY_PATH", ""),
+		DomainRedisDB:    parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
 		DBHost:         get("DB_HOST", "localhost"),
 		DBPort:         parsePort(get("DB_PORT", "5432"), 5432),
 		DBUser:         get("DB_USER", "postgres"),

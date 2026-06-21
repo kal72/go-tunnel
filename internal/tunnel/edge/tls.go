@@ -52,6 +52,32 @@ func ensureDefaultServerName(cfg *tls.Config, fallback string) {
 	}
 }
 
+func wrapWithWildcardCert(cfg *tls.Config, wildcardDomain, certPath, keyPath string) {
+	if wildcardDomain == "" || certPath == "" || keyPath == "" {
+		return
+	}
+
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		fmt.Printf("[edge] warning: failed to load wildcard cert from %s: %v\n", certPath, err)
+		return
+	}
+
+	baseGetCert := cfg.GetCertificate
+	cfg.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		if hello != nil && matchWildcard(strings.ToLower(hello.ServerName), wildcardDomain) {
+			return &cert, nil
+		}
+		if baseGetCert != nil {
+			return baseGetCert(hello)
+		}
+		if len(cfg.Certificates) > 0 {
+			return &cfg.Certificates[0], nil
+		}
+		return nil, fmt.Errorf("no certificates configured")
+	}
+}
+
 func generateSelfSignedCert(host string) (*tls.Config, error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

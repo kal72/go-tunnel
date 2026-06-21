@@ -198,6 +198,7 @@ func buildHostRegistry(env *config.ServerConfig) *registry.HostRegistry {
 
 func buildHTTPSServer(env *config.ServerConfig, m interface{ TLSConfig() *tls.Config }, srv http.Handler) *http.Server {
 	tlsCfg := cloneTLSConfig(m.TLSConfig())
+	wrapWithWildcardCert(tlsCfg, env.WildcardDomain, env.WildcardCertPath, env.WildcardKeyPath)
 	tlsCfg.MinVersion = tls.VersionTLS12
 	tlsCfg.ClientSessionCache = tls.NewLRUClientSessionCache(128)
 	tlsCfg.NextProtos = ensureProto(tlsCfg.NextProtos, "h2")
