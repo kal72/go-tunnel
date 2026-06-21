@@ -1,6 +1,7 @@
 package di
 
 import (
+	"crypto/tls"
 	"gotunnel/internal/infrastructure/cert"
 	"net/http"
 
@@ -28,6 +29,16 @@ type TunnelApp struct {
 
 func (a *TunnelApp) Run(ctx context.Context) error {
 	tunnelTLS := cert.CloneTLSConfig(nil)
+	cert.WrapWithWildcardCert(tunnelTLS, a.cfg.WildcardDomain, a.cfg.WildcardCertPath, a.cfg.WildcardKeyPath)
+
+	if len(tunnelTLS.Certificates) == 0 && tunnelTLS.GetCertificate == nil {
+		log.Println("[tunnel] Dev Mode / Fallback: Generating self-signed certificate.")
+		fallback, err := cert.GenerateSelfSignedCert(a.cfg.TunnelDomain)
+		if err == nil {
+			tunnelTLS.Certificates = fallback.Certificates
+		}
+	}
+	tunnelTLS.MinVersion = tls.VersionTLS12
 	tunnelAddr := fmt.Sprintf("0.0.0.0:%d", a.cfg.TunnelPort)
 
 	// Start TCP Tunnel listener

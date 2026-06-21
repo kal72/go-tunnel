@@ -78,13 +78,24 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 		tlsCfg = cert.CloneTLSConfig(nil)
 	}
 
-	if tlsCfg != nil {
-		cert.WrapWithWildcardCert(tlsCfg, env.WildcardDomain, env.WildcardCertPath, env.WildcardKeyPath)
-		tlsCfg.MinVersion = tls.VersionTLS12
-		tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "h2")
-		tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "http/1.1")
-		cert.EnsureDefaultServerName(tlsCfg, env.GatewayDomain)
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{}
 	}
+
+	cert.WrapWithWildcardCert(tlsCfg, env.WildcardDomain, env.WildcardCertPath, env.WildcardKeyPath)
+	
+	if len(tlsCfg.Certificates) == 0 && tlsCfg.GetCertificate == nil {
+		log.Println("[proxy] Dev Mode / Fallback: Generating self-signed certificate.")
+		fallback, err := cert.GenerateSelfSignedCert(env.GatewayDomain + "," + env.TunnelDomain + "," + env.WebUIDomain + ",localhost,127.0.0.1")
+		if err == nil {
+			tlsCfg.Certificates = fallback.Certificates
+		}
+	}
+
+	tlsCfg.MinVersion = tls.VersionTLS12
+	tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "h2")
+	tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "http/1.1")
+	cert.EnsureDefaultServerName(tlsCfg, env.GatewayDomain)
 
 	p.httpSrv = &http.Server{
 		Handler:           mainHandler,

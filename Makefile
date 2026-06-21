@@ -5,6 +5,7 @@ GOCMD=go
 GOBUILD=$(GOCMD) build
 GOTEST=$(GOCMD) test
 GOGENERATE=$(GOCMD) generate
+PROXY_BINARY=./bin/gotunnel-proxy
 SERVER_BINARY=./bin/gotunnel-server
 WEBUI_BINARY=./bin/gotunnel-webui
 CLIENT_BINARY=./bin/gotunnel-client
@@ -34,7 +35,7 @@ all: generate build test
 build:
 	@echo "Building binaries..."
 	$(GOBUILD) -o $(SERVER_BINARY) ./cmd/tunnel/main.go
-	$(GOBUILD) -o ./bin/gotunnel-proxy ./cmd/proxy/main.go
+	$(GOBUILD) -o $(PROXY_BINARY) ./cmd/proxy/main.go
 	$(GOBUILD) -o $(WEBUI_BINARY) ./cmd/webui/main.go
 	$(GOBUILD) -o $(CLIENT_BINARY) ./cmd/client/main.go
 
@@ -63,6 +64,10 @@ run-server:
 run-webui:
 	@echo "Starting Web UI..."
 	$(GOCMD) run ./cmd/webui/main.go
+
+run-proxy:
+	@echo "Starting proxy..."
+	$(GOCMD) run ./cmd/proxy/main.go
 
 # Podman Targets
 deploy: podman-stop podman-build podman-run
