@@ -93,6 +93,19 @@ jobs:
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
 
+            echo "⏳ Menunggu container booting (5 detik)..."
+            sleep 5
+            STATUS=$(sudo podman inspect -f '{{.State.Status}}' tunnel)
+            if [ "$STATUS" != "running" ]; then
+              echo "❌ Error: Deployment GAGAL! Container crash/berhenti (Status: $STATUS)."
+              sudo podman logs tunnel
+              exit 1
+            else
+              echo "✅ Sukses: Deployment BERHASIL! Container berjalan dengan sehat."
+              echo "--- Log Terakhir ---"
+              sudo podman logs tunnel | tail -n 20
+            fi
+
 
 
   # ======== MANUAL RELEASE =======
@@ -191,3 +204,16 @@ jobs:
               -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
+
+            echo "⏳ Menunggu container booting (5 detik)..."
+            sleep 5
+            STATUS=$(sudo podman inspect -f '{{.State.Status}}' tunnel)
+            if [ "$STATUS" != "running" ]; then
+              echo "❌ Error: Deployment GAGAL! Container crash/berhenti (Status: $STATUS)."
+              sudo podman logs tunnel
+              exit 1
+            else
+              echo "✅ Sukses: Deployment BERHASIL! Container berjalan dengan sehat."
+              echo "--- Log Terakhir ---"
+              sudo podman logs tunnel | tail -n 20
+            fi
