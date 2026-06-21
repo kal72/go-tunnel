@@ -5,11 +5,11 @@ This file is a workspace-scoped Knowledge Item for the **`go-tunnel`** project, 
 ---
 
 ## 1. Project Overview & Architecture
-`go-tunnel` is a Go-based reverse-tunneling gateway designed to expose private/local services over public TLS/HTTPS connections using:
-- **ACME (`autocert.Manager`)**: Automatic Let's Encrypt TLS termination.
-- **Yamux (`hashicorp/yamux`)**: Multiplexing multiple logical streams over a single outbound TLS connection.
+`go-tunnel` is a Go-based reverse-tunneling gateway designed to expose private/local services over public TLS/HTTPS connections using a **split microservices architecture**:
+- **Edge Proxy (`cmd/proxy`)**: The public-facing gateway that handles L4 SNI Multiplexing (TCP passthrough for Tunnel clients) and L7 HTTP Reverse Proxying with Auto Let's Encrypt (ACME) via `autocert.Manager`.
+- **Tunnel Server (`cmd/tunnel`)**: The backend manager that terminates the `hashicorp/yamux` TCP connections and manages internal HTTP demultiplexing.
 - **Redis (`go-redis`)**: Session management, active tunnel registry, and dynamic domain allowlisting (wildcard and static).
-- **Web UI Engine**: Alpine.js, Tailwind, and Go Templates to generate tokens, manage client configuration files, and monitor active tunnels.
+- **Web UI Engine (`cmd/webui`)**: Alpine.js, Tailwind, and Go Templates to generate tokens, manage client configuration files, and monitor active tunnels.
 
 ---
 

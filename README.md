@@ -46,11 +46,12 @@ Copy `.env.example` and adjust the variables:
 | Variable | Description |
 | --- | --- |
 | `GATEWAY_HOST` | Domain for the public HTTPS gateway. |
-| `GATEWAY_PORT` | Port for the public HTTPS gateway (default `443`). |
+| `GATEWAY_PORT` | Port for the public Edge Gateway Proxy (default `8443`). |
 | `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
-| `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `localhost`). |
-| `TUNNEL_HOST` | Domain for agent TLS connections (SNI). |
-| `TUNNEL_PORT` | Port for agent TLS connections (default `9443`). |
+| `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `webui.example.com`). |
+| `PROXY_INTERNAL_PORT` | Internal port used by the Proxy to forward traffic to the Tunnel (default `8081`). |
+| `TUNNEL_HOST` | Domain for agent TCP connections (SNI, e.g. `tunnel.example.com`). |
+| `TUNNEL_PORT` | Port for agent TCP Yamux connections (default `9443`). |
 | `JWT_SECRET` | Master secret used to generate client tokens and JWTs. |
 | `ACME_CACHE` | Directory to store Let's Encrypt certificates (default `./cert-cache`). |
 | `ACME_ENV` | Let's Encrypt environment: `production` or `staging`. |
@@ -63,18 +64,19 @@ Copy `.env.example` and adjust the variables:
 
 ## How to Run
 
-### 1. Server & Web UI (Local)
-Ensure Redis is running before starting the server.
+### 1. Server, Proxy & Web UI (Local)
+Ensure Redis is running before starting the services.
 ```sh
-go run ./cmd/server/main.go
+go run ./cmd/proxy/main.go
+go run ./cmd/tunnel/main.go
 go run ./cmd/webui/main.go
 ```
 
-### 2. Server & Web UI (Docker)
+### 2. Run with Docker
 Build and run everything using Docker:
 ```sh
 docker build -t gotunnel .
-docker run -p 80:80 -p 443:443 -p 8080:8080 -p 9443:9443 --env-file .env gotunnel
+docker run -p 80:80 -p 8443:8443 -p 8080:8080 -p 9443:9443 --env-file .env gotunnel
 ```
 
 ### 3. Client/Agent
@@ -111,35 +113,41 @@ gotunnel run my-web-app
 4. If authorized, the tunnel is established and ACME SSL issuance is permitted.
 
 ## Architecture Overview
+## Architecture Overview
 | Component | Role |
 | --- | --- |
-| **Edge Server** | Handles public traffic and TLS tunnel connections from agents. |
-| **Redis Store** | Maintains active tunnel states and valid/revoked token lists. |
-| **Web UI Handler** | Provides the API and interface for configuration management. |
-| **Agent** | The client that opens the outbound tunnel to the server. |
+| **Edge Proxy (`cmd/proxy`)** | Handles public HTTPS traffic, ACME Let's Encrypt, and L4 SNI Multiplexing. |
+| **Tunnel Server (`cmd/tunnel`)** | Manages TCP Yamux streams and internal HTTP Demultiplexing. |
+| **Web UI (`cmd/webui`)** | Provides the API and visual interface for configuration management. |
+| **Redis Store** | Maintains active tunnel states and domain validation rules. |
+| **Agent / Client** | The local client that opens the outbound tunnel to the server. |
 
 ## Production Architecture (Reverse Proxy)
 
-For production deployments, it is highly recommended to run `go-tunnel` behind a reverse proxy like **Nginx** or **HAProxy**. This allows you to expose **only** ports `80` and `443` to the internet, while multiplexing all services through Server Name Indication (SNI) routing on the proxy level.
+For production deployments, it is highly recommended to run `go-tunnel` behind an external reverse proxy like **Nginx** or **HAProxy/Cloudflare Tunnel**. This allows you to expose **only** port `443` to the internet, while multiplexing all services through Server Name Indication (SNI) routing on the proxy level.
 
 ```mermaid
 graph TD
-    Client[Web/API Client] -->|"HTTPS (Port 443)"| RP[Reverse Proxy<br>Nginx / HAProxy]
-    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| RP
-    Admin[Admin/User] -->|"HTTPS (Port 443)"| RP
+    Client[Web/API Client] -->|"HTTPS (Port 443)"| ExtRP[External Reverse Proxy<br>Nginx / NLB]
+    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| ExtRP
+    Admin[Admin/User] -->|"HTTPS (Port 443)"| ExtRP
 
-    subgraph Internal Network
-        RP -- "Host: *.example.com" --> Server["Go-Tunnel Server<br>(Port 80/443)"]
-        RP -- "SNI: tunnel.example.com<br>(TCP Passthrough)" --> Tunnel["Tunnel Listener<br>(Port 9443)"]
-        RP -- "Host: webui.example.com" --> WebUI["Web UI Manager<br>(Port 8080)"]
+    subgraph "Docker Container / Local Server"
+        ExtRP -- "Raw TCP Port 8443" --> EdgeProxy["Edge Proxy<br>(cmd/proxy)"]
+        
+        EdgeProxy -- "Host: *.example.com<br>HTTP Reverse Proxy" --> TunnelHttp["Tunnel Internal HTTP<br>(Port 8081)"]
+        EdgeProxy -- "Host: webui.example.com<br>HTTP Reverse Proxy" --> WebUI["Web UI Manager<br>(Port 8080)"]
+        EdgeProxy -- "SNI: tunnel.example.com<br>L4 TCP Passthrough" --> TunnelTCP["Tunnel Yamux Listener<br>(Port 9443)"]
+        
+        TunnelHttp -.->|"Inject to Stream"| TunnelTCP
     end
 ```
 
 ### Key Considerations
-1. **Single Port Exposure**: The firewall only needs to open ports `80` and `443`.
-2. **Domain-Based Filtering**: The reverse proxy routes traffic strictly based on the domain name (Host/SNI), despite sharing the same public port:
-   - Requests to `webui.example.com` are forwarded via standard HTTP proxy to the Web UI container (`:8080`).
-   - Requests to `gateway.example.com` or `*.example.com` are forwarded to the Gateway Server.
-   - Requests to `tunnel.example.com` **MUST** be forwarded using **TCP Stream Proxy (SNI Passthrough)** to the Tunnel Listener (`:9443`), because the tunnel uses raw multiplexed TLS (yamux) instead of standard HTTP.
+1. **Single Port Exposure**: The external firewall only needs to open ports `80` and `443`.
+2. **Microservices Routing**: Inside your server, `cmd/proxy` intelligently routes traffic:
+   - Requests to `webui.example.com` are forwarded to the Web UI container (`:8080`).
+   - Requests to `*.example.com` (application subdomains) are validated via Redis and forwarded to the Tunnel Internal HTTP (`:8081`).
+   - Requests to `tunnel.example.com` **MUST** be forwarded using **L4 TCP Stream Passthrough** directly to the Yamux Listener (`:9443`).
 
 Happy tunneling!
