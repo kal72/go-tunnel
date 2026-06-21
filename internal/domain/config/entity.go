@@ -71,11 +71,12 @@ type ServerConfig struct {
 	WildcardKeyPath  string
 	DomainRedisDB    int
 
-	DBHost string
-	DBPort int
-	DBUser string
-	DBPass string
-	DBName string
+	DBHost    string
+	DBPort    int
+	DBUser    string
+	DBPass    string
+	DBName    string
+	DBSSLMode string
 }
 
 type ClientAppConfig struct {

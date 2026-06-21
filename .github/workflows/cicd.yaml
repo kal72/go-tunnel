@@ -98,6 +98,7 @@ jobs:
               -e DB_USER=${{ secrets.DB_USER }} \
               -e DB_PASS=${{ secrets.DB_PASS }} \
               -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_SSLMODE=${{ secrets.DB_SSLMODE }} \
               -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
@@ -219,6 +220,7 @@ jobs:
               -e DB_USER=${{ secrets.DB_USER }} \
               -e DB_PASS=${{ secrets.DB_PASS }} \
               -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_SSLMODE=${{ secrets.DB_SSLMODE }} \
               -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE

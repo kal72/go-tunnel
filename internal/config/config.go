@@ -55,6 +55,7 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		DBUser:           get("DB_USER", "postgres"),
 		DBPass:           get("DB_PASS", "postgres"),
 		DBName:           get("DB_NAME", "gotunnel"),
+		DBSSLMode:        get("DB_SSLMODE", "disable"),
 	}
 
 	if strings.TrimSpace(s.GatewayDomain) == "" {
