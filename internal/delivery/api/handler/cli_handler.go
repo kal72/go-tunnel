@@ -71,6 +71,7 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 		TunnelAddr:    h.tunnelAddr,
 		SkipTLSVerify: !h.acmeEnable,
 		ClientID:      cfg.ID.String(),
+		ClientName:    cfg.Name,
 		AuthToken:     "", // Client uses its own JWT
 		Tunnels:       cfg.Tunnels,
 	}

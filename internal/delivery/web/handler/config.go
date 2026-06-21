@@ -27,7 +27,7 @@ type Handler struct {
 	masterSecret   string
 	tunnelAddr     string
 	wildcardDomain string
-	gatewayDomain    string
+	gatewayDomain  string
 	acmeEnable     bool
 }
 
@@ -73,7 +73,7 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		masterSecret:   masterSecret,
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
-		gatewayDomain:    gatewayDomain,
+		gatewayDomain:  gatewayDomain,
 		acmeEnable:     acmeEnable,
 	}
 }
@@ -140,7 +140,7 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"DomainEnabled":  true,
 		"WildcardDomain": h.wildcardDomain,
-		"GatewayDomain":    h.gatewayDomain,
+		"GatewayDomain":  h.gatewayDomain,
 		"UserRole":       role,
 		"UserName":       username,
 	}

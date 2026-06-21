@@ -97,11 +97,12 @@ func (c *Client) runOnce() error {
 
 	// REGISTER
 	if err := protocol.SendJSON(ctrl, protocol.RegisterMessage{
-		Type:      protocol.MsgTypeRegister,
-		ClientID:  c.cfg.ClientID,
-		AuthToken: token,
-		Routes:    c.routes,
-		Modes:     c.modes,
+		Type:       protocol.MsgTypeRegister,
+		ClientID:   c.cfg.ClientID,
+		ClientName: c.cfg.ClientName,
+		AuthToken:  token,
+		Routes:     c.routes,
+		Modes:      c.modes,
 	}); err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	domainTunnel "gotunnel/internal/domain/tunnel"
+	domainUser "gotunnel/internal/domain/user"
 	"gotunnel/internal/shared/protocol"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	usecaseUser "gotunnel/internal/usecase/user"
@@ -22,12 +23,14 @@ import (
 )
 
 type TunnelSession struct {
-	Session   *yamux.Session
-	ClientID  string
-	Hostnames map[string]struct{}
-	Modes     map[string]string
-	Ctrl      *yamux.Stream
-	ClientIP  string
+	Session    *yamux.Session
+	ClientID   string
+	ClientName string
+	Username   string
+	Hostnames  map[string]struct{}
+	Modes      map[string]string
+	Ctrl       *yamux.Stream
+	ClientIP   string
 	Connected time.Time
 }
 
@@ -141,8 +144,8 @@ func (s *Server) updateState(ts *TunnelSession) {
 		hosts = append(hosts, h)
 	}
 	info := domainTunnel.TunnelInfo{
-		ClientID:    ts.ClientID,
-		Client:      ts.ClientIP,
+		ClientID:    ts.ClientName,
+		Client:      ts.Username,
 		Hosts:       hosts,
 		ConnectedAt: ts.Connected,
 		LastPing:    time.Now(),
@@ -211,8 +214,13 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}
 	authToken, _ := protocol.GetString(msg, "auth_token")
 	clientID, _ := protocol.GetString(msg, "client_id")
+	clientName, _ := protocol.GetString(msg, "client_name")
+	if clientName == "" {
+		clientName = clientID // fallback
+	}
 
-	if err := s.verifyAuthToken(authToken, clientID); err != nil {
+	user, err := s.verifyAuthToken(authToken, clientID)
+	if err != nil {
 		s.logger.Warn("[edge] auth failed", zap.String("client_id", clientID), zap.Error(err))
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "auth failed"})
 		session.Close()
@@ -226,13 +234,15 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	}
 
 	ts := &TunnelSession{
-		Session:   session,
-		ClientID:  clientID,
-		Hostnames: map[string]struct{}{},
-		Modes:     map[string]string{},
-		Ctrl:      ctrl,
-		ClientIP:  ip,
-		Connected: time.Now(),
+		Session:    session,
+		ClientID:   clientID,
+		ClientName: clientName,
+		Username:   user.Username,
+		Hostnames:  map[string]struct{}{},
+		Modes:      map[string]string{},
+		Ctrl:       ctrl,
+		ClientIP:   ip,
+		Connected:  time.Now(),
 	}
 
 	rawModes := map[string]string{}
@@ -409,13 +419,13 @@ func (ts *TunnelSession) modeForHost(host string) string {
 	return "http"
 }
 
-func (s *Server) verifyAuthToken(providedToken string, clientID string) error {
-	_, err := s.authUsecase.VerifyToken(context.Background(), providedToken)
+func (s *Server) verifyAuthToken(providedToken string, clientID string) (*domainUser.User, error) {
+	user, err := s.authUsecase.VerifyToken(context.Background(), providedToken)
 	if err != nil {
-		return fmt.Errorf("invalid auth token: %v", err)
+		return nil, fmt.Errorf("invalid auth token: %v", err)
 	}
 
-	return nil
+	return user, nil
 }
 
 func copyHeader(dst, src http.Header) {
