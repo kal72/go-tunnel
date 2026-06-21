@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"gotunnel/internal/model"
+	"gotunnel/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"gotunnel/internal/util"
 )
 
 type authUsecase struct {
 	userRepo  model.UserRepository
-	store     model.TunnelStore
+	store     repository.TunnelStore
 	jwtSecret string
 }
 
-func NewAuthUsecase(userRepo model.UserRepository, store model.TunnelStore, jwtSecret string) AuthUsecase {
+func NewAuthUsecase(userRepo model.UserRepository, store repository.TunnelStore, jwtSecret string) AuthUsecase {
 	return &authUsecase{
 		userRepo:  userRepo,
 		store:     store,
@@ -38,8 +39,7 @@ func (u *authUsecase) Login(ctx context.Context, username, password string) (str
 		return "", model.ErrUnauthorized
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
+	if !util.CheckPasswordHash(password, user.Password) {
 		return "", model.ErrUnauthorized
 	}
 
@@ -107,7 +107,7 @@ func (u *authUsecase) Logout(ctx context.Context, tokenStr string) error {
 }
 
 func (u *authUsecase) CreateUser(ctx context.Context, username, password string, role int16) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := util.HashPassword(password)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (u *authUsecase) UpdateUserStatus(ctx context.Context, id uuid.UUID, status
 }
 
 func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, password string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := util.HashPassword(password)
 	if err != nil {
 		return err
 	}

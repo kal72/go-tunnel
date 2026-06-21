@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"gotunnel/internal/model"
 	tunnelhandler "gotunnel/internal/handler/tunnel"
-	"gotunnel/internal/repository/memory"
 	"log"
 	"net"
 	"net/http"
@@ -18,18 +17,18 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-type Edge struct {
+type TunnelGateway struct {
 	cfg      *model.ServerConfig
 	httpsSrv *http.Server
 	acmeSrv  *http.Server
 	tunnelLn net.Listener
 }
 
-func New(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore model.DomainStore, srv *tunnelhandler.Server) (*Edge, error) {
+func New(env *model.ServerConfig, srv *tunnelhandler.Server, hostPolicy HostPolicyFunc) (*TunnelGateway, error) {
 	// Autocert
 	var m interface{ TLSConfig() *tls.Config }
 	if env.ACMEEnable {
-		m = NewAutocertManager(env, hostRegistry, domainStore, env.WildcardDomain)
+		m = NewAutocertManager(env.ACMECache, env.ACMEEnv, hostPolicy)
 	}
 
 	// WebUI Reverse Proxy
@@ -43,7 +42,7 @@ func New(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore
 				pr.Out.Host = target.Host
 			},
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-				log.Printf("[edge] WebUI Proxy error: %v", err)
+				log.Printf("[gateway] WebUI Proxy error: %v", err)
 				w.WriteHeader(http.StatusBadGateway)
 				fmt.Fprintf(w, "WebUI Proxy Error: %v", err)
 			},
@@ -61,11 +60,11 @@ func New(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore
 
 		if isWebUI {
 			if webuiProxy == nil {
-				log.Printf("[edge] WebUI Domain matched (%s) but proxy is nil", host)
+				log.Printf("[gateway] WebUI Domain matched (%s) but proxy is nil", host)
 				http.Error(w, "WebUI Proxy not initialized", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("[edge] Proxying request for %s to WebUI", host)
+			log.Printf("[gateway] Proxying request for %s to WebUI", host)
 			webuiProxy.ServeHTTP(w, r)
 			return
 		}
@@ -92,7 +91,7 @@ func New(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore
 		return nil, fmt.Errorf("tunnel listener: %w", err)
 	}
 
-	return &Edge{
+	return &TunnelGateway{
 		cfg:      env,
 		httpsSrv: httpsSrv,
 		acmeSrv:  acmeSrv,
@@ -101,27 +100,27 @@ func New(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore
 }
 
 // Run starts all servers and blocks until ctx is cancelled or a fatal error occurs.
-func (e *Edge) Run(ctx context.Context) error {
+func (g *TunnelGateway) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 
-	if e.cfg.ACMEEnable && e.acmeSrv != nil {
+	if g.cfg.ACMEEnable && g.acmeSrv != nil {
 		go func() {
-			log.Printf("[edge] acme-http listening on :%d", e.cfg.ACMEPort)
-			if err := e.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("[gateway] acme-http listening on :%d", g.cfg.ACMEPort)
+			if err := g.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Println("[acme-http]", err)
 			}
 		}()
 	}
 
 	go func() {
-		if e.cfg.ACMEEnable {
-			log.Printf("[edge] HTTPS public listening on :%d", e.cfg.GatewayPort)
-			if err := e.httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+		if g.cfg.ACMEEnable {
+			log.Printf("[gateway] HTTPS public listening on :%d", g.cfg.GatewayPort)
+			if err := g.httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 				errCh <- err
 			}
 		} else {
-			log.Printf("[edge] HTTP public listening on :%d", e.cfg.GatewayPort)
-			if err := e.httpsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("[gateway] HTTP public listening on :%d", g.cfg.GatewayPort)
+			if err := g.httpsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				errCh <- err
 			}
 		}
@@ -129,33 +128,33 @@ func (e *Edge) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		log.Println("[edge] shutdown signal received")
+		log.Println("[gateway] shutdown signal received")
 	case err := <-errCh:
 		return fmt.Errorf("HTTPS server fatal: %w", err)
 	}
 
-	return e.shutdown()
+	return g.shutdown()
 }
 
-func (e *Edge) shutdown() error {
+func (g *TunnelGateway) shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	if e.httpsSrv != nil {
-		if err := e.httpsSrv.Shutdown(ctx); err != nil {
-			log.Printf("[edge] Gateway shutdown error: %v", err)
+	if g.httpsSrv != nil {
+		if err := g.httpsSrv.Shutdown(ctx); err != nil {
+			log.Printf("[gateway] Gateway shutdown error: %v", err)
 		}
 	}
-	if e.acmeSrv != nil {
-		if err := e.acmeSrv.Shutdown(ctx); err != nil {
-			log.Printf("[edge] acme-http shutdown error: %v", err)
+	if g.acmeSrv != nil {
+		if err := g.acmeSrv.Shutdown(ctx); err != nil {
+			log.Printf("[gateway] acme-http shutdown error: %v", err)
 		}
 	}
-	if e.tunnelLn != nil {
-		_ = e.tunnelLn.Close()
+	if g.tunnelLn != nil {
+		_ = g.tunnelLn.Close()
 	}
 
-	log.Println("[edge] shutdown complete")
+	log.Println("[gateway] shutdown complete")
 	return nil
 }
 
@@ -214,10 +213,10 @@ func buildACMEServer(m interface {
 func buildTunnelTLS(m interface{ TLSConfig() *tls.Config }, tunnelHost string, generateSelfSigned bool) *tls.Config {
 	var tlsCfg *tls.Config
 	if generateSelfSigned {
-		log.Printf("[edge] ACME disabled, generating self-signed certificate for tunnel: %s", tunnelHost)
+		log.Printf("[gateway] ACME disabled, generating self-signed certificate for tunnel: %s", tunnelHost)
 		cfg, err := generateSelfSignedCert(tunnelHost)
 		if err != nil {
-			log.Fatalf("[edge] Failed to generate self-signed cert for tunnel: %v", err)
+			log.Fatalf("[gateway] Failed to generate self-signed cert for tunnel: %v", err)
 		}
 		tlsCfg = cfg
 	} else {

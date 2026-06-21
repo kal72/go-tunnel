@@ -1,4 +1,4 @@
-package server
+package tunnel
 
 import (
 	"bufio"
@@ -7,9 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"gotunnel/internal/model"
-	"gotunnel/internal/util/protocol"
-	"gotunnel/internal/repository/memory"
 	"gotunnel/internal/usecase"
+	"gotunnel/internal/util/protocol"
 	"io"
 	"net"
 	"net/http"
@@ -34,7 +33,7 @@ type TunnelSession struct {
 type Server struct {
 	jwtSecret    []byte
 	logger       *zap.Logger
-	hostRegistry *memory.HostRegistry
+	hostRegistry model.HostRegistry
 
 	// host -> session
 	mu        sync.RWMutex
@@ -58,7 +57,7 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry *memory.HostRegistry, serverDomain string, wildcardDomain string, tunnelUsecase usecase.TunnelUsecase, authUsecase usecase.AuthUsecase) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry model.HostRegistry, serverDomain string, wildcardDomain string, tunnelUsecase usecase.TunnelUsecase, authUsecase usecase.AuthUsecase) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -370,12 +369,12 @@ func (s *Server) cleanup(ts *TunnelSession) {
 func (s *Server) sessionForHost(host string) *TunnelSession {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Exact match
 	if ts, ok := s.hostToSes[host]; ok {
 		return ts
 	}
-	
+
 	// Wildcard match
 	parts := strings.SplitN(host, ".", 2)
 	if len(parts) == 2 {
@@ -384,7 +383,7 @@ func (s *Server) sessionForHost(host string) *TunnelSession {
 			return ts
 		}
 	}
-	
+
 	return nil
 }
 

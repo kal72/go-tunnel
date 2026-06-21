@@ -7,7 +7,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func InitDB(env *model.ServerConfig) (*sqlx.DB, error) {
@@ -23,14 +22,4 @@ func InitDB(env *model.ServerConfig) (*sqlx.DB, error) {
 	return db, nil
 }
 
-// HashPassword generates a bcrypt hash
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	return string(bytes), err
-}
 
-// CheckPasswordHash compares password against a hash
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}

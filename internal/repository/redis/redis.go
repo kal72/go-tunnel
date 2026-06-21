@@ -11,15 +11,15 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisStore struct {
+type TunnelRedisStore struct {
 	client     *redis.Client
 	prefix     string
 	authPrefix string
 	domainKey  string
 }
 
-func NewRedisStore(addr, pass string, db int) *RedisStore {
-	return &RedisStore{
+func NewTunnelRedisStore(addr, pass string, db int) *TunnelRedisStore {
+	return &TunnelRedisStore{
 		client: redis.NewClient(&redis.Options{
 			Addr:     addr,
 			Password: pass,
@@ -31,7 +31,7 @@ func NewRedisStore(addr, pass string, db int) *RedisStore {
 	}
 }
 
-func (s *RedisStore) Ping(ctx context.Context) {
+func (s *TunnelRedisStore) Ping(ctx context.Context) {
 	pong, err := s.client.Ping(ctx).Result()
 	if err != nil {
 		fmt.Println("Redis connection failed:", err)
@@ -41,7 +41,7 @@ func (s *RedisStore) Ping(ctx context.Context) {
 	fmt.Println("Redis connected:", pong)
 }
 
-func (s *RedisStore) SetTunnel(ctx context.Context, sessionID string, info model.TunnelInfo) error {
+func (s *TunnelRedisStore) SetTunnel(ctx context.Context, sessionID string, info model.TunnelInfo) error {
 	data, err := json.Marshal(info)
 	if err != nil {
 		return err
@@ -50,11 +50,11 @@ func (s *RedisStore) SetTunnel(ctx context.Context, sessionID string, info model
 	return s.client.Set(ctx, s.prefix+sessionID, data, 1*time.Hour).Err()
 }
 
-func (s *RedisStore) DeleteTunnel(ctx context.Context, sessionID string) error {
+func (s *TunnelRedisStore) DeleteTunnel(ctx context.Context, sessionID string) error {
 	return s.client.Del(ctx, s.prefix+sessionID).Err()
 }
 
-func (s *RedisStore) ListTunnels(ctx context.Context) ([]model.TunnelInfo, error) {
+func (s *TunnelRedisStore) ListTunnels(ctx context.Context) ([]model.TunnelInfo, error) {
 	keys, err := s.client.Keys(ctx, s.prefix+"*").Result()
 	if err != nil {
 		return nil, err
@@ -78,11 +78,11 @@ func (s *RedisStore) ListTunnels(ctx context.Context) ([]model.TunnelInfo, error
 	return infos, nil
 }
 
-func (s *RedisStore) SetToken(ctx context.Context, token string, expiration time.Duration) error {
+func (s *TunnelRedisStore) SetToken(ctx context.Context, token string, expiration time.Duration) error {
 	return s.client.Set(ctx, s.authPrefix+token, "valid", expiration).Err()
 }
 
-func (s *RedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, error) {
+func (s *TunnelRedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, error) {
 	val, err := s.client.Get(ctx, s.authPrefix+token).Result()
 	if err == redis.Nil {
 		return true, nil // If not in redis, consider it revoked or expired
@@ -93,7 +93,7 @@ func (s *RedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, er
 	return val == "revoked", nil
 }
 
-func (s *RedisStore) RevokeToken(ctx context.Context, token string) error {
+func (s *TunnelRedisStore) RevokeToken(ctx context.Context, token string) error {
 	// We could either delete it or set it to "revoked".
 	// Setting to "revoked" is better if we want to keep track of revoked tokens before they expire.
 	// But deleting it also works as IsTokenRevoked returns true if not found.
@@ -101,17 +101,5 @@ func (s *RedisStore) RevokeToken(ctx context.Context, token string) error {
 	return s.client.Del(ctx, s.authPrefix+token).Err()
 }
 
-func (s *RedisStore) AddDomain(ctx context.Context, domain string) error {
-	return s.client.SAdd(ctx, s.domainKey, domain).Err()
-}
 
-func (s *RedisStore) RemoveDomain(ctx context.Context, domain string) error {
-	return s.client.SRem(ctx, s.domainKey, domain).Err()
-}
 
-func (s *RedisStore) ListDomains(ctx context.Context) ([]string, error) {
-	return s.client.SMembers(ctx, s.domainKey).Result()
-}
-func (s *RedisStore) IsDomainAllowed(ctx context.Context, domain string) (bool, error) {
-	return s.client.SIsMember(ctx, s.domainKey, domain).Result()
-}

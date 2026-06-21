@@ -4,14 +4,15 @@ import (
 	"context"
 
 	"gotunnel/internal/model"
+	"gotunnel/internal/repository"
 )
 
 type tunnelUsecase struct {
-	tunnelStore model.TunnelStore
-	domainStore model.DomainStore
+	tunnelStore repository.TunnelStore
+	domainStore repository.DomainStore
 }
 
-func NewTunnelUsecase(tunnelStore model.TunnelStore, domainStore model.DomainStore) TunnelUsecase {
+func NewTunnelUsecase(tunnelStore repository.TunnelStore, domainStore repository.DomainStore) TunnelUsecase {
 	return &tunnelUsecase{
 		tunnelStore: tunnelStore,
 		domainStore: domainStore,

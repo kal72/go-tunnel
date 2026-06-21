@@ -1,4 +1,4 @@
-package handler
+package webui
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 
 const (
 	jwtCookieName = "tunnel_token"
-	jwtSecret = "very-secret-key-change-me" // hardcoded as requested
 )
 
 type contextKey string
