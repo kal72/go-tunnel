@@ -21,8 +21,7 @@ type loginResponse struct {
 }
 
 type Credentials struct {
-	ServerURL string `json:"server_url"`
-	Token     string `json:"token"`
+	Token string `json:"token"`
 }
 
 func GetCredentialsPath() (string, error) {
@@ -103,8 +102,7 @@ func Login(serverURL, username, password string) error {
 	}
 
 	creds := Credentials{
-		ServerURL: serverURL,
-		Token:     res.Token,
+		Token: res.Token,
 	}
 
 	b, err := json.MarshalIndent(creds, "", "  ")
@@ -140,7 +138,7 @@ func ReadCredentials() (*Credentials, error) {
 		return nil, fmt.Errorf("failed to decode credentials: %w", err)
 	}
 
-	if creds.Token == "" || creds.ServerURL == "" {
+	if strings.TrimSpace(creds.Token) == "" {
 		return nil, fmt.Errorf("invalid credentials file, please login again")
 	}
 

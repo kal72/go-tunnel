@@ -46,17 +46,17 @@ type ClientConfig struct {
 
 type ServerConfig struct {
 	GatewayDomain string
-	GatewayPort int
+	GatewayPort   int
 
 	TunnelDomain string
-	TunnelPort int
+	TunnelPort   int
 
 	WebUIDomain string
 	WebUIPort   int
-	
+
 	ProxyHttpPort  int
 	ProxyHttpsPort int
-	
+
 	JWTSecret  string
 	ACMEEnable bool
 	ACMECache  string
@@ -84,7 +84,6 @@ type ClientAppConfig struct {
 	SkipTLSVerify bool   `yaml:"skip_tls_verify" json:"skip_tls_verify"`
 
 	ClientID  string `yaml:"client_id" json:"client_id"`
-	JWTSecret string `yaml:"jwt_secret" json:"jwt_secret"`
 	AuthToken string `yaml:"auth_token" json:"auth_token"`
 
 	Tunnels []TunnelEntry `yaml:"tunnels" json:"tunnels"`

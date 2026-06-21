@@ -12,13 +12,13 @@ type ListConfigsResponse []struct {
 	Name string `json:"name"`
 }
 
-func ListConfigs() error {
+func ListConfigs(serverURL string) error {
 	creds, err := ReadCredentials()
 	if err != nil {
 		return err
 	}
 
-	endpoint := fmt.Sprintf("%s/api/cli/configs", creds.ServerURL)
+	endpoint := fmt.Sprintf("%s/api/cli/configs", serverURL)
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
@@ -52,13 +52,13 @@ func ListConfigs() error {
 	return nil
 }
 
-func FetchConfig(configName string) (*config.ClientAppConfig, error) {
+func FetchConfig(serverURL string, configName string) (*config.ClientAppConfig, error) {
 	creds, err := ReadCredentials()
 	if err != nil {
 		return nil, err
 	}
 
-	endpoint := fmt.Sprintf("%s/api/cli/config/%s", creds.ServerURL, configName)
+	endpoint := fmt.Sprintf("%s/api/cli/config/%s", serverURL, configName)
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err

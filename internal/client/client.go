@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/yamux"
@@ -68,7 +69,13 @@ func (c *Client) runOnce() error {
 	}
 
 	c.logger.Info("[agent] connecting to", zap.String("server", c.cfg.TunnelAddr))
-	conn, err := tls.Dial("tcp", c.cfg.TunnelAddr, tlsCfg)
+	
+	dialAddr := c.cfg.TunnelAddr
+	if !strings.Contains(dialAddr, ":") {
+		dialAddr = dialAddr + ":443"
+	}
+
+	conn, err := tls.Dial("tcp", dialAddr, tlsCfg)
 	if err != nil {
 		return err
 	}
