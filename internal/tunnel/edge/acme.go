@@ -24,6 +24,11 @@ func NewAutocertManager(env *config.ServerConfig, hostRegistry *registry.HostReg
 		HostPolicy: func(ctx context.Context, host string) error {
 			h := strings.ToLower(strings.TrimSpace(host))
 
+			// 0. Wildcard subdomains are managed externally (e.g. Reverse Proxy)
+			if wildcardDomain != "" && matchWildcard(h, wildcardDomain) {
+				return fmt.Errorf("wildcard domains are managed externally: %s", h)
+			}
+
 			// 1. System domains (Gateway, Tunnel & WebUI)
 			if h == strings.ToLower(env.GatewayHost) || h == strings.ToLower(env.TunnelHost) || h == strings.ToLower(env.WebUIDomain) {
 				return nil

@@ -75,6 +75,7 @@ jobs:
               -v "$(pwd)/downloads:/app/downloads:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
               -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \
@@ -166,6 +167,7 @@ jobs:
               -v "$(pwd)/downloads:/app/downloads:Z" \
               -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
               -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
               -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \

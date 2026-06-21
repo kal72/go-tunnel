@@ -27,10 +27,11 @@ type Handler struct {
 	tunnelAddr     string
 	wildcardDomain string
 	gatewayHost    string
+	acmeEnable     bool
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, store state.Store, domainStore state.Store, configRepo state.ConfigRepository, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string) *Handler {
+func New(fs embed.FS, store state.Store, domainStore state.Store, configRepo state.ConfigRepository, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string, acmeEnable bool) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -73,6 +74,7 @@ func New(fs embed.FS, store state.Store, domainStore state.Store, configRepo sta
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
 		gatewayHost:    gatewayHost,
+		acmeEnable:     acmeEnable,
 	}
 }
 
@@ -400,7 +402,7 @@ func (h *Handler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 	// But let's construct the payload.
 	clientConfig := model.ClientConfig{
 		TunnelAddr:    h.tunnelAddr,
-		SkipTLSVerify: false,
+		SkipTLSVerify: !h.acmeEnable,
 		ClientID:      cfg.ID.String(),
 		AuthToken:     "", // Client uses its own JWT
 		Tunnels:       tunnels,

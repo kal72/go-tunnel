@@ -15,6 +15,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/acme/autocert"
 )
 
 type Edge struct {
@@ -44,7 +46,10 @@ func New(env *config.ServerConfig, userRepo state.UserRepository) (*Edge, error)
 	}
 
 	// Autocert
-	m := NewAutocertManager(env, hostRegistry, domainStore, env.WildcardDomain)
+	var m interface{ TLSConfig() *tls.Config }
+	if env.ACMEEnable {
+		m = NewAutocertManager(env, hostRegistry, domainStore, env.WildcardDomain)
+	}
 
 	srv, err := server.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, tunnelStore, domainStore, env.WildcardDomain, userRepo)
 	if err != nil {
@@ -91,14 +96,20 @@ func New(env *config.ServerConfig, userRepo state.UserRepository) (*Edge, error)
 		srv.ServeHTTP(w, r)
 	})
 
-	// Public HTTPS
-	httpsSrv := buildHTTPSServer(env, m, mainHandler)
+	// Public Gateway
+	var httpsSrv *http.Server
+	var acmeSrv *http.Server
 
-	// ACME HTTP-01
-	acmeSrv := buildACMEServer(m, env.ACMEPort)
+	if env.ACMEEnable {
+		httpsSrv = buildHTTPSServer(env, m, mainHandler)
+		acmeSrv = buildACMEServer(m.(*autocert.Manager), env.ACMEPort)
+	} else {
+		// Serve standard HTTP if ACME is disabled
+		httpsSrv = buildHTTPServer(env, mainHandler)
+	}
 
 	// Tunnel TLS listener
-	tunnelTLS := buildTunnelTLS(m, env.TunnelHost)
+	tunnelTLS := buildTunnelTLS(m, env.TunnelHost, !env.ACMEEnable)
 	tunnelAddr := fmt.Sprintf("0.0.0.0:%d", env.TunnelPort)
 	tunnelLn, err := srv.ListenTunnelTLS(tunnelAddr, tunnelTLS)
 	if err != nil {
@@ -118,17 +129,26 @@ func New(env *config.ServerConfig, userRepo state.UserRepository) (*Edge, error)
 func (e *Edge) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 
-	go func() {
-		log.Printf("[edge] acme-http listening on :%d", e.cfg.ACMEPort)
-		if err := e.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Println("[acme-http]", err)
-		}
-	}()
+	if e.cfg.ACMEEnable && e.acmeSrv != nil {
+		go func() {
+			log.Printf("[edge] acme-http listening on :%d", e.cfg.ACMEPort)
+			if err := e.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Println("[acme-http]", err)
+			}
+		}()
+	}
 
 	go func() {
-		log.Printf("[edge] HTTPS public listening on :%d", e.cfg.GatewayPort)
-		if err := e.httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			errCh <- err
+		if e.cfg.ACMEEnable {
+			log.Printf("[edge] HTTPS public listening on :%d", e.cfg.GatewayPort)
+			if err := e.httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				errCh <- err
+			}
+		} else {
+			log.Printf("[edge] HTTP public listening on :%d", e.cfg.GatewayPort)
+			if err := e.httpsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				errCh <- err
+			}
 		}
 	}()
 
@@ -146,11 +166,15 @@ func (e *Edge) shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	if err := e.httpsSrv.Shutdown(ctx); err != nil {
-		log.Printf("[edge] HTTPS shutdown error: %v", err)
+	if e.httpsSrv != nil {
+		if err := e.httpsSrv.Shutdown(ctx); err != nil {
+			log.Printf("[edge] Gateway shutdown error: %v", err)
+		}
 	}
-	if err := e.acmeSrv.Shutdown(ctx); err != nil {
-		log.Printf("[edge] acme-http shutdown error: %v", err)
+	if e.acmeSrv != nil {
+		if err := e.acmeSrv.Shutdown(ctx); err != nil {
+			log.Printf("[edge] acme-http shutdown error: %v", err)
+		}
 	}
 	if e.tunnelLn != nil {
 		_ = e.tunnelLn.Close()
@@ -190,6 +214,16 @@ func buildHTTPSServer(env *config.ServerConfig, m interface{ TLSConfig() *tls.Co
 	}
 }
 
+func buildHTTPServer(env *config.ServerConfig, srv http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
+		Handler:           srv,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
+	}
+}
+
 func buildACMEServer(m interface {
 	HTTPHandler(http.Handler) http.Handler
 }, port int) *http.Server {
@@ -211,8 +245,19 @@ func buildACMEServer(m interface {
 	}
 }
 
-func buildTunnelTLS(m interface{ TLSConfig() *tls.Config }, tunnelHost string) *tls.Config {
-	tlsCfg := cloneTLSConfig(m.TLSConfig())
+func buildTunnelTLS(m interface{ TLSConfig() *tls.Config }, tunnelHost string, generateSelfSigned bool) *tls.Config {
+	var tlsCfg *tls.Config
+	if generateSelfSigned {
+		log.Printf("[edge] ACME disabled, generating self-signed certificate for tunnel: %s", tunnelHost)
+		cfg, err := generateSelfSignedCert(tunnelHost)
+		if err != nil {
+			log.Fatalf("[edge] Failed to generate self-signed cert for tunnel: %v", err)
+		}
+		tlsCfg = cfg
+	} else {
+		tlsCfg = cloneTLSConfig(m.TLSConfig())
+	}
+	
 	tlsCfg.MinVersion = tls.VersionTLS12
 	tlsCfg.ClientSessionCache = tls.NewLRUClientSessionCache(64)
 	ensureDefaultServerName(tlsCfg, tunnelHost)

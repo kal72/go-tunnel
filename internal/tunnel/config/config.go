@@ -28,9 +28,10 @@ type ServerConfig struct {
 	WebUIPort   int
 
 	JWTSecret string
-	ACMECache string
-	ACMEEnv   string
-	ACMEPort  int
+	ACMEEnable bool
+	ACMECache  string
+	ACMEEnv    string
+	ACMEPort   int
 
 	RedisAddr string
 	RedisPass string
@@ -82,6 +83,7 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		WebUIDomain:    get("WEBUI_DOMAIN", "localhost"),
 		WebUIPort:      parsePort(get("WEBUI_PORT", "8080"), 8080),
 		JWTSecret:      get("JWT_SECRET", "defaultjwtsecret"),
+		ACMEEnable:     strings.ToLower(get("ACME_ENABLE", "false")) == "true",
 		ACMECache:      get("ACME_CACHE", "./cert-cache"),
 		ACMEEnv:        get("ACME_ENV", "staging"), // production or staging
 		ACMEPort:       parsePort(get("ACME_PORT", "80"), 80),

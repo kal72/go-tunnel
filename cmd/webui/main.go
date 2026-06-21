@@ -51,7 +51,7 @@ func main() {
 	userRepo := state.NewUserRepository(db)
 	configRepo := state.NewConfigRepository(db)
 
-	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, configRepo, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost)
+	h := handler.New(assets.EmbeddedFS, redisStore, domainStore, configRepo, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost, env.ACMEEnable)
 	authH := handler.NewAuth(assets.EmbeddedFS, redisStore, userRepo)
 	userH := handler.NewUserHandler(assets.EmbeddedFS, userRepo)
 
