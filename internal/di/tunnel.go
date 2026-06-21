@@ -29,9 +29,20 @@ type TunnelApp struct {
 
 func (a *TunnelApp) Run(ctx context.Context) error {
 	tunnelTLS := cert.CloneTLSConfig(nil)
+
+	if a.cfg.ACMEEnable {
+		acmeManager := cert.NewAutocertManager(a.cfg.ACMECache, a.cfg.ACMEEnv, func(ctx context.Context, host string) error {
+			if host == a.cfg.TunnelDomain {
+				return nil
+			}
+			return fmt.Errorf("acme host not allowed in tunnel: %s", host)
+		})
+		tunnelTLS.GetCertificate = acmeManager.GetCertificate
+	}
+
 	cert.WrapWithWildcardCert(tunnelTLS, a.cfg.WildcardDomain, a.cfg.WildcardCertPath, a.cfg.WildcardKeyPath)
 
-	if len(tunnelTLS.Certificates) == 0 && tunnelTLS.GetCertificate == nil {
+	if len(tunnelTLS.Certificates) == 0 {
 		log.Println("[tunnel] Dev Mode / Fallback: Generating self-signed certificate.")
 		fallback, err := cert.GenerateSelfSignedCert(a.cfg.TunnelDomain)
 		if err == nil {
