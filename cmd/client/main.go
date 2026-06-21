@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"gotunnel/internal/tunnel/client"
+	"gotunnel/internal/client"
 )
 
 var (

@@ -1,0 +1,70 @@
+package server
+
+import (
+	"context"
+	"fmt"
+	"gotunnel/internal/model"
+	"gotunnel/internal/repository/memory"
+	"strings"
+
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
+)
+
+func NewAutocertManager(env *model.ServerConfig, hostRegistry *memory.HostRegistry, domainStore model.DomainStore, wildcardDomain string) *autocert.Manager {
+	acmeClient := &acme.Client{
+		DirectoryURL: acmeDirectoryURL(env.ACMEEnv),
+	}
+
+	return &autocert.Manager{
+		Cache:  autocert.DirCache(env.ACMECache),
+		Prompt: autocert.AcceptTOS,
+		Client: acmeClient,
+		HostPolicy: func(ctx context.Context, host string) error {
+			h := strings.ToLower(strings.TrimSpace(host))
+
+			// 0. Wildcard subdomains are managed externally (e.g. Reverse Proxy)
+			if wildcardDomain != "" && matchWildcard(h, wildcardDomain) {
+				return fmt.Errorf("wildcard domains are managed externally: %s", h)
+			}
+
+			// 1. System domains (Gateway, Tunnel & WebUI)
+			if h == strings.ToLower(env.GatewayHost) || h == strings.ToLower(env.TunnelHost) || h == strings.ToLower(env.WebUIDomain) {
+				return nil
+			}
+
+			// 2. Redis allowlist
+			if domainStore != nil {
+				allowed, err := domainStore.IsDomainAllowed(ctx, h)
+				if err == nil && allowed {
+					return nil
+				}
+			}
+
+			// 3. Currently active tunnel
+			if hostRegistry.IsActive(h) {
+				return nil
+			}
+
+			return fmt.Errorf("unauthorized host: %s", h)
+		},
+	}
+}
+
+func acmeDirectoryURL(env string) string {
+	if strings.ToLower(strings.TrimSpace(env)) == "production" {
+		return acme.LetsEncryptURL
+	}
+	return "https://acme-staging-v02.api.letsencrypt.org/directory"
+}
+func isPattern(host string) bool {
+	return strings.Contains(host, "*")
+}
+
+func matchWildcard(host, pattern string) bool {
+	if !strings.HasPrefix(pattern, "*.") {
+		return host == pattern
+	}
+	base := strings.TrimPrefix(pattern, "*.")
+	return strings.HasSuffix(host, "."+base) && !strings.Contains(strings.TrimSuffix(host, "."+base), ".")
+}
