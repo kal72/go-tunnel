@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	domainErrors "gotunnel/internal/domain/errors"
@@ -98,13 +99,33 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		cookie, err := r.Cookie(jwtCookieName)
-		if err != nil {
+		var tokenString string
+
+		// First try Authorization header
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+
+		// Fallback to cookie
+		if tokenString == "" {
+			cookie, err := r.Cookie(jwtCookieName)
+			if err == nil {
+				tokenString = cookie.Value
+			}
+		}
+
+		if tokenString == "" {
+			// If it's an API/CLI request, return 401 instead of redirecting
+			if strings.HasPrefix(r.URL.Path, "/api/cli/") {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 
-		user, err := h.authUsecase.VerifyToken(r.Context(), cookie.Value)
+		user, err := h.authUsecase.VerifyToken(r.Context(), tokenString)
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
