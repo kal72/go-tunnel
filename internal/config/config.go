@@ -30,14 +30,14 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 	}
 
 	s := &domainConfig.ServerConfig{
-		GatewayDomain:      get("GATEWAY_DOMAIN", ""),
-		GatewayPort:      parsePort(get("GATEWAY_PORT", "443"), 443),
-		TunnelDomain:       get("TUNNEL_DOMAIN", ""),
-		TunnelPort:       parsePort(get("TUNNEL_PORT", "9443"), 9443),
-		WebUIDomain:      get("WEBUI_DOMAIN", "localhost"),
-		WebUIPort:        parsePort(get("WEBUI_PORT", "8080"), 8080),
-		ProxyHttpPort:    parsePort(get("PROXY_HTTP_PORT", "80"), 80),
-		ProxyHttpsPort:   parsePort(get("PROXY_HTTPS_PORT", "443"), 443),
+		GatewayDomain:  get("GATEWAY_DOMAIN", ""),
+		GatewayPort:    parsePort(get("GATEWAY_PORT", "8443"), 8443),
+		TunnelDomain:   get("TUNNEL_DOMAIN", ""),
+		TunnelPort:     parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		WebUIDomain:    get("WEBUI_DOMAIN", "localhost"),
+		WebUIPort:      parsePort(get("WEBUI_PORT", "8080"), 8080),
+		ProxyHttpPort:  parsePort(get("PROXY_HTTP_PORT", "80"), 80),
+		ProxyHttpsPort: parsePort(get("PROXY_HTTPS_PORT", "443"), 443),
 
 		JWTSecret:        get("JWT_SECRET", "defaultjwtsecret"),
 		ACMEEnable:       strings.ToLower(get("ACME_ENABLE", "false")) == "true",
