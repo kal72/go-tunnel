@@ -122,19 +122,19 @@ gotunnel run my-web-app
 | **Redis Store** | Maintains active tunnel states and domain validation rules. |
 | **Agent / Client** | The local client that opens the outbound tunnel to the server. |
 
-## Production Architecture (Reverse Proxy)
+## Production Architecture
 
-For production deployments, it is highly recommended to run `go-tunnel` behind an external reverse proxy like **Nginx** or **HAProxy/Cloudflare Tunnel**. This allows you to expose **only** port `443` to the internet, while multiplexing all services through Server Name Indication (SNI) routing on the proxy level.
+`go-tunnel` is designed to be highly self-sufficient. Because we built a custom **Edge Proxy (`cmd/proxy`)** with L4 SNI Multiplexing and automatic Let's Encrypt (ACME), you **DO NOT need external reverse proxies like Nginx or HAProxy**.
+
+Our Edge Proxy binds directly to your public port `443` and handles all complex routing internally.
 
 ```mermaid
 graph TD
-    Client[Web/API Client] -->|"HTTPS (Port 443)"| ExtRP[External Reverse Proxy<br>Nginx / NLB]
-    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| ExtRP
-    Admin[Admin/User] -->|"HTTPS (Port 443)"| ExtRP
+    Client[Web/API Client] -->|"HTTPS (Port 443)"| EdgeProxy["Edge Proxy<br>(cmd/proxy)"]
+    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| EdgeProxy
+    Admin[Admin/User] -->|"HTTPS (Port 443)"| EdgeProxy
 
     subgraph "Docker Container / Local Server"
-        ExtRP -- "Raw TCP Port 8443" --> EdgeProxy["Edge Proxy<br>(cmd/proxy)"]
-        
         EdgeProxy -- "Host: *.example.com<br>HTTP Reverse Proxy" --> TunnelHttp["Tunnel Internal HTTP<br>(Port 8081)"]
         EdgeProxy -- "Host: webui.example.com<br>HTTP Reverse Proxy" --> WebUI["Web UI Manager<br>(Port 8080)"]
         EdgeProxy -- "SNI: tunnel.example.com<br>L4 TCP Passthrough" --> TunnelTCP["Tunnel Yamux Listener<br>(Port 9443)"]
@@ -144,7 +144,7 @@ graph TD
 ```
 
 ### Key Considerations
-1. **Single Port Exposure**: The external firewall only needs to open ports `80` and `443`.
+1. **Single Port Exposure**: The external firewall only needs to open ports `80` (for ACME) and `443`.
 2. **Microservices Routing**: Inside your server, `cmd/proxy` intelligently routes traffic:
    - Requests to `webui.example.com` are forwarded to the Web UI container (`:8080`).
    - Requests to `*.example.com` (application subdomains) are validated via Redis and forwarded to the Tunnel Internal HTTP (`:8081`).
