@@ -9,21 +9,24 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"gotunnel/assets"
-	"gotunnel/internal/model"
-	"gotunnel/internal/repository"
-	postgresrepo "gotunnel/internal/repository/postgres"
-	redisrepo "gotunnel/internal/repository/redis"
-	"gotunnel/internal/usecase"
-	"gotunnel/internal/handler/api"
-	"gotunnel/internal/handler/webui"
+	api "gotunnel/internal/delivery/api/handler"
+	"gotunnel/internal/delivery/web"
+	webui "gotunnel/internal/delivery/web/handler"
+	domainConfig "gotunnel/internal/domain/config"
+	domainTunnel "gotunnel/internal/domain/tunnel"
+	redisrepo "gotunnel/internal/infrastructure/cache/redis"
+	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
+	usecaseConfig "gotunnel/internal/usecase/config"
+	usecaseTunnel "gotunnel/internal/usecase/tunnel"
+	usecaseUser "gotunnel/internal/usecase/user"
 )
 
-func BuildWebUIApp(env *model.ServerConfig) (*chi.Mux, func(), error) {
+func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	// Redis Repositories
 	tunnelStore := redisrepo.NewTunnelRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())
 
-	var domainStore repository.DomainStore
+	var domainStore domainTunnel.DomainStore
 	if env.WildcardDomain != "" {
 		domainStore = redisrepo.NewDomainRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
 		domainStore.Ping(context.Background())
@@ -44,9 +47,9 @@ func BuildWebUIApp(env *model.ServerConfig) (*chi.Mux, func(), error) {
 	configRepo := postgresrepo.NewConfigRepository(db)
 
 	// Usecases
-	tunnelUsecase := usecase.NewTunnelUsecase(tunnelStore, domainStore)
-	configUsecase := usecase.NewConfigUsecase(configRepo)
-	authUsecase := usecase.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
+	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
+	configUsecase := usecaseConfig.NewConfigUsecase(configRepo)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
 
 	// Handlers
 	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost, env.ACMEEnable)
@@ -55,7 +58,7 @@ func BuildWebUIApp(env *model.ServerConfig) (*chi.Mux, func(), error) {
 	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable)
 
 	// Router
-	router := webui.SetupRouter(h, authH, userH, cliH, http.FS(assets.EmbeddedFS))
+	router := web.SetupRouter(h, authH, userH, cliH, http.FS(assets.EmbeddedFS))
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")

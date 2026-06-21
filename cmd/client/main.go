@@ -63,13 +63,13 @@ func main() {
 			os.Exit(1)
 		}
 		configName := flag.Args()[1]
-		
+
 		log.Printf("Fetching configuration: %s\n", configName)
 		cfg, err := client.FetchConfig(configName)
 		if err != nil {
 			log.Fatalf("Failed to fetch config %s: %v", configName, err)
 		}
-		
+
 		c := client.NewClient(cfg)
 		c.RunForever()
 

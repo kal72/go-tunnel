@@ -47,7 +47,7 @@ func InteractivePrompt(prompt string, isPassword bool) (string, error) {
 		}
 		return string(bytePassword), nil
 	}
-	
+
 	reader := bufio.NewReader(os.Stdin)
 	text, err := reader.ReadString('\n')
 	if err != nil {
@@ -76,7 +76,7 @@ func Login(serverURL, username, password string) error {
 	serverURL = strings.TrimRight(serverURL, "/")
 
 	endpoint := fmt.Sprintf("%s/api/cli/login", serverURL)
-	
+
 	data := url.Values{}
 	data.Set("username", username)
 	data.Set("password", password)
@@ -134,7 +134,7 @@ func ReadCredentials() (*Credentials, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read credentials (have you logged in?): %w", err)
 	}
-	
+
 	var creds Credentials
 	if err := json.Unmarshal(b, &creds); err != nil {
 		return nil, fmt.Errorf("failed to decode credentials: %w", err)

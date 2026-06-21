@@ -31,4 +31,3 @@ func main() {
 	log.Printf("Tunnel Manager running on http://%s:%s", env.WebUIDomain, port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
 }
-

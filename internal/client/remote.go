@@ -1,11 +1,11 @@
 package client
 
 import (
+	"gotunnel/internal/domain/config"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"gotunnel/internal/model"
 )
 
 type ListConfigsResponse []struct {
@@ -52,7 +52,7 @@ func ListConfigs() error {
 	return nil
 }
 
-func FetchConfig(configName string) (*model.ClientAppConfig, error) {
+func FetchConfig(configName string) (*config.ClientAppConfig, error) {
 	creds, err := ReadCredentials()
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func FetchConfig(configName string) (*model.ClientAppConfig, error) {
 		return nil, fmt.Errorf("server returned status %d", resp.StatusCode)
 	}
 
-	var cfg model.ClientAppConfig
+	var cfg config.ClientAppConfig
 	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to decode config %s: %w", configName, err)
 	}

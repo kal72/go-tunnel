@@ -33,7 +33,8 @@ all: generate build test
 
 build:
 	@echo "Building binaries..."
-	$(GOBUILD) -o $(SERVER_BINARY) ./cmd/server/main.go
+	$(GOBUILD) -o $(SERVER_BINARY) ./cmd/tunnel/main.go
+	$(GOBUILD) -o ./bin/gotunnel-proxy ./cmd/proxy/main.go
 	$(GOBUILD) -o $(WEBUI_BINARY) ./cmd/webui/main.go
 	$(GOBUILD) -o $(CLIENT_BINARY) ./cmd/client/main.go
 
@@ -57,7 +58,7 @@ generate:
 
 run-server:
 	@echo "Starting server..."
-	$(GOCMD) run ./cmd/server/main.go
+	$(GOCMD) run ./cmd/tunnel/main.go
 
 run-webui:
 	@echo "Starting Web UI..."

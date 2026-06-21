@@ -1,11 +1,12 @@
 package client
 
 import (
+	"gotunnel/internal/domain/config"
+
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"gotunnel/internal/model"
-	"gotunnel/internal/util/protocol"
+	"gotunnel/internal/shared/protocol"
 	"io"
 	"net"
 	"net/http"
@@ -17,13 +18,13 @@ import (
 )
 
 type Client struct {
-	cfg    *model.ClientAppConfig
+	cfg    *config.ClientAppConfig
 	logger *zap.Logger
 	routes map[string]string // hostname -> target
 	modes  map[string]string
 }
 
-func NewClient(cfg *model.ClientAppConfig) *Client {
+func NewClient(cfg *config.ClientAppConfig) *Client {
 	r := make(map[string]string, len(cfg.Tunnels))
 	m := make(map[string]string)
 	for _, t := range cfg.Tunnels {
