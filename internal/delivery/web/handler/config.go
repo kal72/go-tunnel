@@ -27,12 +27,12 @@ type Handler struct {
 	masterSecret   string
 	tunnelAddr     string
 	wildcardDomain string
-	gatewayHost    string
+	gatewayDomain    string
 	acmeEnable     bool
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayHost string, acmeEnable bool) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -73,7 +73,7 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		masterSecret:   masterSecret,
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
-		gatewayHost:    gatewayHost,
+		gatewayDomain:    gatewayDomain,
 		acmeEnable:     acmeEnable,
 	}
 }
@@ -140,7 +140,7 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"DomainEnabled":  true,
 		"WildcardDomain": h.wildcardDomain,
-		"GatewayHost":    h.gatewayHost,
+		"GatewayDomain":    h.gatewayDomain,
 		"UserRole":       role,
 		"UserName":       username,
 	}

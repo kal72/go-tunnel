@@ -70,11 +70,11 @@ jobs:
 
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
               -v "$(pwd)/downloads:/app/downloads:Z" \
-              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
-              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e GATEWAY_DOMAIN=${{ secrets.GATEWAY_DOMAIN }} \
+              -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
               -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
               -e REDIS_ADDR="host.containers.internal:6379" \
@@ -84,6 +84,11 @@ jobs:
               -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
               -e WILDCARD_CERT_PATH=${{ secrets.WILDCARD_CERT_PATH }} \
               -e WILDCARD_KEY_PATH=${{ secrets.WILDCARD_KEY_PATH }} \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASS=${{ secrets.DB_PASS }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
               -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
@@ -164,11 +169,11 @@ jobs:
 
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
               -v "$(pwd)/downloads:/app/downloads:Z" \
-              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
-              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -e GATEWAY_DOMAIN=${{ secrets.GATEWAY_DOMAIN }} \
+              -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
               -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
               -e REDIS_ADDR="host.containers.internal:6379" \
@@ -178,6 +183,11 @@ jobs:
               -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
               -e WILDCARD_CERT_PATH=${{ secrets.WILDCARD_CERT_PATH }} \
               -e WILDCARD_KEY_PATH=${{ secrets.WILDCARD_KEY_PATH }} \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASS=${{ secrets.DB_PASS }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
               -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
               -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE

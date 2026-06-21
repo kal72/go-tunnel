@@ -30,19 +30,19 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 	}
 
 	s := &domainConfig.ServerConfig{
-		GatewayHost:      get("GATEWAY_HOST", ""),
+		GatewayDomain:      get("GATEWAY_DOMAIN", ""),
 		GatewayPort:      parsePort(get("GATEWAY_PORT", "443"), 443),
-		TunnelHost:       get("TUNNEL_HOST", ""),
+		TunnelDomain:       get("TUNNEL_DOMAIN", ""),
 		TunnelPort:       parsePort(get("TUNNEL_PORT", "9443"), 9443),
 		WebUIDomain:      get("WEBUI_DOMAIN", "localhost"),
 		WebUIPort:        parsePort(get("WEBUI_PORT", "8080"), 8080),
-		ProxyInternalPort: parsePort(get("PROXY_INTERNAL_PORT", "8081"), 8080),
+		ProxyHttpPort:    parsePort(get("PROXY_HTTP_PORT", "80"), 80),
+		ProxyHttpsPort:   parsePort(get("PROXY_HTTPS_PORT", "443"), 443),
 
 		JWTSecret:        get("JWT_SECRET", "defaultjwtsecret"),
 		ACMEEnable:       strings.ToLower(get("ACME_ENABLE", "false")) == "true",
 		ACMECache:        get("ACME_CACHE", "./cert-cache"),
 		ACMEEnv:          get("ACME_ENV", "staging"), // production or staging
-		ACMEPort:         parsePort(get("ACME_PORT", "80"), 80),
 		RedisAddr:        get("REDIS_ADDR", "localhost:6379"),
 		RedisPass:        get("REDIS_PASS", ""),
 		RedisDB:          parsePort(get("REDIS_DB", "0"), 0),
@@ -57,11 +57,11 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		DBName:           get("DB_NAME", "gotunnel"),
 	}
 
-	if strings.TrimSpace(s.GatewayHost) == "" {
-		fmt.Println("[Warning] GATEWAY_HOST not set in environment")
+	if strings.TrimSpace(s.GatewayDomain) == "" {
+		fmt.Println("[Warning] GATEWAY_DOMAIN not set in environment")
 	}
-	if strings.TrimSpace(s.TunnelHost) == "" {
-		fmt.Println("[Warning] TUNNEL_HOST not set in environment")
+	if strings.TrimSpace(s.TunnelDomain) == "" {
+		fmt.Println("[Warning] TUNNEL_DOMAIN not set in environment")
 	}
 
 	return s, nil

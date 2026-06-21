@@ -45,17 +45,17 @@ Copy `.env.example` and adjust the variables:
 
 | Variable | Description |
 | --- | --- |
-| `GATEWAY_HOST` | Domain for the public HTTPS gateway. |
-| `GATEWAY_PORT` | Port for the public Edge Gateway Proxy (default `8443`). |
+| `GATEWAY_DOMAIN` | Domain for the public HTTPS gateway. |
+| `PROXY_HTTP_PORT` | Port for the public Proxy HTTP/ACME (default `80`). |
+| `PROXY_HTTPS_PORT` | Port for the public Edge Gateway Proxy (default `443`). |
 | `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
 | `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `webui.example.com`). |
-| `PROXY_INTERNAL_PORT` | Internal port used by the Proxy to forward traffic to the Tunnel (default `8081`). |
-| `TUNNEL_HOST` | Domain for agent TCP connections (SNI, e.g. `tunnel.example.com`). |
+| `GATEWAY_PORT` | Internal port used by the Tunnel to handle local HTTP traffic (default `8443`). |
+| `TUNNEL_DOMAIN` | Domain for agent TCP connections (SNI, e.g. `tunnel.example.com`). |
 | `TUNNEL_PORT` | Port for agent TCP Yamux connections (default `9443`). |
 | `JWT_SECRET` | Master secret used to generate client tokens and JWTs. |
 | `ACME_CACHE` | Directory to store Let's Encrypt certificates (default `./cert-cache`). |
 | `ACME_ENV` | Let's Encrypt environment: `production` or `staging`. |
-| `ACME_PORT` | Port used for the ACME HTTP-01 challenge (default `80`). |
 | `REDIS_ADDR` | Redis server address (default `localhost:6379`). |
 | `REDIS_PASS` | Redis password (optional). |
 | `REDIS_DB` | Redis database for sessions/auth (default `0`). |
@@ -76,7 +76,7 @@ go run ./cmd/webui/main.go
 Build and run everything using Docker:
 ```sh
 docker build -t gotunnel .
-docker run -p 80:80 -p 8443:8443 -p 8080:8080 -p 9443:9443 --env-file .env gotunnel
+docker run -p 80:80 -p 443:443 --env-file .env gotunnel
 ```
 
 ### 3. Client/Agent
@@ -135,7 +135,7 @@ graph TD
     Admin[Admin/User] -->|"HTTPS (Port 443)"| EdgeProxy
 
     subgraph "Docker Container / Local Server"
-        EdgeProxy -- "Host: *.example.com<br>HTTP Reverse Proxy" --> TunnelHttp["Tunnel Internal HTTP<br>(Port 8081)"]
+        EdgeProxy -- "Host: *.example.com<br>HTTP Reverse Proxy" --> TunnelHttp["Tunnel Internal HTTP<br>(Port 8443)"]
         EdgeProxy -- "Host: webui.example.com<br>HTTP Reverse Proxy" --> WebUI["Web UI Manager<br>(Port 8080)"]
         EdgeProxy -- "SNI: tunnel.example.com<br>L4 TCP Passthrough" --> TunnelTCP["Tunnel Yamux Listener<br>(Port 9443)"]
         
@@ -147,7 +147,7 @@ graph TD
 1. **Single Port Exposure**: The external firewall only needs to open ports `80` (for ACME) and `443`.
 2. **Microservices Routing**: Inside your server, `cmd/proxy` intelligently routes traffic:
    - Requests to `webui.example.com` are forwarded to the Web UI container (`:8080`).
-   - Requests to `*.example.com` (application subdomains) are validated via Redis and forwarded to the Tunnel Internal HTTP (`:8081`).
+   - Requests to `*.example.com` (application subdomains) are validated via Redis and forwarded to the Tunnel Internal HTTP (`:8443`).
    - Requests to `tunnel.example.com` **MUST** be forwarded using **L4 TCP Stream Passthrough** directly to the Yamux Listener (`:9443`).
 
 Happy tunneling!

@@ -9,15 +9,10 @@ import (
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/gateway"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
-	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
 )
 
 func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func(), error) {
-	// Initialize DB (for any config if needed, though mostly Redis for domain)
-	db, err := postgresrepo.InitDB(env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("init db: %w", err)
-	}
+	// Proxy only needs Redis for Domain Allowlist, no Postgres needed.
 
 	var domainStore domainTunnel.DomainStore
 	if env.WildcardDomain != "" {
@@ -32,13 +27,11 @@ func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func()
 
 	proxySrv, err := gateway.NewProxy(env, domainStore, hostPolicy)
 	if err != nil {
-		db.Close()
 		return nil, nil, fmt.Errorf("init proxy: %w", err)
 	}
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up Proxy resources...")
-		db.Close()
 	}
 
 	return proxySrv, cleanup, nil

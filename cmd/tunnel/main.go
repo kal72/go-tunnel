@@ -19,7 +19,7 @@ func main() {
 
 	log.Printf("[config] Ports: public=%d tunnel=%d",
 		env.GatewayPort, env.TunnelPort)
-	log.Printf("[config] Domain: %v", env.GatewayHost)
+	log.Printf("[config] Domain: %v", env.GatewayDomain)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

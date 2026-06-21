@@ -39,7 +39,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("[tunnel] Internal HTTP listening on :%d", a.cfg.ProxyInternalPort)
+		log.Printf("[tunnel] Internal HTTP listening on :%d", a.cfg.GatewayPort)
 		if err := a.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 		}
@@ -76,7 +76,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	// HostRegistry
 	hostRegistry := memory.NewHostRegistry()
-	for _, d := range []string{env.GatewayHost, env.TunnelHost, env.WebUIDomain} {
+	for _, d := range []string{env.GatewayDomain, env.TunnelDomain, env.WebUIDomain} {
 		if d = strings.TrimSpace(d); d != "" {
 			hostRegistry.Authorize(d)
 		}
@@ -90,14 +90,14 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
 
 	// Handlers
-	tunnelSrv, err := tunnelhandler.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayHost, env.WildcardDomain, tunnelUsecase, authUsecase)
+	tunnelSrv, err := tunnelhandler.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayDomain, env.WildcardDomain, tunnelUsecase, authUsecase)
 	if err != nil {
 		db.Close()
 		return nil, nil, fmt.Errorf("init tunnel server: %w", err)
 	}
 
 	httpSrv := &http.Server{
-		Addr:    fmt.Sprintf("0.0.0.0:%d", env.ProxyInternalPort),
+		Addr:    fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
 		Handler: tunnelSrv,
 	}
 

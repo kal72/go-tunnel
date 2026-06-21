@@ -40,10 +40,8 @@ RUN printf '#!/bin/sh\nset -e\n./gotunnel-webui &\n./gotunnel-tunnel &\nexec ./g
 
 # Expose ports:
 # 80    -> HTTP-01 ACME challenge
-# 8443  -> HTTPS publik (Edge Gateway Proxy)
-# 9443  -> Tunnel TLS (Akses Client)
-# 8080  -> Tunnel Manager (WebUI)
-EXPOSE 80 8443 9443 8080
+# 443   -> HTTPS publik & Edge Gateway Proxy (semua trafik masuk ke sini)
+EXPOSE 80 443
 
 # Gunakan array form (lebih aman, tidak wrap shell)
 CMD ["./start.sh"]

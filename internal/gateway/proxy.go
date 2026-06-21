@@ -41,7 +41,7 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 	}
 
 	// Setup Reverse Proxies
-	tunnelTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.ProxyInternalPort))
+	tunnelTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.GatewayPort))
 	tunnelProxy := httputil.NewSingleHostReverseProxy(tunnelTarget)
 
 	webuiTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
@@ -74,11 +74,16 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 	var tlsCfg *tls.Config
 	if p.acmeManager != nil {
 		tlsCfg = cert.CloneTLSConfig(p.acmeManager.TLSConfig())
+	} else if env.WildcardCertPath != "" && env.WildcardKeyPath != "" {
+		tlsCfg = cert.CloneTLSConfig(nil)
+	}
+
+	if tlsCfg != nil {
 		cert.WrapWithWildcardCert(tlsCfg, env.WildcardDomain, env.WildcardCertPath, env.WildcardKeyPath)
 		tlsCfg.MinVersion = tls.VersionTLS12
 		tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "h2")
 		tlsCfg.NextProtos = cert.EnsureProto(tlsCfg.NextProtos, "http/1.1")
-		cert.EnsureDefaultServerName(tlsCfg, env.GatewayHost)
+		cert.EnsureDefaultServerName(tlsCfg, env.GatewayDomain)
 	}
 
 	p.httpSrv = &http.Server{
@@ -90,9 +95,9 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 	}
 
 	if env.ACMEEnable {
-		p.acmeSrv = buildACMEServer(p.acmeManager.(*autocert.Manager), env.ACMEPort)
+		p.acmeSrv = buildACMEServer(p.acmeManager.(*autocert.Manager), env.ProxyHttpPort)
 	} else {
-		p.httpSrv.Addr = fmt.Sprintf("0.0.0.0:%d", env.GatewayPort)
+		p.httpSrv.Addr = fmt.Sprintf("0.0.0.0:%d", env.ProxyHttpPort)
 	}
 
 	return p, nil
@@ -103,16 +108,16 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 
 	if p.cfg.ACMEEnable && p.acmeSrv != nil {
 		go func() {
-			log.Printf("[proxy] acme-http listening on :%d", p.cfg.ACMEPort)
+			log.Printf("[proxy] acme-http listening on :%d", p.cfg.ProxyHttpPort)
 			if err := p.acmeSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Println("[acme-http]", err)
 			}
 		}()
 	}
 
-	if p.cfg.ACMEEnable {
+	if p.httpSrv.TLSConfig != nil {
 		// Listen raw TCP for SNI multiplexing
-		addr := fmt.Sprintf("0.0.0.0:%d", p.cfg.GatewayPort)
+		addr := fmt.Sprintf("0.0.0.0:%d", p.cfg.ProxyHttpsPort)
 		ln, err := net.Listen("tcp", addr)
 		if err != nil {
 			return err
@@ -120,7 +125,7 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 		p.ln = ln
 		p.chanLn = NewChanListener(ln.Addr())
 		go func() {
-			log.Printf("[proxy] HTTPS serving multiplexed connections")
+			log.Printf("[proxy] HTTPS serving multiplexed connections on :%d", p.cfg.ProxyHttpsPort)
 			if err := p.httpSrv.Serve(p.chanLn); err != nil && err != http.ErrServerClosed {
 				errCh <- err
 			}
@@ -142,9 +147,11 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 				go p.handleConnection(conn)
 			}
 		}()
-	} else {
+	} 
+
+	if p.acmeSrv == nil {
 		go func() {
-			log.Printf("[proxy] HTTP public listening on :%d", p.cfg.GatewayPort)
+			log.Printf("[proxy] HTTP public listening on :%d", p.cfg.ProxyHttpPort)
 			if err := p.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				errCh <- err
 			}
@@ -174,9 +181,9 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 		return
 	}
 
-	if sni == p.cfg.TunnelHost {
+	if sni == p.cfg.TunnelDomain {
 		// Tunnel Client connection, route to localhost:9443
-		log.Printf("[proxy] SNI matched TunnelHost %s, routing to localhost:%d", sni, p.cfg.TunnelPort)
+		log.Printf("[proxy] SNI matched TunnelDomain %s, routing to localhost:%d", sni, p.cfg.TunnelPort)
 		target, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", p.cfg.TunnelPort))
 		if err != nil {
 			log.Printf("[proxy] tunnel dial error: %v", err)

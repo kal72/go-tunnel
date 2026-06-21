@@ -20,7 +20,7 @@ func main() {
 	log.Printf("[proxy] Ports: public=%d tunnel=%d webui=%d",
 		env.GatewayPort, env.TunnelPort, env.WebUIPort)
 	log.Printf("[proxy] Domains: Gateway=%s Tunnel=%s WebUI=%s",
-		env.GatewayHost, env.TunnelHost, env.WebUIDomain)
+		env.GatewayDomain, env.TunnelDomain, env.WebUIDomain)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

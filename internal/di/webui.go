@@ -32,9 +32,9 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 		domainStore.Ping(context.Background())
 	}
 
-	tunnelAddr := env.TunnelHost
-	if env.TunnelPort != 0 && env.TunnelPort != 443 {
-		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelHost, env.TunnelPort)
+	tunnelAddr := env.TunnelDomain
+	if env.ProxyHttpsPort != 0 && env.ProxyHttpsPort != 443 {
+		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelDomain, env.ProxyHttpsPort)
 	}
 
 	// Postgres DB
@@ -52,7 +52,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
 
 	// Handlers
-	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayHost, env.ACMEEnable)
+	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
 	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable)

@@ -164,7 +164,7 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 
 }
 
-func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelHost string) {
+func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain string) {
 	defer stream.Close()
 	reader := bufio.NewReader(stream)
 

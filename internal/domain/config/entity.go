@@ -45,22 +45,22 @@ type ClientConfig struct {
 }
 
 type ServerConfig struct {
-	GatewayHost string
+	GatewayDomain string
 	GatewayPort int
 
-	TunnelHost string
+	TunnelDomain string
 	TunnelPort int
 
 	WebUIDomain string
 	WebUIPort   int
-	ProxyInternalPort int
-
-
+	
+	ProxyHttpPort  int
+	ProxyHttpsPort int
+	
 	JWTSecret  string
 	ACMEEnable bool
 	ACMECache  string
 	ACMEEnv    string
-	ACMEPort   int
 
 	RedisAddr string
 	RedisPass string
