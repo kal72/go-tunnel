@@ -68,6 +68,15 @@ jobs:
 
             sudo mkdir -p cert-cache
 
+            CERT_CONTENT="${{ secrets.WILDCARD_CERT_CONTENT }}"
+            KEY_CONTENT="${{ secrets.WILDCARD_KEY_CONTENT }}"
+            
+            if [ -n "$CERT_CONTENT" ] && [ -n "$KEY_CONTENT" ]; then
+              echo "Memasang certificate wildcard dari GitHub Secrets..."
+              echo "$CERT_CONTENT" | sudo tee cert-cache/cloudflare-cert.pem > /dev/null
+              echo "$KEY_CONTENT" | sudo tee cert-cache/cloudflare-key.pem > /dev/null
+            fi
+
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
@@ -82,8 +91,8 @@ jobs:
               -e DOMAIN_REDIS_DB="1" \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
               -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
-              -e WILDCARD_CERT_PATH=${{ secrets.WILDCARD_CERT_PATH }} \
-              -e WILDCARD_KEY_PATH=${{ secrets.WILDCARD_KEY_PATH }} \
+              -e WILDCARD_CERT_PATH="/app/cert-cache/cloudflare-cert.pem" \
+              -e WILDCARD_KEY_PATH="/app/cert-cache/cloudflare-key.pem" \
               -e DB_HOST=${{ secrets.DB_HOST }} \
               -e DB_PORT=${{ secrets.DB_PORT }} \
               -e DB_USER=${{ secrets.DB_USER }} \
@@ -180,6 +189,15 @@ jobs:
             
             sudo mkdir -p cert-cache
 
+            CERT_CONTENT="${{ secrets.WILDCARD_CERT_CONTENT }}"
+            KEY_CONTENT="${{ secrets.WILDCARD_KEY_CONTENT }}"
+            
+            if [ -n "$CERT_CONTENT" ] && [ -n "$KEY_CONTENT" ]; then
+              echo "Memasang certificate wildcard dari GitHub Secrets..."
+              echo "$CERT_CONTENT" | sudo tee cert-cache/cloudflare-cert.pem > /dev/null
+              echo "$KEY_CONTENT" | sudo tee cert-cache/cloudflare-key.pem > /dev/null
+            fi
+
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
             sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
@@ -194,8 +212,8 @@ jobs:
               -e DOMAIN_REDIS_DB="1" \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
               -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
-              -e WILDCARD_CERT_PATH=${{ secrets.WILDCARD_CERT_PATH }} \
-              -e WILDCARD_KEY_PATH=${{ secrets.WILDCARD_KEY_PATH }} \
+              -e WILDCARD_CERT_PATH="/app/cert-cache/cloudflare-cert.pem" \
+              -e WILDCARD_KEY_PATH="/app/cert-cache/cloudflare-key.pem" \
               -e DB_HOST=${{ secrets.DB_HOST }} \
               -e DB_PORT=${{ secrets.DB_PORT }} \
               -e DB_USER=${{ secrets.DB_USER }} \
