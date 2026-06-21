@@ -4,11 +4,14 @@
   <!-- ═══════════════════════════════════════════════
        SIDEBAR — config file list
   ════════════════════════════════════════════════ -->
-  <aside class="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col shrink-0 transition-colors">
+  <aside
+    class="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col shrink-0 transition-colors">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
       <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Client Configs</p>
-      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-0.5" title="Add new config">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-0.5"
+        title="Add new config">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
@@ -26,12 +29,15 @@
                 class="w-1.5 h-1.5 rounded-full shrink-0"></span>
               <span x-text="cfg.name" class="truncate font-bold"></span>
             </div>
-            <span class="text-[10px] bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full shrink-0" x-text="(cfg.tunnels ? cfg.tunnels.length : 0) + ' tunnels'"></span>
+            <span
+              class="text-[10px] bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full shrink-0"
+              x-text="(cfg.tunnels ? cfg.tunnels.length : 0) + ' tunnels'"></span>
           </button>
-          <button @click.stop="deleteConfig(cfg)" 
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Delete config">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button @click.stop="deleteConfig(cfg)"
+            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+            title="Delete config">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"></path>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -53,10 +59,12 @@
   <main class="flex-1 flex flex-col overflow-hidden">
 
     <!-- Toolbar -->
-    <div class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-5 py-3 flex items-center justify-between shrink-0 transition-colors">
+    <div
+      class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-5 py-3 flex items-center justify-between shrink-0 transition-colors">
       <div class="flex items-center gap-3">
         <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="current ? current.name : '—'"></span>
-        <span x-show="saved" x-transition class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">saved</span>
+        <span x-show="saved" x-transition
+          class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">saved</span>
         <span x-show="!current" class="text-xs text-gray-400 dark:text-gray-500 italic">select a config</span>
       </div>
       <div class="flex items-center gap-2">
@@ -77,22 +85,27 @@
         <!-- Empty state -->
         <div x-show="!current" class="flex flex-col items-center justify-center h-full space-y-4">
           <div class="w-16 h-16 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-gray-400 dark:text-gray-500">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+              class="text-gray-400 dark:text-gray-500">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
-          <p class="text-sm text-gray-400 dark:text-gray-500 text-center">Select a config from the sidebar<br>or create a new one.</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500 text-center">Select a config from the sidebar<br>or create
+            a new one.</p>
         </div>
 
         <div x-show="current" class="space-y-6">
-          <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+          <div
+            class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">How to use this config</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Run this command in your terminal after logging in.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Run this command in your terminal after logging
+                in.</p>
             </div>
             <div class="flex items-center bg-gray-900 rounded-md py-2 px-3 gap-3 border border-gray-700 shadow-inner">
-              <code class="text-xs text-green-400 font-mono">client run <span x-text="current?.name"></span></code>
-              <button @click="copyCommand()" class="text-gray-400 hover:text-white transition-colors" title="Copy to clipboard">
+              <code class="text-xs text-green-400 font-mono">gotunnel run <span x-text="current?.name"></span></code>
+              <button @click="copyCommand()" class="text-gray-400 hover:text-white transition-colors"
+                title="Copy to clipboard">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -118,9 +131,11 @@
 
             <div class="space-y-3">
               <template x-for="(tunnel, idx) in form.tunnels" :key="idx">
-                <div class="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors shadow-sm">
+                <div
+                  class="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors shadow-sm">
                   <!-- Card header -->
-                  <div class="bg-gray-50 dark:bg-slate-800/80 px-3 py-2 flex items-center justify-between border-b border-gray-200 dark:border-slate-700">
+                  <div
+                    class="bg-gray-50 dark:bg-slate-800/80 px-3 py-2 flex items-center justify-between border-b border-gray-200 dark:border-slate-700">
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-mono text-gray-600 dark:text-gray-400" x-text="'#' + (idx+1)"></span>
                       <span class="text-xs font-mono text-gray-700 dark:text-gray-300 font-medium"
@@ -129,11 +144,19 @@
                     <div class="flex items-center gap-2">
                       <span
                         :class="tunnel.mode === 'http' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 border-amber-200 dark:border-amber-500/30'"
-                        class="text-[10px] px-2 py-0.5 rounded-full border font-mono uppercase tracking-wider transition-colors font-semibold" x-text="tunnel.mode">
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-mono uppercase tracking-wider transition-colors font-semibold"
+                        x-text="tunnel.mode">
                       </span>
                       <button @click="removeTunnel(idx)"
                         class="text-xs text-red-400 hover:text-red-600 transition-colors px-1 ml-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                          </path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -142,7 +165,8 @@
 
                     <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
                       <label class="text-xs font-mono text-gray-400 dark:text-gray-500">hostname</label>
-                      <input type="text" x-model="tunnel.hostname" @input="updatePreview()" placeholder="app.example.com"
+                      <input type="text" x-model="tunnel.hostname" @input="updatePreview()"
+                        placeholder="app.example.com"
                         class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                     </div>
 
@@ -169,14 +193,17 @@
               <!-- Empty tunnels hint -->
               <div x-show="form.tunnels.length === 0"
                 class="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-lg p-8 flex flex-col items-center justify-center text-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-300 dark:text-gray-600 mb-2">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  class="text-gray-300 dark:text-gray-600 mb-2">
                   <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                   <path d="M3 15h6"></path>
                   <path d="M6 12v6"></path>
                 </svg>
                 <p class="text-xs text-gray-500 dark:text-gray-400">No tunnels configured.</p>
-                <button @click="addTunnel()" class="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Add your first tunnel</button>
+                <button @click="addTunnel()"
+                  class="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Add your first
+                  tunnel</button>
               </div>
             </div>
           </div>
@@ -185,41 +212,55 @@
       </div><!-- /form -->
 
       <!-- ── JSON Preview panel ── -->
-      <div class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
+      <div
+        class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
           <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">JSON Payload</p>
         </div>
-        <pre class="flex-1 overflow-auto p-4 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed whitespace-pre"
+        <pre
+          class="flex-1 overflow-auto p-4 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed whitespace-pre"
           x-text="jsonPreview"></pre>
       </div>
 
     </div><!-- /form + preview split -->
 
     <!-- Status bar -->
-    <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-5 py-2 flex items-center justify-between shrink-0 transition-colors">
+    <div
+      class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-5 py-2 flex items-center justify-between shrink-0 transition-colors">
       <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="statusText"></span>
-      <span class="text-xs text-gray-400 dark:text-gray-500" x-text="current ? 'PUT /api/configs/' + current.id : ''"></span>
+      <span class="text-xs text-gray-400 dark:text-gray-500"
+        x-text="current ? 'PUT /api/configs/' + current.id : ''"></span>
     </div>
 
   </main>
 
   <!-- New Config Modal -->
-  <div x-show="showNewModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition>
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transition-colors transform scale-100" @click.away="showNewModal = false">
-      <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/80">
+  <div x-show="showNewModal"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition>
+    <div
+      class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transition-colors transform scale-100"
+      @click.away="showNewModal = false">
+      <div
+        class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/80">
         <h3 class="font-bold text-gray-900 dark:text-white">New Config</h3>
-        <button @click="showNewModal = false" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+        <button @click="showNewModal = false"
+          class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
       </div>
       <div class="p-6">
-        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Config Name</label>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Config
+          Name</label>
         <input type="text" x-model="newName" placeholder="e.g. my-macbook" maxlength="25"
-                class="w-full text-sm font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all shadow-sm"
-                @keyup.enter="createNewConfig()">
-        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Max 25 characters. Alphanumeric and dashes only.</p>
+          class="w-full text-sm font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all shadow-sm"
+          @keyup.enter="createNewConfig()">
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Max 25 characters. Alphanumeric and dashes only.
+        </p>
       </div>
-      <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
-        <button @click="showNewModal = false" class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 px-3 py-1.5">Cancel</button>
-        <button @click="createNewConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-xs font-medium transition-colors shadow-sm">
+      <div
+        class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showNewModal = false"
+          class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 px-3 py-1.5">Cancel</button>
+        <button @click="createNewConfig()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-xs font-medium transition-colors shadow-sm">
           Create Config
         </button>
       </div>
@@ -235,7 +276,7 @@
       saved: false,
       statusText: 'Select a config file to begin',
       jsonPreview: '',
-      
+
       showNewModal: false,
       newName: '',
 
@@ -253,8 +294,8 @@
       async refreshConfigs() {
         const res = await fetch('/api/configs');
         if (res.ok) {
-            this.configs = await res.json();
-            if (!this.configs) this.configs = [];
+          this.configs = await res.json();
+          if (!this.configs) this.configs = [];
         }
       },
 
@@ -285,42 +326,42 @@
         const name = this.newName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-').substring(0, 25);
         if (!name) return;
 
-        const res = await fetch(`/api/configs`, { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, tunnels: [] })
+        const res = await fetch(`/api/configs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, tunnels: [] })
         });
-        
+
         if (res.ok) {
-            this.showNewModal = false;
-            this.newName = '';
-            await this.refreshConfigs();
-            const created = await res.json();
-            await this.selectConfig(created.config);
-            this.statusText = `Created ${name} successfully`;
+          this.showNewModal = false;
+          this.newName = '';
+          await this.refreshConfigs();
+          const created = await res.json();
+          await this.selectConfig(created.config);
+          this.statusText = `Created ${name} successfully`;
         } else {
-            const err = await res.text();
-            alert(`Failed to create: ${err}`);
+          const err = await res.text();
+          alert(`Failed to create: ${err}`);
         }
       },
 
       async deleteConfig(cfg) {
         if (!confirm(`Are you sure you want to delete configuration '${cfg.name}'?`)) {
-            return;
+          return;
         }
 
         const res = await fetch(`/api/configs/${cfg.id}`, { method: 'DELETE' });
         if (res.ok) {
-            if (this.current && this.current.id === cfg.id) {
-                this.current = null;
-                this.form = { tunnels: [] };
-                this.jsonPreview = '';
-            }
-            await this.refreshConfigs();
-            this.statusText = `Deleted ${cfg.name} successfully`;
+          if (this.current && this.current.id === cfg.id) {
+            this.current = null;
+            this.form = { tunnels: [] };
+            this.jsonPreview = '';
+          }
+          await this.refreshConfigs();
+          this.statusText = `Deleted ${cfg.name} successfully`;
         } else {
-            const err = await res.text();
-            alert(`Failed to delete: ${err}`);
+          const err = await res.text();
+          alert(`Failed to delete: ${err}`);
         }
       },
 
@@ -345,8 +386,8 @@
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-              name: this.current.name,
-              tunnels: this.form.tunnels
+            name: this.current.name,
+            tunnels: this.form.tunnels
           }),
         });
 
@@ -360,15 +401,15 @@
           this.statusText = `Save failed: ${err}`;
         }
       },
-      
+
       copyCommand() {
-          if (!this.current) return;
-          const cmd = `client run ${this.current.name}`;
-          navigator.clipboard.writeText(cmd).then(() => {
-              const old = this.statusText;
-              this.statusText = "Command copied to clipboard!";
-              setTimeout(() => { this.statusText = old; }, 2000);
-          });
+        if (!this.current) return;
+        const cmd = `client run ${this.current.name}`;
+        navigator.clipboard.writeText(cmd).then(() => {
+          const old = this.statusText;
+          this.statusText = "Command copied to clipboard!";
+          setTimeout(() => { this.statusText = old; }, 2000);
+        });
       },
 
       updatePreview() {

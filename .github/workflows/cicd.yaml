@@ -18,6 +18,10 @@ on:
         options:
           - production
           - staging
+      version:
+        description: "Version tag (e.g. v1.0.0). Required for release if not running from tag."
+        required: false
+        type: string
 
 jobs:
 

@@ -26,6 +26,8 @@ fi
 
 BINARY_NAME="gotunnel-${OS}-${ARCH}"
 
+echo "Detected OS: $OS"
+echo "Detected Architecture: $ARCH"
 echo "Downloading gotunnel from ${DL_URL}/${BINARY_NAME}..."
 curl -fsSL "${DL_URL}/${BINARY_NAME}" -o gotunnel
 

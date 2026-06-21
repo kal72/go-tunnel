@@ -41,9 +41,7 @@ func SetupRouter(
 		r.Get("/domains", h.Domains)
 		r.Get("/downloads", h.Downloads)
 
-		// Serve static binaries inside the protected group
-		fs := http.FileServer(http.Dir("./downloads"))
-		r.Handle("/dl/*", http.StripPrefix("/dl/", fs))
+
 
 		// API
 		r.Get("/api/configs", h.ListConfigs)
@@ -70,6 +68,10 @@ func SetupRouter(
 			r.Delete("/api/users/{id}", userH.DeleteUser)
 		})
 	})
+
+	// Serve static binaries (public for curl install)
+	fs := http.FileServer(http.Dir("./downloads"))
+	r.Handle("/dl/*", http.StripPrefix("/dl/", fs))
 
 	// Static assets
 	r.Handle("/static/*", http.FileServer(staticFS))
