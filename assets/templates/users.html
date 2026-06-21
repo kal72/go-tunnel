@@ -28,22 +28,22 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50">
-            <template x-for="u in users" :key="u.ID">
+            <template x-for="u in users" :key="u.id">
               <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group">
                 <td class="px-6 py-4">
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono" x-text="u.Username"></span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono" x-text="u.username"></span>
                 </td>
                 <td class="px-6 py-4">
-                  <span x-show="u.Role === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 transition-colors">Admin</span>
-                  <span x-show="u.Role === 2" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-slate-600 transition-colors">User</span>
+                  <span x-show="u.role === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 transition-colors">Admin</span>
+                  <span x-show="u.role === 2" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-slate-600 transition-colors">User</span>
                 </td>
                 <td class="px-6 py-4">
-                  <span x-show="u.Status === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition-colors">Active</span>
-                  <span x-show="u.Status !== 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-500/20 transition-colors">Inactive</span>
+                  <span x-show="u.status === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition-colors">Active</span>
+                  <span x-show="u.status !== 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-500/20 transition-colors">Inactive</span>
                 </td>
-                <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400" x-text="new Date(u.CreatedAt).toLocaleString()"></td>
+                <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400" x-text="new Date(u.created_at).toLocaleString()"></td>
                 <td class="px-6 py-4 text-right flex justify-end gap-2">
-                  <button @click="toggleStatus(u)" :title="u.Status === 1 ? 'Deactivate' : 'Activate'"
+                  <button @click="toggleStatus(u)" :title="u.status === 1 ? 'Deactivate' : 'Activate'"
                     class="text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors p-1 rounded-md hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
@@ -118,7 +118,7 @@
         <button @click="showPasswordModal = false" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
       </div>
       <div class="p-6">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Set new password for <strong class="text-gray-900 dark:text-gray-100" x-text="selectedUser?.Username"></strong>:</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Set new password for <strong class="text-gray-900 dark:text-gray-100" x-text="selectedUser?.username"></strong>:</p>
         <input type="password" x-model="newPassword" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
       </div>
       <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
@@ -154,7 +154,7 @@
         try {
           const res = await fetch('/api/users');
           if (res.ok) {
-            this.users = await res.json();
+            this.users = await res.json() || [];
           }
         } catch (e) {
           console.error("Failed to fetch users", e);
@@ -181,9 +181,9 @@
       },
 
       async toggleStatus(user) {
-        const newStatus = user.Status === 1 ? 0 : 1;
+        const newStatus = user.status === 1 ? 0 : 1;
         try {
-          const res = await fetch(`/api/users/${user.ID}/status`, {
+          const res = await fetch(`/api/users/${user.id}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus })
@@ -207,7 +207,7 @@
       async updatePassword() {
         if (!this.newPassword) return;
         try {
-          const res = await fetch(`/api/users/${this.selectedUser.ID}/password`, {
+          const res = await fetch(`/api/users/${this.selectedUser.id}/password`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: this.newPassword })
@@ -224,9 +224,9 @@
       },
 
       async deleteUser(user) {
-        if (!confirm(`Are you sure you want to delete ${user.Username}?`)) return;
+        if (!confirm(`Are you sure you want to delete ${user.username}?`)) return;
         try {
-          const res = await fetch(`/api/users/${user.ID}`, { method: 'DELETE' });
+          const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
           if (res.ok) {
             await this.fetchUsers();
           } else {
