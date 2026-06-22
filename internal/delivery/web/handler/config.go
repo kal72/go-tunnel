@@ -7,9 +7,11 @@ import (
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	"html/template"
-	"math/rand"
 	"net/http"
 	"strings"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 
 	"github.com/google/uuid"
 
@@ -29,10 +31,11 @@ type Handler struct {
 	wildcardDomain string
 	gatewayDomain  string
 	acmeEnable     bool
+	maxFreeDomains int
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -75,6 +78,7 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		wildcardDomain: wildcardDomain,
 		gatewayDomain:  gatewayDomain,
 		acmeEnable:     acmeEnable,
+		maxFreeDomains: maxFreeDomains,
 	}
 }
 
@@ -348,7 +352,12 @@ func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, []any{})
 		return
 	}
-	domains, err := h.tunnelUsecase.ListDomains(r.Context())
+
+	userIDStr, _ := r.Context().Value(UserIDKey).(string)
+	userID, _ := uuid.Parse(userIDStr)
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+
+	domains, err := h.tunnelUsecase.ListDomains(r.Context(), userID, role)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -380,7 +389,12 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 
 	prefix := strings.TrimSpace(strings.ToLower(payload.Prefix))
 	if payload.Random {
-		prefix = generateRandomString(16)
+		var err error
+		prefix, err = generateSubdomain()
+		if err != nil {
+			http.Error(w, "failed to generate random subdomain", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if prefix == "" {
@@ -398,14 +412,46 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 
 	fullDomain := prefix
 	// If it doesn't contain a dot, treat it as a prefix for the wildcard domain
+	isFreeDomain := false
 	if !strings.Contains(prefix, ".") && h.wildcardDomain != "" {
 		base := strings.TrimPrefix(h.wildcardDomain, "*.")
 		if base != "" {
 			fullDomain = prefix + "." + base
+			isFreeDomain = true
 		}
 	}
 
-	if err := h.tunnelUsecase.AddDomain(r.Context(), fullDomain); err != nil {
+	userIDStr, _ := r.Context().Value(UserIDKey).(string)
+	userID, _ := uuid.Parse(userIDStr)
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+
+	// Check domain limit for User role
+	if role == 2 && isFreeDomain {
+		domains, err := h.tunnelUsecase.ListDomains(r.Context(), userID, role)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		freeDomainCount := 0
+		base := ""
+		if h.wildcardDomain != "" {
+			base = strings.TrimPrefix(h.wildcardDomain, "*.")
+		}
+		
+		for _, d := range domains {
+			if base != "" && strings.HasSuffix(d.Domain, "."+base) {
+				freeDomainCount++
+			}
+		}
+
+		if freeDomainCount >= h.maxFreeDomains {
+			http.Error(w, fmt.Sprintf("You have reached the maximum limit of %d free domains", h.maxFreeDomains), http.StatusForbidden)
+			return
+		}
+	}
+
+	if err := h.tunnelUsecase.AddDomain(r.Context(), fullDomain, userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -424,20 +470,33 @@ func (h *Handler) RemoveDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.tunnelUsecase.RemoveDomain(r.Context(), domain); err != nil {
+	userIDStr, _ := r.Context().Value(UserIDKey).(string)
+	userID, _ := uuid.Parse(userIDStr)
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+
+	if err := h.tunnelUsecase.RemoveDomain(r.Context(), domain, userID, role); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, map[string]string{"status": "ok", "message": "domain removed"})
 }
 
-func generateRandomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
-	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
-		ret[i] = letters[rand.Intn(len(letters))]
+// generateSubdomain menghasilkan format: app-[16_karakter_hex]
+func generateSubdomain() (string, error) {
+	// 8 bytes akan menghasilkan 16 karakter hexadecimal (karena 1 byte = 2 karakter hex)
+	bytes := make([]byte, 8)
+	
+	// Mengisi byte dengan data acak yang aman secara kriptografi
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
 	}
-	return string(ret)
+
+	// Mengubah byte acak menjadi string hexadecimal (0-9, a-f)
+	randomHex := hex.EncodeToString(bytes)
+
+	// Menggabungkan dengan prefix dan mengembalikan hasil
+	return fmt.Sprintf("app-%s", randomHex), nil
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -57,6 +57,8 @@ type ServerConfig struct {
 	ProxyHttpPort  int
 	ProxyHttpsPort int
 
+	MaxFreeDomains int
+
 	JWTSecret  string
 	ACMEEnable bool
 	ACMECache  string

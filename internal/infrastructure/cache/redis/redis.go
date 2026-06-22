@@ -100,3 +100,24 @@ func (s *TunnelRedisStore) RevokeToken(ctx context.Context, token string) error 
 	// For "revoke anytime", deleting is simplest.
 	return s.client.Del(ctx, s.authPrefix+token).Err()
 }
+
+func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain string, sessionID string) error {
+	// SETNX active_domain:<domain> <sessionID> EX 24h
+	// Set the key only if it doesn't exist to guarantee atomic locking.
+	key := "active_domain:" + domain
+	// Expiration is a safety net in case of dirty disconnects. The cleanup normally removes this key.
+	ok, err := s.client.SetNX(ctx, key, sessionID, 24*time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("failed to set active domain lock: %w", err)
+	}
+	if !ok {
+		// Key already exists, domain is active somewhere else
+		return fmt.Errorf("domain is currently actively tunneled")
+	}
+	return nil
+}
+
+func (s *TunnelRedisStore) RemoveActiveDomain(ctx context.Context, domain string) error {
+	key := "active_domain:" + domain
+	return s.client.Del(ctx, key).Err()
+}

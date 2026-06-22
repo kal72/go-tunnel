@@ -39,6 +39,8 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		ProxyHttpPort:  parsePort(get("PROXY_HTTP_PORT", "80"), 80),
 		ProxyHttpsPort: parsePort(get("PROXY_HTTPS_PORT", "443"), 443),
 
+		MaxFreeDomains: parsePort(get("MAX_FREE_DOMAINS", "5"), 5),
+
 		JWTSecret:        get("JWT_SECRET", "defaultjwtsecret"),
 		ACMEEnable:       strings.ToLower(get("ACME_ENABLE", "false")) == "true",
 		ACMECache:        get("ACME_CACHE", "./cert-cache"),

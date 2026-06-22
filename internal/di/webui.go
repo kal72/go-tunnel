@@ -26,21 +26,20 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	tunnelStore := redisrepo.NewTunnelRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())
 
+	// Postgres DB
+	db, err := postgresrepo.InitDB(env)
+	if err != nil {
+		return nil, nil, fmt.Errorf("init db: %w", err)
+	}
+
 	var domainStore domainTunnel.DomainStore
 	if env.WildcardDomain != "" {
-		domainStore = redisrepo.NewDomainRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
-		domainStore.Ping(context.Background())
+		domainStore = postgresrepo.NewDomainRepository(db)
 	}
 
 	tunnelAddr := env.TunnelDomain
 	if env.ProxyHttpsPort != 0 && env.ProxyHttpsPort != 443 {
 		tunnelAddr = fmt.Sprintf("%s:%d", env.TunnelDomain, env.ProxyHttpsPort)
-	}
-
-	// Postgres DB
-	db, err := postgresrepo.InitDB(env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("init db: %w", err)
 	}
 
 	userRepo := postgresrepo.NewUserRepository(db)
@@ -52,7 +51,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
 
 	// Handlers
-	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable)
+	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
 	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable)

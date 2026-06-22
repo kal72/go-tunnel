@@ -268,10 +268,10 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		if hn == s.dashboardDomain {
 			// Allowed automatically
 		} else if s.tunnelUsecase != nil {
-			// 2. Check Redis allowlist
-			allowed, err := s.tunnelUsecase.IsDomainAllowed(context.Background(), hn)
+			// 2. Check Database allowlist based on RBAC (Admin or specific User)
+			allowed, err := s.tunnelUsecase.IsDomainAllowed(context.Background(), hn, user.ID, user.Role)
 			if err != nil || !allowed {
-				conflict = fmt.Sprintf("%s (not authorized)", hn)
+				conflict = fmt.Sprintf("%s (not authorized or you do not own this domain)", hn)
 				break
 			}
 		} else {
@@ -280,7 +280,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 			break
 		}
 
-		// 2. Check if already active
+		// 3. Check if already active locally
 		if _, exists := s.hostToSes[hn]; exists {
 			conflict = hn
 			break
@@ -288,6 +288,19 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		if s.hostRegistry != nil && !s.hostRegistry.Register(hn) {
 			conflict = hn
 			break
+		}
+		
+		// 4. Check if already active globally (Redis Active Lock)
+		if s.tunnelUsecase != nil {
+			err := s.tunnelUsecase.SetActiveDomain(context.Background(), hn, fmt.Sprintf("%p", ts))
+			if err != nil {
+				// Unlock locally registered memory before breaking
+				if s.hostRegistry != nil {
+					s.hostRegistry.Unregister(hn)
+				}
+				conflict = fmt.Sprintf("%s (domain is currently actively tunneled)", hn)
+				break
+			}
 		}
 		ts.Hostnames[hn] = struct{}{}
 		ts.Modes[hn] = getMode(hn)
@@ -304,6 +317,9 @@ func (s *Server) handleClientConn(conn net.Conn) {
 			}
 			if s.hostRegistry != nil {
 				s.hostRegistry.Unregister(hn)
+			}
+			if s.tunnelUsecase != nil {
+				s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
 			}
 		}
 		s.mu.Unlock()
@@ -365,6 +381,9 @@ func (s *Server) cleanup(ts *TunnelSession) {
 			delete(s.hostToSes, hn)
 			if s.hostRegistry != nil {
 				s.hostRegistry.Unregister(hn)
+			}
+			if s.tunnelUsecase != nil {
+				s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
 			}
 			delete(ts.Modes, hn)
 			s.logger.Info("[edge] deregistered host", zap.String("host", hn))

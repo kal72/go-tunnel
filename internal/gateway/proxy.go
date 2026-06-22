@@ -17,6 +17,7 @@ import (
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cert"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -61,7 +62,7 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 
 		// If using Redis for Domain Filter
 		if p.domainStore != nil {
-			allowed, err := p.domainStore.IsDomainAllowed(r.Context(), host)
+			allowed, err := p.domainStore.IsDomainAllowed(r.Context(), host, uuid.Nil, 1)
 			if err != nil || !allowed {
 				http.Error(w, "Forbidden Domain", http.StatusForbidden)
 				return

@@ -90,8 +90,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	var domainStore domainTunnel.DomainStore
 	if env.WildcardDomain != "" {
-		domainStore = redisrepo.NewDomainRedisStore(env.RedisAddr, env.RedisPass, env.DomainRedisDB)
-		domainStore.Ping(context.Background())
+		domainStore = postgresrepo.NewDomainRepository(db)
 	} else {
 		log.Printf("[gateway] Domain Management disabled (WILDCARD_DOMAIN is empty)")
 	}
