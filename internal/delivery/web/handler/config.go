@@ -87,8 +87,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			for _, info := range infos {
 				tunnels = append(tunnels, map[string]any{
-					"ClientID":    info.ClientID,
-					"Client":      info.Client,
+					"TunnelName":  info.Name,
+					"ClientName":  info.ClientName,
 					"Hosts":       strings.Join(info.Hosts, ", "),
 					"ConnectedAt": info.ConnectedAt.Format("01-02-2006 15:04:05"),
 					"LastPing":    info.LastPing.Format("15:04:05"),
