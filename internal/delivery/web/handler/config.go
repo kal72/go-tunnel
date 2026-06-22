@@ -156,6 +156,7 @@ func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
+		"GatewayDomain": h.gatewayDomain,
 		"UserRole":      role,
 		"UserName":      username,
 		"HideSidebar":   true,

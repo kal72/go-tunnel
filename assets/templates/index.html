@@ -165,20 +165,20 @@
 
                     <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
                       <label class="text-xs font-mono text-gray-400 dark:text-gray-500">hostname</label>
-                      <input type="text" x-model="tunnel.hostname" @input="updatePreview()"
+                      <input type="text" x-model="tunnel.hostname"
                         placeholder="app.example.com"
                         class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                     </div>
 
                     <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
                       <label class="text-xs font-mono text-gray-400 dark:text-gray-500">target</label>
-                      <input type="text" x-model="tunnel.target" @input="updatePreview()" placeholder="127.0.0.1:8080"
+                      <input type="text" x-model="tunnel.target" placeholder="127.0.0.1:8080"
                         class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                     </div>
 
                     <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
                       <label class="text-xs font-mono text-gray-400 dark:text-gray-500">mode</label>
-                      <select x-model="tunnel.mode" @change="updatePreview()"
+                      <select x-model="tunnel.mode"
                         class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                         <option value="http">http</option>
                         <option value="https">https</option>
@@ -211,15 +211,34 @@
 
       </div><!-- /form -->
 
-      <!-- ── JSON Preview panel ── -->
+      <!-- ── Instructions panel ── -->
       <div
         class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">JSON Payload</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide</p>
         </div>
-        <pre
-          class="flex-1 overflow-auto p-4 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed whitespace-pre"
-          x-text="jsonPreview"></pre>
+        <div class="flex-1 overflow-auto p-5 text-sm text-gray-600 dark:text-gray-400 space-y-5 leading-relaxed">
+          
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">1. Add a Tunnel</h4>
+            <p class="text-xs">Click <span class="text-blue-600 dark:text-blue-400 font-medium">+ add tunnel</span> to create a new port mapping. You can add multiple tunnels to a single config.</p>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">2. Configure Fields</h4>
+            <ul class="text-xs space-y-2 list-disc ml-4">
+              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> The public domain you registered in Manage Domains (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">app.domain.com</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Your local application's address and port (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:8080</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">mode:</strong> <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">http</code> for web apps, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">https</code> for secure local targets, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">tcp</code> for raw TCP (SSH/DB).</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Save & Run</h4>
+            <p class="text-xs">After saving the configuration, open your terminal and start the tunnel using the <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-green-600 dark:text-green-400">gotunnel run</code> command shown above.</p>
+          </div>
+
+        </div>
       </div>
 
     </div><!-- /form + preview split -->
@@ -275,7 +294,6 @@
       configs: [],
       saved: false,
       statusText: 'Select a config file to begin',
-      jsonPreview: '',
 
       showNewModal: false,
       newName: '',
@@ -318,7 +336,6 @@
         };
 
         this.statusText = `Loaded configuration: ${data.name}`;
-        this.updatePreview();
       },
 
       async createNewConfig() {
@@ -355,7 +372,6 @@
           if (this.current && this.current.id === cfg.id) {
             this.current = null;
             this.form = { tunnels: [] };
-            this.jsonPreview = '';
           }
           await this.refreshConfigs();
           this.statusText = `Deleted ${cfg.name} successfully`;
@@ -371,12 +387,10 @@
           target: '127.0.0.1:3000',
           mode: 'http',
         });
-        this.updatePreview();
       },
 
       removeTunnel(idx) {
         this.form.tunnels.splice(idx, 1);
-        this.updatePreview();
       },
 
       async saveConfig() {
@@ -404,16 +418,12 @@
 
       copyCommand() {
         if (!this.current) return;
-        const cmd = `client run ${this.current.name}`;
+        const cmd = `gotunnel run ${this.current.name}`;
         navigator.clipboard.writeText(cmd).then(() => {
           const old = this.statusText;
           this.statusText = "Command copied to clipboard!";
           setTimeout(() => { this.statusText = old; }, 2000);
         });
-      },
-
-      updatePreview() {
-        this.jsonPreview = JSON.stringify(this.form, null, 2);
       }
     };
   }
