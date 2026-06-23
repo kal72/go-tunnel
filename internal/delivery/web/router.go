@@ -60,6 +60,12 @@ func SetupRouter(
 		// Admin only routes
 		r.Group(func(r chi.Router) {
 			r.Use(handler.AdminMiddleware)
+			
+			// Settings Admin
+			r.Get("/settings", h.SettingsPage)
+			r.Get("/api/settings", h.GetSettings)
+			r.Put("/api/settings", h.UpdateSettings)
+
 			r.Get("/users", userH.UsersPage)
 			r.Get("/api/users", userH.ListUsers)
 			r.Post("/api/users", userH.CreateUser)

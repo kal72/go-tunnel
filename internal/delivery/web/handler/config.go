@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	domainConfig "gotunnel/internal/domain/config"
 	usecaseConfig "gotunnel/internal/usecase/config"
+	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	"html/template"
 	"net/http"
@@ -26,6 +27,8 @@ type Handler struct {
 	downTmpl       *template.Template
 	tunnelUsecase  usecaseTunnel.TunnelUsecase
 	configUsecase  usecaseConfig.ConfigUsecase
+	settingUsecase usecaseSetting.SettingUsecase
+	settingTmpl    *template.Template
 	masterSecret   string
 	tunnelAddr     string
 	wildcardDomain string
@@ -35,7 +38,7 @@ type Handler struct {
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -65,14 +68,21 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		"templates/downloads.html",
 	))
 
+	settingTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/settings.html",
+	))
+
 	return &Handler{
 		dashTmpl:       dashTmpl,
 		confTmpl:       confTmpl,
 		domainTmpl:     domainTmpl,
 		docsTmpl:       docsTmpl,
 		downTmpl:       downTmpl,
+		settingTmpl:    settingTmpl,
 		tunnelUsecase:  tunnelUsecase,
 		configUsecase:  configUsecase,
+		settingUsecase: settingUsecase,
 		masterSecret:   masterSecret,
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
@@ -445,8 +455,10 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if freeDomainCount >= h.maxFreeDomains {
-			http.Error(w, fmt.Sprintf("You have reached the maximum limit of %d free domains", h.maxFreeDomains), http.StatusForbidden)
+		maxFreeDomains := h.settingUsecase.GetMaxFreeDomains(r.Context(), h.maxFreeDomains)
+
+		if freeDomainCount >= maxFreeDomains {
+			http.Error(w, fmt.Sprintf("You have reached the maximum limit of %d free domains", maxFreeDomains), http.StatusForbidden)
 			return
 		}
 	}

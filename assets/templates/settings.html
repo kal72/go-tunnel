@@ -1,0 +1,168 @@
+{{define "content"}}
+<div x-data="settingsPage()" x-init="fetchSettings()" x-cloak class="flex flex-col h-full">
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-auto p-6 bg-transparent">
+    <div class="max-w-4xl mx-auto">
+      
+      <!-- Header Area -->
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">System Settings</h2>
+            <span x-show="saved" x-transition
+              class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full" x-cloak>saved</span>
+            <span x-show="errorMsg" x-text="errorMsg" class="text-xs text-red-500" x-cloak></span>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure core platform behavior and user limitations.</p>
+        </div>
+        <button @click="saveSettings()" :disabled="saving"
+          class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors">
+          <svg x-show="saving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span x-text="saving ? 'Saving...' : 'Save Settings'"></span>
+        </button>
+      </div>
+
+      <!-- Settings Card -->
+      <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden transition-colors duration-200">
+        <div class="p-6 space-y-8">
+          
+          <!-- Domain Limits Section -->
+          <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+              </svg>
+              Domain Limits
+            </h3>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Max Free Domains -->
+              <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+                <label for="max_free_domains" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Free Domains</label>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-3">Limit auto-generated internal subdomains per regular user.</p>
+                <input type="number" id="max_free_domains" x-model="settings.max_free_domains" min="0"
+                  class="block w-full px-3 py-2.5 sm:text-sm border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors">
+              </div>
+
+              <!-- Max Tunnels -->
+              <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+                <label for="max_tunnels_per_user" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Active Tunnels</label>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-3">Limit concurrent tunnels allowed per regular user.</p>
+                <input type="number" id="max_tunnels_per_user" x-model="settings.max_tunnels_per_user" min="1"
+                  class="block w-full px-3 py-2.5 sm:text-sm border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors">
+              </div>
+              
+            </div>
+          </div>
+
+          <hr class="border-gray-100 dark:border-slate-700">
+
+          <!-- Access & Security Section -->
+          <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              Access & Security
+            </h3>
+            
+            <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+              <div class="mr-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Public Registration</label>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Allow users to sign up independently from the login page.</p>
+              </div>
+              <!-- Custom Alpine Toggle -->
+              <button type="button" 
+                @click="settings.allow_registration = !settings.allow_registration"
+                :class="settings.allow_registration ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'"
+                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800" 
+                role="switch" 
+                :aria-checked="settings.allow_registration.toString()">
+                <span class="sr-only">Toggle Public Registration</span>
+                <span 
+                  :class="settings.allow_registration ? 'translate-x-5' : 'translate-x-0'"
+                  class="pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out">
+                </span>
+              </button>
+            </div>
+            
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  function settingsPage() {
+    return {
+      settings: {
+        max_free_domains: "5",
+        max_tunnels_per_user: "3",
+        allow_registration: true
+      },
+      saving: false,
+      saved: false,
+      errorMsg: '',
+
+      async fetchSettings() {
+        try {
+          const res = await fetch('/api/settings');
+          const data = await res.json();
+          if (res.ok && data.settings) {
+            this.settings.max_free_domains = data.settings.max_free_domains || "5";
+            this.settings.max_tunnels_per_user = data.settings.max_tunnels_per_user || "3";
+            this.settings.allow_registration = data.settings.allow_registration === "true";
+          }
+        } catch (e) {
+          console.error("Failed to load settings:", e);
+        }
+      },
+
+      async saveSettings() {
+        this.saving = true;
+        this.saved = false;
+        this.errorMsg = '';
+        try {
+          // Convert everything to string for the key-value store
+          const payload = {
+            settings: {
+              max_free_domains: String(this.settings.max_free_domains),
+              max_tunnels_per_user: String(this.settings.max_tunnels_per_user),
+              allow_registration: String(this.settings.allow_registration)
+            }
+          };
+
+          const res = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if (res.ok) {
+            // Re-fetch to ensure sync with backend
+            await this.fetchSettings();
+            this.saved = true;
+            setTimeout(() => { this.saved = false; }, 3000);
+          } else {
+            const err = await res.text();
+            this.errorMsg = `Failed to save: ${err}`;
+            setTimeout(() => { this.errorMsg = ''; }, 5000);
+          }
+        } catch (e) {
+          this.errorMsg = `Error: ${e.message}`;
+          setTimeout(() => { this.errorMsg = ''; }, 5000);
+        } finally {
+          this.saving = false;
+        }
+      }
+    }
+  }
+</script>
+{{end}}
