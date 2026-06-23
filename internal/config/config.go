@@ -42,6 +42,7 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		MaxFreeDomains: parsePort(get("MAX_FREE_DOMAINS", "5"), 5),
 
 		JWTSecret:        get("JWT_SECRET", "defaultjwtsecret"),
+		JWTExpireHours:   parsePort(get("JWT_EXPIRE_HOURS", "24"), 24),
 		ACMEEnable:       strings.ToLower(get("ACME_ENABLE", "false")) == "true",
 		ACMECache:        get("ACME_CACHE", "./cert-cache"),
 		ACMEEnv:          get("ACME_ENV", "staging"), // production or staging

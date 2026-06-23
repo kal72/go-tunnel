@@ -108,7 +108,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.JWTExpireHours)
 
 	// Handlers
 	tunnelSrv, err := tunnelhandler.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayDomain, env.WildcardDomain, tunnelUsecase, authUsecase)

@@ -59,8 +59,9 @@ type ServerConfig struct {
 
 	MaxFreeDomains int
 
-	JWTSecret  string
-	ACMEEnable bool
+	JWTSecret      string
+	JWTExpireHours int
+	ACMEEnable     bool
 	ACMECache  string
 	ACMEEnv    string
 

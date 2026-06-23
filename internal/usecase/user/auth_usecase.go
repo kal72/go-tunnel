@@ -17,15 +17,20 @@ import (
 
 type authUsecase struct {
 	userRepo  domainUser.UserRepository
-	store     domainTunnel.TunnelStore
-	jwtSecret string
+	store          domainTunnel.TunnelStore
+	jwtSecret      string
+	jwtExpireHours int
 }
 
-func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string) AuthUsecase {
+func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string, jwtExpireHours int) AuthUsecase {
+	if jwtExpireHours <= 0 {
+		jwtExpireHours = 24
+	}
 	return &authUsecase{
-		userRepo:  userRepo,
-		store:     store,
-		jwtSecret: jwtSecret,
+		userRepo:       userRepo,
+		store:          store,
+		jwtSecret:      jwtSecret,
+		jwtExpireHours: jwtExpireHours,
 	}
 }
 
@@ -45,7 +50,7 @@ func (u *authUsecase) Login(ctx context.Context, username, password string) (str
 		return "", domainErrors.ErrUnauthorized
 	}
 
-	expiration := 30 * 24 * time.Hour // default 30 days
+	expiration := time.Duration(u.jwtExpireHours) * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID.String(),
 		"user": user.Username,
