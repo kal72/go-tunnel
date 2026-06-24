@@ -1,0 +1,222 @@
+{{define "content"}}
+<div class="h-full bg-[#1e293b] selection:bg-blue-500/30 overflow-y-auto relative font-sans">
+  <!-- Soft background glows -->
+  <div class="fixed top-[-5%] left-[-5%] w-[40%] h-[40%] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+  <div class="fixed bottom-[-5%] right-[-5%] w-[40%] h-[40%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+  <!-- Main Container Wrapper to handle padding -->
+  <div class="flex justify-center py-8 md:py-12">
+    <div class="max-w-6xl w-full mx-4 flex flex-col md:flex-row gap-6 z-10 relative items-stretch">
+      
+      <!-- Sidebar Navigation -->
+      <aside class="w-full md:w-64 shrink-0">
+        <div class="bg-slate-900/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/5 p-6 sticky top-8 z-20">
+          <div class="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h2 class="text-sm font-bold text-white tracking-tight uppercase">Daftar Isi</h2>
+          </div>
+          
+          <nav class="space-y-1.5">
+            <a href="#section-1" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+              <span class="w-6 h-6 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold border border-blue-500/20">1</span>
+              Persiapan Web UI
+            </a>
+            <a href="#section-2" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+              <span class="w-6 h-6 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-[10px] font-bold border border-indigo-500/20">2</span>
+              Client Login
+            </a>
+            <a href="#section-3" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+              <span class="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-[10px] font-bold border border-emerald-500/20">3</span>
+              Jalankan Tunnel
+            </a>
+            <div class="pt-2 mt-2 border-t border-white/5">
+              <a href="#section-4" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-purple-400 font-medium hover:text-purple-300 hover:bg-purple-500/10 transition-colors bg-purple-500/5 border border-purple-500/10 shadow-inner">
+                <span class="w-6 h-6 rounded-md bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold border border-purple-500/20">4</span>
+                Custom Domain
+              </a>
+            </div>
+          </nav>
+          
+          <div class="mt-8 pt-4 border-t border-white/5">
+            <a href="javascript:history.back()" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition-all shadow-sm hover:shadow">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Kembali
+            </a>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <main class="flex-1 h-fit bg-slate-900/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/5 p-8 md:p-12 relative overflow-hidden">
+        <!-- Subtle Grid -->
+        <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 24px 24px;"></div>
+        
+        <div class="relative z-10">
+          <div class="mb-10 pb-6 border-b border-white/5">
+            <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight mb-4">Panduan Penggunaan Go-Tunnel</h1>
+            <p class="text-sm md:text-base leading-relaxed text-slate-400">Dokumentasi ini menjelaskan langkah-langkah untuk menghubungkan layanan lokal Anda ke internet menggunakan <strong class="text-white font-medium">go-tunnel</strong>, mulai dari konfigurasi di sisi server (Web UI) hingga menjalankan client.</p>
+          </div>
+
+          <div class="space-y-16">
+            <!-- Section 1 -->
+            <section id="section-1" class="scroll-mt-12">
+              <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+                <span class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-black shadow-inner border border-blue-500/20 shrink-0">1</span>
+                Persiapan di Web UI (Server)
+              </h3>
+              <p class="text-sm text-slate-400 mb-5">Sebelum client dapat terhubung, Anda harus menyiapkan akses dan mendaftarkan konfigurasi di server melalui Web UI.</p>
+              <ul class="space-y-4 text-sm text-slate-400 ml-1">
+                <li class="flex gap-3 items-start">
+                  <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span><strong class="text-slate-200">Daftarkan Subdomain</strong>: Gunakan fitur <em>Manage Domains</em> untuk mendaftarkan subdomain secara manual, atau biarkan sistem menghasilkan subdomain secara otomatis (auto-generate).</span>
+                </li>
+                <li class="flex gap-3 items-start">
+                  <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span><strong class="text-slate-200">Buat Konfigurasi</strong>: Buka menu <em>Manage Configs</em> dan buat konfigurasi baru. Tentukan <strong>Config Name</strong> dan daftarkan Hostname (dari Manage Domains) serta Target Lokal Anda (misal: <code>127.0.0.1:8080</code>).</span>
+                </li>
+              </ul>
+              <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/20 transition-colors">
+                  <h4 class="text-[10px] font-bold text-blue-400 uppercase mb-2 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    Mode: http
+                  </h4>
+                  <p class="text-[11px] text-slate-400 leading-relaxed text-justify">Digunakan untuk aplikasi web standar. Gateway menangani SSL/TLS dan meneruskan trafik HTTP biasa ke target lokal Anda.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-indigo-500/20 transition-colors">
+                  <h4 class="text-[10px] font-bold text-indigo-400 uppercase mb-2 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    Mode: https
+                  </h4>
+                  <p class="text-[11px] text-slate-400 leading-relaxed text-justify">Gunakan jika target lokal Anda sudah memiliki SSL sendiri. Gateway akan meneruskan trafik terenkripsi secara langsung ke target.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/20 transition-colors">
+                  <h4 class="text-[10px] font-bold text-emerald-400 uppercase mb-2 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Mode: tcp
+                  </h4>
+                  <p class="text-[11px] text-slate-400 leading-relaxed text-justify">Untuk layanan non-HTTP seperti SSH (port 22) atau Database. Meneruskan aliran data TCP mentah tanpa modifikasi protokol.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Section 2 -->
+            <section id="section-2" class="scroll-mt-12">
+              <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+                <span class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-black shadow-inner border border-indigo-500/20 shrink-0">2</span>
+                Autentikasi (Client Login)
+              </h3>
+              <p class="text-sm text-slate-400 mb-5">Karena konfigurasi sekarang disimpan terpusat di server, Anda hanya perlu melakukan login sekali saja menggunakan CLI client dari terminal Anda.</p>
+              <div class="bg-[#0f172a] border border-indigo-500/20 rounded-xl p-4 md:p-5 font-mono text-[11px] md:text-xs overflow-x-auto text-indigo-400 shadow-inner mb-5 flex items-center gap-3">
+                <span class="text-slate-600 select-none">$</span>
+                <code>gotunnel login</code>
+              </div>
+              <p class="text-sm text-slate-400 bg-white/5 border border-white/5 p-4 rounded-xl leading-relaxed">
+                Anda akan diminta untuk memasukkan <strong>Username</strong> dan <strong>Password</strong> akun portal Anda. Jika berhasil, kredensial (token) akan disimpan secara aman di komputer lokal Anda.
+              </p>
+            </section>
+
+            <!-- Section 3 -->
+            <section id="section-3" class="scroll-mt-12">
+              <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+                <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-black shadow-inner border border-emerald-500/20 shrink-0">3</span>
+                Menjalankan Tunnel
+              </h3>
+              <p class="text-sm text-slate-400 mb-5">Untuk melihat daftar konfigurasi yang telah Anda buat di server, gunakan perintah <code class="bg-white/5 border border-white/10 px-1 rounded text-emerald-300">gotunnel list</code>. Untuk mulai mempublikasikan layanan lokal Anda, cukup jalankan nama konfigurasi tersebut:</p>
+              <div class="bg-[#0f172a] border border-emerald-500/20 rounded-xl p-4 md:p-5 font-mono text-[11px] md:text-xs overflow-x-auto text-emerald-400 shadow-inner mb-5 flex items-center gap-3">
+                <span class="text-slate-600 select-none">$</span>
+                <code>gotunnel run &lt;nama_config&gt;</code>
+              </div>
+              <p class="text-sm text-slate-400 bg-white/5 border border-white/5 p-4 rounded-xl leading-relaxed">
+                Client akan mengunduh pemetaan port dari server dan otomatis membentuk koneksi tunnel yang aman. Jika berhasil, layanan lokal Anda langsung dapat diakses publik!
+              </p>
+            </section>
+
+            <!-- Section 4 -->
+            <section id="section-4" class="scroll-mt-12">
+              <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
+                <span class="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-black shadow-inner border border-purple-500/20 shrink-0">4</span>
+                Konfigurasi Custom Domain
+              </h3>
+              <p class="text-sm text-slate-400 mb-6">Jika Anda ingin menggunakan nama domain Anda sendiri (misalnya <code class="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-purple-300">app.namaperusahaan.com</code>) alih-alih menggunakan subdomain default, ikuti langkah-langkah berikut:</p>
+              
+              <div class="space-y-8">
+                <!-- Step 1 -->
+                <div>
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center text-[10px] font-bold">1</div>
+                    <h4 class="text-sm font-bold text-white">Konfigurasi DNS (CNAME)</h4>
+                  </div>
+                  <p class="text-xs text-slate-400 mb-4 ml-9 text-justify">Buka panel DNS management domain Anda (seperti Cloudflare atau Namecheap) dan tambahkan record CNAME yang mengarah ke gateway server tunnel ini.</p>
+                  
+                  <div class="ml-9 overflow-hidden rounded-xl border border-white/5 bg-[#0f172a]/50">
+                    <table class="w-full text-left border-collapse text-[11px]">
+                      <thead>
+                        <tr class="bg-white/5 text-slate-300 border-b border-white/5">
+                          <th class="px-4 py-2 font-bold">Type</th>
+                          <th class="px-4 py-2 font-bold">Name</th>
+                          <th class="px-4 py-2 font-bold">Content</th>
+                          <th class="px-4 py-2 font-bold">TTL</th>
+                        </tr>
+                      </thead>
+                      <tbody class="text-slate-400">
+                        <tr class="border-b border-white/5">
+                          <td class="px-4 py-2 text-blue-400 font-bold">CNAME</td>
+                          <td class="px-4 py-2 text-white">app <span class="text-[10px] text-slate-500">(Subdomain)</span></td>
+                          <td class="px-4 py-2 text-emerald-400">{{.GatewayDomain}}</td>
+                          <td class="px-4 py-2">Auto / 3600</td>
+                        </tr>
+                        <tr>
+                          <td class="px-4 py-2 text-blue-400 font-bold">CNAME</td>
+                          <td class="px-4 py-2 text-white">@ <span class="text-[10px] text-slate-500">(Root Domain)</span></td>
+                          <td class="px-4 py-2 text-emerald-400">{{.GatewayDomain}}</td>
+                          <td class="px-4 py-2">Auto / 3600</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div>
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center text-[10px] font-bold">2</div>
+                    <h4 class="text-sm font-bold text-white">Registrasi di Portal (Web UI)</h4>
+                  </div>
+                  <p class="text-xs text-slate-400 mb-4 ml-9 text-justify">Setelah DNS dikonfigurasi, Anda harus mendaftarkan domain tersebut di menu <strong>Domain Manager</strong> portal ini agar diizinkan untuk melakukan tunneling.</p>
+                  <ul class="ml-14 space-y-2 text-xs text-slate-400 list-disc">
+                    <li>Klik menu <strong class="text-white">Manage Domains</strong> di sidebar utama.</li>
+                    <li>Klik tombol <strong class="text-emerald-400">+ Add Domain</strong>.</li>
+                    <li>Pilih tipe <strong class="text-white">Manual</strong> dan masukkan hostname lengkap Anda (misal: <code class="text-purple-300">app.namaperusahaan.com</code>).</li>
+                  </ul>
+                </div>
+
+                <!-- Step 3 -->
+                <div>
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center text-[10px] font-bold">3</div>
+                    <h4 class="text-sm font-bold text-white">Update Konfigurasi di Web UI</h4>
+                  </div>
+                  <p class="text-xs text-slate-400 mb-4 ml-9 text-justify">Pilih konfigurasi Anda di menu <strong>Manage Configs</strong>, lalu tambahkan pemetaan baru menggunakan domain custom yang telah diregistrasikan tersebut. Setelah disimpan, cukup <i>restart</i> tunnel di terminal Anda menggunakan perintah <code class="text-purple-300">gotunnel run &lt;nama_config&gt;</code>.</p>
+                </div>
+              </div>
+
+              <div class="mt-8 bg-purple-900/20 border border-purple-500/20 p-5 rounded-xl flex gap-4 items-start shadow-inner">
+                <svg class="w-6 h-6 text-purple-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div class="space-y-2">
+                  <p class="text-sm text-purple-200 font-bold">Tentang SSL/TLS Otomatis</p>
+                  <p class="text-xs text-purple-200/80 leading-relaxed text-justify">Sistem akan secara otomatis melakukan proses negosiasi dan meng-generate sertifikat SSL/TLS (Let's Encrypt) gratis untuk custom domain Anda saat trafik pertama kali masuk. Pastikan DNS Anda sudah merambat (*propagated*) dengan benar sebelum mengaksesnya.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+{{end}}

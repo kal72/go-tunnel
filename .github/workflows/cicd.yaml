@@ -18,6 +18,13 @@ on:
         options:
           - production
           - staging
+      version:
+        description: "Version tag (e.g. v1.0.0). Required for release if not running from tag."
+        required: false
+        type: string
+
+env:
+  CLI_VERSION: "v1.0"
 
 jobs:
 
@@ -42,6 +49,18 @@ jobs:
     needs: build-dev
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Build Clients
+        run: |
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+      - name: Copy binaries to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "downloads/"
+          target: "."
       - uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -56,16 +75,54 @@ jobs:
 
             sudo mkdir -p cert-cache
 
+            CERT_CONTENT="${{ secrets.WILDCARD_CERT_CONTENT }}"
+            KEY_CONTENT="${{ secrets.WILDCARD_KEY_CONTENT }}"
+            
+            if [ -n "$CERT_CONTENT" ] && [ -n "$KEY_CONTENT" ]; then
+              echo "Memasang certificate wildcard dari GitHub Secrets..."
+              echo "$CERT_CONTENT" | sudo tee cert-cache/cloudflare-cert.pem > /dev/null
+              echo "$KEY_CONTENT" | sudo tee cert-cache/cloudflare-key.pem > /dev/null
+            fi
+
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
-              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
-              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -v "$(pwd)/downloads:/app/downloads:Z" \
+              -e GATEWAY_DOMAIN=${{ secrets.GATEWAY_DOMAIN }} \
+              -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
+              -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
-               -e REDIS_ADDR="host.containers.internal:6379" \
+              -e CLI_LATEST_VERSION="${{ env.CLI_VERSION }}" \
+              -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \
+              -e DOMAIN_REDIS_DB="1" \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
+              -e WILDCARD_CERT_PATH="/app/cert-cache/cloudflare-cert.pem" \
+              -e WILDCARD_KEY_PATH="/app/cert-cache/cloudflare-key.pem" \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASS=${{ secrets.DB_PASS }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_SSLMODE=${{ secrets.DB_SSLMODE }} \
+              -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
+              -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
+
+            echo "⏳ Menunggu container booting (5 detik)..."
+            sleep 5
+            STATUS=$(sudo podman inspect -f '{{.State.Status}}' tunnel)
+            if [ "$STATUS" != "running" ]; then
+              echo "❌ Error: Deployment GAGAL! Container crash/berhenti (Status: $STATUS)."
+              sudo podman logs tunnel
+              exit 1
+            else
+              echo "✅ Sukses: Deployment BERHASIL! Container berjalan dengan sehat."
+              echo "--- Log Terakhir ---"
+              sudo podman logs tunnel | tail -n 20
+            fi
 
 
 
@@ -73,6 +130,8 @@ jobs:
   build-release:
     if: ${{ github.event.inputs.target == 'release' }}
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
     steps:
 
       - uses: actions/checkout@v4
@@ -91,6 +150,7 @@ jobs:
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
             echo "Auto VERSION from TAG: ${GITHUB_REF_NAME}"
           else
             if [ -z "${{ github.event.inputs.version }}" ]; then
@@ -98,6 +158,7 @@ jobs:
               exit 1
             fi
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
             echo "Manual VERSION: ${{ github.event.inputs.version }}"
           fi
 
@@ -115,12 +176,25 @@ jobs:
     needs: build-release
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Build Clients
+        run: |
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+      - name: Copy binaries to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "downloads/"
+          target: "."
       - uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            VERSION="${{ needs.build-release.outputs.version }}"
             IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:${VERSION}
             ACME_ENV="${{ github.event.inputs.acme_env }}"
             if [ -z "$ACME_ENV" ]; then ACME_ENV=production; fi
@@ -129,13 +203,51 @@ jobs:
             
             sudo mkdir -p cert-cache
 
+            CERT_CONTENT="${{ secrets.WILDCARD_CERT_CONTENT }}"
+            KEY_CONTENT="${{ secrets.WILDCARD_KEY_CONTENT }}"
+            
+            if [ -n "$CERT_CONTENT" ] && [ -n "$KEY_CONTENT" ]; then
+              echo "Memasang certificate wildcard dari GitHub Secrets..."
+              echo "$CERT_CONTENT" | sudo tee cert-cache/cloudflare-cert.pem > /dev/null
+              echo "$KEY_CONTENT" | sudo tee cert-cache/cloudflare-key.pem > /dev/null
+            fi
+
             sudo podman stop tunnel || true
             sudo podman rm tunnel || true
-            sudo podman run -d --name tunnel -p 80:80 -p 443:443 -p 9443:9443 -p 8080:8080 \
+            sudo podman run -d --name tunnel -p 80:80 -p 443:443 \
               -v "$(pwd)/cert-cache:/app/cert-cache:Z" \
-              -e GATEWAY_HOST=${{ secrets.GATEWAY_HOST }} \
-              -e TUNNEL_HOST=${{ secrets.TUNNEL_HOST }} \
+              -v "$(pwd)/downloads:/app/downloads:Z" \
+              -e GATEWAY_DOMAIN=${{ secrets.GATEWAY_DOMAIN }} \
+              -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
+              -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
+              -e CLI_LATEST_VERSION="${{ env.CLI_VERSION }}" \
               -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \
+              -e DOMAIN_REDIS_DB="1" \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e WILDCARD_DOMAIN=${{ secrets.WILDCARD_DOMAIN }} \
+              -e WILDCARD_CERT_PATH="/app/cert-cache/cloudflare-cert.pem" \
+              -e WILDCARD_KEY_PATH="/app/cert-cache/cloudflare-key.pem" \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASS=${{ secrets.DB_PASS }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_SSLMODE=${{ secrets.DB_SSLMODE }} \
+              -e WEBUI_DOMAIN=${{ secrets.WEBUI_DOMAIN }} \
+              -e WEBUI_PORT=${{ secrets.WEBUI_PORT }} \
               $IMAGE
+
+            echo "⏳ Menunggu container booting (5 detik)..."
+            sleep 5
+            STATUS=$(sudo podman inspect -f '{{.State.Status}}' tunnel)
+            if [ "$STATUS" != "running" ]; then
+              echo "❌ Error: Deployment GAGAL! Container crash/berhenti (Status: $STATUS)."
+              sudo podman logs tunnel
+              exit 1
+            else
+              echo "✅ Sukses: Deployment BERHASIL! Container berjalan dengan sehat."
+              echo "--- Log Terakhir ---"
+              sudo podman logs tunnel | tail -n 20
+            fi

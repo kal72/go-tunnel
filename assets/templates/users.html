@@ -1,0 +1,242 @@
+{{define "content"}}
+<div x-data="usersApp()" x-init="init()" x-cloak class="flex flex-col h-full">
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-auto p-6 bg-transparent">
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-6 flex justify-between items-end">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">System Users</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage admin and client accounts.</p>
+        </div>
+        <button @click="showAddModal = true"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+          Add User
+        </button>
+      </div>
+
+      <!-- Users Table -->
+      <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden relative transition-colors duration-200">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Username</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Created</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50">
+            <template x-for="u in users" :key="u.id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group">
+                <td class="px-6 py-4">
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono" x-text="u.username"></span>
+                </td>
+                <td class="px-6 py-4">
+                  <span x-show="u.role === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 transition-colors">Admin</span>
+                  <span x-show="u.role === 2" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-slate-600 transition-colors">User</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span x-show="u.status === 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition-colors">Active</span>
+                  <span x-show="u.status !== 1" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-500/20 transition-colors">Inactive</span>
+                </td>
+                <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400" x-text="new Date(u.created_at).toLocaleString()"></td>
+                <td class="px-6 py-4 text-right flex justify-end gap-2">
+                  <button @click="toggleStatus(u)" :title="u.status === 1 ? 'Deactivate' : 'Activate'"
+                    class="text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors p-1 rounded-md hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+                    </svg>
+                  </button>
+                  <button @click="openPasswordModal(u)" title="Change Password"
+                    class="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-500/10 focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                  </button>
+                  <button @click="deleteUser(u)" title="Delete User"
+                    class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add User Modal -->
+  <div x-show="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-transition>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden transition-colors" @click.away="showAddModal = false">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="font-bold text-gray-900 dark:text-white">Add New User</h3>
+        <button @click="showAddModal = false" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Username</label>
+          <input type="text" x-model="newUser.username" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Password</label>
+          <input type="password" x-model="newUser.password" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Role</label>
+          <select x-model.number="newUser.role" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+            <option value="2">User</option>
+            <option value="1">Admin</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Status</label>
+          <select x-model.number="newUser.status" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showAddModal = false" class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+        <button @click="createUser()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors">
+          Create
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div x-show="showPasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-transition>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden transition-colors" @click.away="showPasswordModal = false">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="font-bold text-gray-900 dark:text-white">Change Password</h3>
+        <button @click="showPasswordModal = false" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+      </div>
+      <div class="p-6">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Set new password for <strong class="text-gray-900 dark:text-gray-100" x-text="selectedUser?.username"></strong>:</p>
+        <input type="password" x-model="newPassword" class="w-full text-sm border border-gray-200 dark:border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+      </div>
+      <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showPasswordModal = false" class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+        <button @click="updatePassword()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function usersApp() {
+    return {
+      users: [],
+      showAddModal: false,
+      showPasswordModal: false,
+      selectedUser: null,
+      newPassword: '',
+      newUser: {
+        username: '',
+        password: '',
+        role: 2,
+        status: 1
+      },
+
+      async init() {
+        await this.fetchUsers();
+      },
+
+      async fetchUsers() {
+        try {
+          const res = await fetch('/api/users');
+          if (res.ok) {
+            this.users = await res.json() || [];
+          }
+        } catch (e) {
+          console.error("Failed to fetch users", e);
+        }
+      },
+
+      async createUser() {
+        try {
+          const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.newUser)
+          });
+          if (res.ok) {
+            this.showAddModal = false;
+            this.newUser = { username: '', password: '', role: 2, status: 1 };
+            await this.fetchUsers();
+          } else {
+            alert(`Failed: ${await res.text()}`);
+          }
+        } catch (e) {
+          alert(`Error: ${e.message}`);
+        }
+      },
+
+      async toggleStatus(user) {
+        const newStatus = user.status === 1 ? 0 : 1;
+        try {
+          const res = await fetch(`/api/users/${user.id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+          });
+          if (res.ok) {
+            await this.fetchUsers();
+          } else {
+            alert(`Failed: ${await res.text()}`);
+          }
+        } catch (e) {
+          alert(`Error: ${e.message}`);
+        }
+      },
+
+      openPasswordModal(user) {
+        this.selectedUser = user;
+        this.newPassword = '';
+        this.showPasswordModal = true;
+      },
+
+      async updatePassword() {
+        if (!this.newPassword) return;
+        try {
+          const res = await fetch(`/api/users/${this.selectedUser.id}/password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: this.newPassword })
+          });
+          if (res.ok) {
+            this.showPasswordModal = false;
+            alert("Password updated");
+          } else {
+            alert(`Failed: ${await res.text()}`);
+          }
+        } catch (e) {
+          alert(`Error: ${e.message}`);
+        }
+      },
+
+      async deleteUser(user) {
+        if (!confirm(`Are you sure you want to delete ${user.username}?`)) return;
+        try {
+          const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+          if (res.ok) {
+            await this.fetchUsers();
+          } else {
+            alert(`Failed: ${await res.text()}`);
+          }
+        } catch (e) {
+          alert(`Error: ${e.message}`);
+        }
+      }
+    };
+  }
+</script>
+{{end}}
