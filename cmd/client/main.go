@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	version   = "dev"
+	version   = "v1.0"
 	ServerURL = "http://localhost:8080"
 )
 
@@ -19,18 +19,32 @@ func main() {
 	flag.BoolVar(showVersion, "v", false, "Print version information and exit (shorthand)")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of gotunnel client:\n")
-		fmt.Fprintf(os.Stderr, "  gotunnel login                      Login to the WebUI server\n")
-		fmt.Fprintf(os.Stderr, "  gotunnel list                       List available remote configurations\n")
-		fmt.Fprintf(os.Stderr, "  gotunnel run <config_name>          Run a remote configuration\n")
-		fmt.Fprintf(os.Stderr, "Options:\n")
+		banner := `
+   ______     ______                     __
+  / ____/___ /_  __/_  ______  ____  ___/ /
+ / / __/ __ \ / / / / / / __ \/ __ \/ _  / 
+/ /_/ / /_/ // / / /_/ / / / / / / /  __/  
+\____/\____//_/  \__,_/_/ /_/_/ /_/\___/   `
+		fmt.Fprintf(os.Stderr, "\033[1;36m%s\033[0m \033[1;33m%s\033[0m\n\n", banner, version)
+		fmt.Fprintf(os.Stderr, "\033[1mGotunnel\033[0m is a client tool for creating secure, encrypted tunnels to your local services.\n\n")
+
+		fmt.Fprintf(os.Stderr, "\033[1mUsage:\033[0m\n")
+		fmt.Fprintf(os.Stderr, "  gotunnel [command] [options]\n\n")
+
+		fmt.Fprintf(os.Stderr, "\033[1mAvailable Commands:\033[0m\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mlogin\033[0m                      Login to the WebUI server\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mlist\033[0m                       List available remote configurations\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mrun\033[0m <config_name>          Run a remote configuration\n\n")
+
+		fmt.Fprintf(os.Stderr, "\033[1mOptions:\033[0m\n")
 		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\n")
 	}
 
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("gotunnel client version: %s\n", version)
+		fmt.Printf("version: %s\n", version)
 		os.Exit(0)
 	}
 
