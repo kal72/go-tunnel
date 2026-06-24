@@ -18,22 +18,28 @@ type TunnelEntry struct {
 }
 
 type ServerConfig struct {
-	ServerDomain  string
-	ServerPort    int
-	TunnelPort    int
-	DashboardPort int
+	GatewayHost string
+	GatewayPort int
+
+	TunnelHost string
+	TunnelPort int
 
 	JWTSecret string
 	ACMECache string
+	ACMEEnv   string
+
+	RedisAddr string
+	RedisPass string
+	RedisDB   int
 }
 
 type ClientConfig struct {
 	TunnelAddr    string `yaml:"tunnel_addr"`
 	SkipTLSVerify bool   `yaml:"skip_tls_verify"`
 
-	JWTSecret    string `yaml:"jwt_secret"`
-	JWTIssuer    string `yaml:"jwt_issuer"`
-	JWTExpireSec int    `yaml:"jwt_expire_sec"`
+	ClientID  string `yaml:"client_id"`
+	JWTSecret string `yaml:"jwt_secret"`
+	AuthToken string `yaml:"auth_token"`
 
 	Tunnels []TunnelEntry `yaml:"tunnels"`
 }
@@ -56,16 +62,23 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 	}
 
 	s := &ServerConfig{
-		ServerDomain:  get("SERVER_DOMAIN", ""),
-		ServerPort:    parsePort(get("SERVER_PORT", "8443"), 8443),
-		TunnelPort:    parsePort(get("TUNNEL_PORT", "9443"), 9443),
-		DashboardPort: parsePort(get("DASHBOARD_PORT", "8080"), 8080),
-		JWTSecret:     get("JWT_SECRET", "defaultjwtsecret"),
-		ACMECache:     get("ACME_CACHE", "./cert-cache"),
+		GatewayHost: get("GATEWAY_HOST", ""),
+		GatewayPort: parsePort(get("GATEWAY_PORT", "443"), 443),
+		TunnelHost:  get("TUNNEL_HOST", ""),
+		TunnelPort:  parsePort(get("TUNNEL_PORT", "9443"), 9443),
+		JWTSecret:   get("JWT_SECRET", "defaultjwtsecret"),
+		ACMECache:   get("ACME_CACHE", "./cert-cache"),
+		ACMEEnv:     get("ACME_ENV", "staging"), // production or staging
+		RedisAddr:   get("REDIS_ADDR", "localhost:6379"),
+		RedisPass:   get("REDIS_PASS", ""),
+		RedisDB:     parsePort(get("REDIS_DB", "0"), 0),
 	}
 
-	if strings.TrimSpace(s.ServerDomain) == "" {
-		fmt.Println("[Warning] SERVER_DOMAIN not set in .env")
+	if strings.TrimSpace(s.GatewayHost) == "" {
+		fmt.Println("[Warning] GATEWAY_HOST not set in environment")
+	}
+	if strings.TrimSpace(s.TunnelHost) == "" {
+		fmt.Println("[Warning] TUNNEL_HOST not set in environment")
 	}
 
 	return s, nil
