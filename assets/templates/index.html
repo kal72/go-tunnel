@@ -1,34 +1,43 @@
 {{define "content"}}
-<div x-data="configApp()" x-init="init('{{.TunnelAddr}}')" x-cloak class="flex h-screen">
+<div x-data="configApp()" x-init="init()" x-cloak class="flex h-screen">
 
   <!-- ═══════════════════════════════════════════════
        SIDEBAR — config file list
   ════════════════════════════════════════════════ -->
-  <aside class="w-52 bg-white border-r border-gray-200 flex flex-col shrink-0">
-    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+  <aside
+    class="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col shrink-0 transition-colors">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
       <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Client Configs</p>
-      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 p-0.5" title="Add new config">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-0.5"
+        title="Add new config">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       </button>
     </div>
     <ul class="flex-1 p-2 space-y-1 overflow-y-auto">
-      <template x-for="name in configs" :key="name">
+      <template x-for="cfg in configs" :key="cfg.id">
         <li class="group relative">
-          <button @click="selectConfig(name)" :class="current === name
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'text-gray-500 hover:bg-gray-100 border-transparent'"
-            class="w-full text-left px-3 py-2 rounded-md text-xs font-mono border transition-colors duration-100 flex items-center gap-2 pr-8">
-            <span :class="current === name ? 'bg-blue-500' : 'bg-green-500'"
-              class="w-1.5 h-1.5 rounded-full shrink-0"></span>
-            <span x-text="name + '.yaml'" class="truncate"></span>
+          <button @click="selectConfig(cfg)" :class="current && current.id === cfg.id
+              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 border-transparent'"
+            class="w-full text-left px-3 py-2 rounded-md text-xs font-mono border transition-colors duration-100 flex items-center justify-between pr-8">
+            <div class="flex items-center gap-2 truncate">
+              <span :class="current && current.id === cfg.id ? 'bg-blue-500' : 'bg-green-500'"
+                class="w-1.5 h-1.5 rounded-full shrink-0"></span>
+              <span x-text="cfg.name" class="truncate font-bold"></span>
+            </div>
+            <span
+              class="text-[10px] bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full shrink-0"
+              x-text="(cfg.tunnels ? cfg.tunnels.length : 0) + ' tunnels'"></span>
           </button>
-          <button @click.stop="deleteConfig(name)" 
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Delete config and revoke token">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button @click.stop="deleteConfig(cfg)"
+            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+            title="Delete config">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"></path>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -37,9 +46,9 @@
         </li>
       </template>
     </ul>
-    <div class="p-3 border-t border-gray-100">
-      <p class="text-xs text-gray-400 font-mono leading-relaxed">
-        Auto-backup: <span class="text-gray-500">.yaml.bak</span>
+    <div class="p-3 border-t border-gray-100 dark:border-slate-700">
+      <p class="text-xs text-gray-400 dark:text-gray-500 font-mono leading-relaxed">
+        Stored securely in PostgreSQL
       </p>
     </div>
   </aside>
@@ -50,260 +59,227 @@
   <main class="flex-1 flex flex-col overflow-hidden">
 
     <!-- Toolbar -->
-    <div class="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+    <div
+      class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-5 py-3 flex items-center justify-between shrink-0 transition-colors">
       <div class="flex items-center gap-3">
-        <a href="/"
-          class="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors">
-          Dashboard
-        </a>
-        <span class="text-xs font-mono text-gray-400" x-text="current ? 'configs/' + current + '.yaml' : '—'"></span>
-        <span x-show="saved" x-transition class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">saved</span>
-        <span x-show="!current" class="text-xs text-gray-400 italic">select a file</span>
+        <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="current ? current.name : '—'"></span>
+        <span x-show="saved" x-transition
+          class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">saved</span>
+        <span x-show="!current" class="text-xs text-gray-400 dark:text-gray-500 italic">select a config</span>
       </div>
       <div class="flex items-center gap-2">
-        <a href="/logout"
-          class="text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors">
-          Logout
-        </a>
-        <button @click="downloadConfig()" :disabled="!current"
-          :class="current ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
-          class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Download
-        </button>
         <button @click="saveConfig()" :disabled="!current"
-          :class="current ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
-          class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium">
-          Save to YAML
+          :class="current ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
+          class="px-4 py-1.5 text-xs rounded-md transition-colors duration-150 font-medium shadow-sm">
+          Save Configuration
         </button>
       </div>
     </div>
 
-    <!-- Form body + YAML preview split -->
+    <!-- Form body + JSON preview split -->
     <div class="flex-1 flex overflow-hidden">
 
       <!-- Form -->
       <div class="flex-1 overflow-y-auto p-5 space-y-7">
 
         <!-- Empty state -->
-        <div x-show="!current" class="flex items-center justify-center h-full">
-          <p class="text-sm text-gray-400">Select a config file from the sidebar.</p>
+        <div x-show="!current" class="flex flex-col items-center justify-center h-full space-y-4">
+          <div class="w-16 h-16 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+              class="text-gray-400 dark:text-gray-500">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <p class="text-sm text-gray-400 dark:text-gray-500 text-center">Select a config from the sidebar<br>or create
+            a new one.</p>
         </div>
 
-        <!-- ── Section: Tunnel Connection ── -->
-        <div x-show="current">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
-            Tunnel connection
-          </p>
-          <div class="space-y-0 divide-y divide-gray-100">
-
-            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">tunnel_addr</label>
-              <input type="text" x-model="form.tunnel_addr" disabled
-                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none bg-gray-50 text-gray-500 cursor-not-allowed">
+        <div x-show="current" class="space-y-6">
+          <div
+            class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">How to use this config</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Run this command in your terminal after logging
+                in.</p>
             </div>
-
-            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">skip_tls_verify</label>
-              <div class="flex items-center gap-3">
-                <button @click="form.skip_tls_verify = !form.skip_tls_verify; updatePreview()"
-                  :class="form.skip_tls_verify ? 'bg-blue-500 border-blue-500' : 'bg-gray-200 border-gray-300'"
-                  class="relative w-9 h-5 rounded-full border transition-colors duration-200 focus:outline-none shrink-0">
-                  <span :class="form.skip_tls_verify ? 'translate-x-4' : 'translate-x-0.5'"
-                    class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 block"></span>
-                </button>
-                <span class="text-xs font-mono text-gray-500" x-text="form.skip_tls_verify ? 'true' : 'false'"></span>
-              </div>
+            <div class="flex items-center bg-gray-900 rounded-md py-2 px-3 gap-3 border border-gray-700 shadow-inner">
+              <code class="text-xs text-green-400 font-mono">gotunnel run <span x-text="current?.name"></span></code>
+              <button @click="copyCommand()" class="text-gray-400 hover:text-white transition-colors"
+                title="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
             </div>
-
-          </div>
-        </div>
-
-        <!-- ── Section: Authentication ── -->
-        <div x-show="current">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
-            Authentication
-          </p>
-          <div class="space-y-0 divide-y divide-gray-100">
-            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">client_id</label>
-              <input type="text" x-model="form.client_id" @input="updatePreview()" placeholder="unique-client-id"
-                class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
-            </div>
-
-
-            <!-- auth_token — masked input -->
-            <div class="grid grid-cols-[180px_1fr] items-center gap-4 py-2.5">
-              <label class="text-xs font-mono text-gray-500">auth_token</label>
-              <div class="flex items-center gap-2">
-                <div class="relative flex-1">
-                  <input :type="showSecret ? 'text' : 'password'" x-model="form.auth_token" @input="updatePreview()"
-                    autocomplete="new-password" placeholder="authtoken"
-                    class="w-full text-xs font-mono border border-gray-200 rounded-md px-3 py-1.5 pr-9 focus:outline-none focus:border-blue-400 bg-white">
-                  <!-- eye toggle -->
-                  <button @click="showSecret = !showSecret" type="button"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                    <!-- eye-off icon -->
-                    <svg x-show="showSecret" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                    <!-- eye icon -->
-                    <svg x-show="!showSecret" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
-                </div>
-                <button @click="copyToken()" title="Copy token to clipboard" :disabled="!form.auth_token"
-                  class="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors border border-gray-200 disabled:opacity-50">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                </button>
-                <button @click="generateToken()" title="Generate token from client_id"
-                  class="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors border border-blue-200">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
-                  </svg>
-                </button>
-                <button @click="revokeToken()" title="Revoke this token from Redis" :disabled="!form.auth_token"
-                  class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
-                  </svg>
-                </button>
-                <span
-                  class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded shrink-0">sensitive</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ── Section: Tunnels (dynamic array) ── -->
-        <div x-show="current">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">
-              Tunnels
-              <span class="text-gray-300 font-normal normal-case tracking-normal ml-1"
-                x-text="'(' + form.tunnels.length + ' ' + (form.tunnels.length === 1 ? 'entry' : 'entries') + ')'">
-              </span>
-            </p>
-            <button @click="addTunnel()"
-              class="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
-              + add tunnel
-            </button>
           </div>
 
-          <div class="space-y-3">
-            <template x-for="(tunnel, idx) in form.tunnels" :key="idx">
-              <div class="border border-gray-200 rounded-lg overflow-hidden">
-                <!-- Card header -->
-                <div class="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono text-gray-600" x-text="'#' + (idx+1)"></span>
-                    <span class="text-xs font-mono text-gray-700 font-medium"
-                      x-text="tunnel.hostname || 'new tunnel'"></span>
+          <!-- ── Section: Tunnels (dynamic array) ── -->
+          <div>
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-slate-700">
+              <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                Tunnels
+                <span class="text-gray-300 dark:text-gray-600 font-normal normal-case tracking-normal ml-1"
+                  x-text="'(' + form.tunnels.length + ' ' + (form.tunnels.length === 1 ? 'entry' : 'entries') + ')'">
+                </span>
+              </p>
+              <button @click="addTunnel()"
+                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors">
+                + add tunnel
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <template x-for="(tunnel, idx) in form.tunnels" :key="idx">
+                <div
+                  class="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors shadow-sm">
+                  <!-- Card header -->
+                  <div
+                    class="bg-gray-50 dark:bg-slate-800/80 px-3 py-2 flex items-center justify-between border-b border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-mono text-gray-600 dark:text-gray-400" x-text="'#' + (idx+1)"></span>
+                      <span class="text-xs font-mono text-gray-700 dark:text-gray-300 font-medium"
+                        x-text="tunnel.hostname || 'new tunnel'"></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        :class="tunnel.mode === 'http' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 border-amber-200 dark:border-amber-500/30'"
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-mono uppercase tracking-wider transition-colors font-semibold"
+                        x-text="tunnel.mode">
+                      </span>
+                      <button @click="removeTunnel(idx)"
+                        class="text-xs text-red-400 hover:text-red-600 transition-colors px-1 ml-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                          </path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      :class="tunnel.mode === 'http' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
-                      class="text-xs px-2 py-0.5 rounded-full border font-mono" x-text="tunnel.mode">
-                    </span>
-                    <button @click="removeTunnel(idx)"
-                      class="text-xs text-red-400 hover:text-red-600 transition-colors px-1">
-                      remove
-                    </button>
+                  <!-- Card fields -->
+                  <div class="px-3 py-2 divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-800">
+
+                    <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                      <label class="text-xs font-mono text-gray-400 dark:text-gray-500">hostname</label>
+                      <input type="text" x-model="tunnel.hostname"
+                        placeholder="app.example.com"
+                        class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+                    </div>
+
+                    <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                      <label class="text-xs font-mono text-gray-400 dark:text-gray-500">target</label>
+                      <input type="text" x-model="tunnel.target" placeholder="127.0.0.1:8080"
+                        class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+                    </div>
+
+                    <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
+                      <label class="text-xs font-mono text-gray-400 dark:text-gray-500">mode</label>
+                      <select x-model="tunnel.mode"
+                        class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
+                        <option value="http">http</option>
+                        <option value="https">https</option>
+                        <option value="tcp">tcp</option>
+                      </select>
+                    </div>
+
                   </div>
                 </div>
-                <!-- Card fields -->
-                <div class="px-3 py-1 divide-y divide-gray-100">
+              </template>
 
-                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">hostname</label>
-                    <input type="text" x-model="tunnel.hostname" @input="updatePreview()" placeholder="app.example.com"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
-                  </div>
-
-                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">target</label>
-                    <input type="text" x-model="tunnel.target" @input="updatePreview()" placeholder="127.0.0.1:8080"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
-                  </div>
-
-                  <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
-                    <label class="text-xs font-mono text-gray-400">mode</label>
-                    <select x-model="tunnel.mode" @change="updatePreview()"
-                      class="w-full text-xs font-mono border border-gray-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white">
-                      <option value="http">http</option>
-                      <option value="https">https</option>
-                      <option value="tcp">tcp</option>
-                    </select>
-                  </div>
-
-                </div>
+              <!-- Empty tunnels hint -->
+              <div x-show="form.tunnels.length === 0"
+                class="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  class="text-gray-300 dark:text-gray-600 mb-2">
+                  <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <path d="M3 15h6"></path>
+                  <path d="M6 12v6"></path>
+                </svg>
+                <p class="text-xs text-gray-500 dark:text-gray-400">No tunnels configured.</p>
+                <button @click="addTunnel()"
+                  class="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Add your first
+                  tunnel</button>
               </div>
-            </template>
-
-            <!-- Empty tunnels hint -->
-            <div x-show="form.tunnels.length === 0"
-              class="border border-dashed border-gray-200 rounded-lg p-4 text-center text-xs text-gray-400">
-              No tunnels configured. Click "add tunnel" to get started.
             </div>
           </div>
         </div>
 
       </div><!-- /form -->
 
-      <!-- ── YAML Preview panel ── -->
-      <div class="w-72 border-l border-gray-200 bg-gray-50 flex flex-col shrink-0">
-        <div class="px-4 py-3 border-b border-gray-200">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">YAML Preview</p>
+      <!-- ── Instructions panel ── -->
+      <div
+        class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide</p>
         </div>
-        <pre class="flex-1 overflow-auto p-4 text-xs font-mono text-gray-500 leading-relaxed whitespace-pre"
-          x-text="yamlPreview"></pre>
+        <div class="flex-1 overflow-auto p-5 text-sm text-gray-600 dark:text-gray-400 space-y-5 leading-relaxed">
+          
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">1. Add a Tunnel</h4>
+            <p class="text-xs">Click <span class="text-blue-600 dark:text-blue-400 font-medium">+ add tunnel</span> to create a new port mapping. You can add multiple tunnels to a single config.</p>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">2. Configure Fields</h4>
+            <ul class="text-xs space-y-2 list-disc ml-4">
+              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> The public domain you registered in Manage Domains (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">app.domain.com</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Your local application's address and port (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:8080</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">mode:</strong> <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">http</code> for web apps, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">https</code> for secure local targets, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">tcp</code> for raw TCP (SSH/DB).</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Save & Run</h4>
+            <p class="text-xs">After saving the configuration, open your terminal and start the tunnel using the <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-green-600 dark:text-green-400">gotunnel run</code> command shown above.</p>
+          </div>
+
+        </div>
       </div>
 
     </div><!-- /form + preview split -->
 
     <!-- Status bar -->
-    <div class="bg-white border-t border-gray-200 px-5 py-2 flex items-center justify-between shrink-0">
-      <span class="text-xs font-mono text-gray-400" x-text="statusText"></span>
-      <span class="text-xs text-gray-400">PUT /api/config/<span x-text="current || '—'"></span></span>
+    <div
+      class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-5 py-2 flex items-center justify-between shrink-0 transition-colors">
+      <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="statusText"></span>
+      <span class="text-xs text-gray-400 dark:text-gray-500"
+        x-text="current ? 'PUT /api/configs/' + current.id : ''"></span>
     </div>
 
   </main>
 
   <!-- New Config Modal -->
-  <div x-show="showNewModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-transition>
-    <div class="bg-white rounded-xl shadow-xl w-full max-sm overflow-hidden" @click.away="showNewModal = false">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="font-bold text-gray-900">New Client Config</h3>
-        <button @click="showNewModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+  <div x-show="showNewModal"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition>
+    <div
+      class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transition-colors transform scale-100"
+      @click.away="showNewModal = false">
+      <div
+        class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/80">
+        <h3 class="font-bold text-gray-900 dark:text-white">New Config</h3>
+        <button @click="showNewModal = false"
+          class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
       </div>
       <div class="p-6">
-        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Config Name</label>
-        <div class="flex items-center gap-2">
-            <input type="text" x-model="newName" placeholder="e.g. staging-server" 
-                   class="flex-1 text-sm font-mono border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:border-blue-400"
-                   @keyup.enter="createNewConfig()">
-            <span class="text-gray-400 text-sm font-mono">.yaml</span>
-        </div>
-        <p class="text-[10px] text-gray-400 mt-2 italic">Special characters and spaces are not allowed.</p>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Config
+          Name</label>
+        <input type="text" x-model="newName" placeholder="e.g. my-macbook" maxlength="25"
+          class="w-full text-sm font-mono border border-gray-200 dark:border-slate-600 rounded-md px-3 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all shadow-sm"
+          @keyup.enter="createNewConfig()">
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Max 25 characters. Alphanumeric and dashes only.
+        </p>
       </div>
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-        <button @click="showNewModal = false" class="text-xs font-medium text-gray-600 hover:text-gray-800">Cancel</button>
-        <button @click="createNewConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors">
+      <div
+        class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showNewModal = false"
+          class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 px-3 py-1.5">Cancel</button>
+        <button @click="createNewConfig()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-xs font-medium transition-colors shadow-sm">
           Create Config
         </button>
       </div>
@@ -314,27 +290,19 @@
 <script>
   function configApp() {
     return {
-      current: '',
+      current: null,
       configs: [],
-      showSecret: false,
       saved: false,
       statusText: 'Select a config file to begin',
-      yamlPreview: '',
-      tunnelAddrEnv: '',
-      
+
       showNewModal: false,
       newName: '',
 
       form: {
-        tunnel_addr: '',
-        skip_tls_verify: false,
-        client_id: '',
-        auth_token: '',
         tunnels: [],
       },
 
-      async init(tunnelAddr) {
-        this.tunnelAddrEnv = tunnelAddr;
+      async init() {
         await this.refreshConfigs();
         if (this.configs.length > 0) {
           await this.selectConfig(this.configs[0]);
@@ -343,70 +311,73 @@
 
       async refreshConfigs() {
         const res = await fetch('/api/configs');
-        this.configs = await res.json();
+        if (res.ok) {
+          this.configs = await res.json();
+          if (!this.configs) this.configs = [];
+        }
       },
 
-      async selectConfig(name) {
-        this.current = name;
-        this.showSecret = false;
+      async selectConfig(cfg) {
+        this.current = cfg;
         this.saved = false;
 
-        const res = await fetch(`/api/config/${name}`);
+        const res = await fetch(`/api/configs/${cfg.id}`);
         if (!res.ok) {
-          this.statusText = `Error loading ${name}.yaml`;
+          this.statusText = `Error loading config ${cfg.name}`;
           return;
         }
         const data = await res.json();
 
         this.form = {
-          tunnel_addr: this.tunnelAddrEnv || data.tunnel_addr || '',
-          skip_tls_verify: data.skip_tls_verify ?? false,
-          client_id: data.client_id ?? '',
-          auth_token: data.auth_token ?? '',
+          name: data.name,
           tunnels: Array.isArray(data.tunnels)
             ? data.tunnels.map(t => ({ ...t }))
             : [],
         };
 
-        this.statusText = `Loaded configs/${name}.yaml`;
-        this.updatePreview();
+        this.statusText = `Loaded configuration: ${data.name}`;
       },
 
       async createNewConfig() {
         if (!this.newName) return;
-        const name = this.newName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+        const name = this.newName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-').substring(0, 25);
         if (!name) return;
 
-        const res = await fetch(`/api/config/${name}`, { method: 'POST' });
+        const res = await fetch(`/api/configs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, tunnels: [] })
+        });
+
         if (res.ok) {
-            this.showNewModal = false;
-            this.newName = '';
-            await this.refreshConfigs();
-            await this.selectConfig(name);
-            this.statusText = `Created ${name}.yaml successfully`;
+          this.showNewModal = false;
+          this.newName = '';
+          await this.refreshConfigs();
+          const created = await res.json();
+          await this.selectConfig(created.config);
+          this.statusText = `Created ${name} successfully`;
         } else {
-            const err = await res.text();
-            alert(`Failed to create: ${err}`);
+          const err = await res.text();
+          alert(`Failed to create: ${err}`);
         }
       },
 
-      async deleteConfig(name) {
-        if (!confirm(`Are you sure you want to delete ${name}.yaml? This will also revoke its auth_token.`)) {
-            return;
+      async deleteConfig(cfg) {
+        if (!confirm(`Are you sure you want to delete configuration '${cfg.name}'?`)) {
+          return;
         }
 
-        const res = await fetch(`/api/config/${name}`, { method: 'DELETE' });
+        const res = await fetch(`/api/configs/${cfg.id}`, { method: 'DELETE' });
         if (res.ok) {
-            if (this.current === name) {
-                this.current = '';
-                this.form = { tunnel_addr: '', skip_tls_verify: false, client_id: '', auth_token: '', tunnels: [] };
-                this.yamlPreview = '';
-            }
-            await this.refreshConfigs();
-            this.statusText = `Deleted ${name}.yaml successfully`;
+          if (this.current && this.current.id === cfg.id) {
+            this.current = null;
+            this.form = { tunnels: [] };
+          }
+          await this.refreshConfigs();
+          this.statusText = `Deleted ${cfg.name} successfully`;
         } else {
-            const err = await res.text();
-            alert(`Failed to delete: ${err}`);
+          const err = await res.text();
+          alert(`Failed to delete: ${err}`);
         }
       },
 
@@ -416,26 +387,28 @@
           target: '127.0.0.1:3000',
           mode: 'http',
         });
-        this.updatePreview();
       },
 
       removeTunnel(idx) {
         this.form.tunnels.splice(idx, 1);
-        this.updatePreview();
       },
 
       async saveConfig() {
         if (!this.current) return;
 
-        const res = await fetch(`/api/config/${this.current}`, {
+        const res = await fetch(`/api/configs/${this.current.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form),
+          body: JSON.stringify({
+            name: this.current.name,
+            tunnels: this.form.tunnels
+          }),
         });
 
         if (res.ok) {
           this.saved = true;
-          this.statusText = `Saved configs/${this.current}.yaml at ${new Date().toLocaleTimeString()}`;
+          this.statusText = `Saved ${this.current.name} at ${new Date().toLocaleTimeString()}`;
+          await this.refreshConfigs();
           setTimeout(() => { this.saved = false; }, 3000);
         } else {
           const err = await res.text();
@@ -443,104 +416,15 @@
         }
       },
 
-      downloadConfig() {
+      copyCommand() {
         if (!this.current) return;
-        window.location.href = `/api/config/${this.current}/download`;
-        this.statusText = `Downloading ${this.current}.yaml`;
-      },
-
-      async generateToken() {
-        if (!this.form.client_id) {
-          alert('Please enter a Client ID first.');
-          return;
-        }
-        const res = await fetch(`/api/generate-token?client_id=${this.form.client_id}`);
-        if (res.ok) {
-          const data = await res.json();
-          this.form.auth_token = data.token;
-          this.updatePreview();
-          this.statusText = 'Generated new auth_token (save to activate)';
-        }
-      },
-
-      async revokeToken() {
-        if (!this.form.auth_token) return;
-        if (!confirm('Are you sure you want to revoke this token? The client using it will be disconnected.')) {
-            return;
-        }
-        
-        const res = await fetch(`/api/revoke-token?token=${this.form.auth_token}`, {
-            method: 'DELETE'
+        const cmd = `gotunnel run ${this.current.name}`;
+        navigator.clipboard.writeText(cmd).then(() => {
+          const old = this.statusText;
+          this.statusText = "Command copied to clipboard!";
+          setTimeout(() => { this.statusText = old; }, 2000);
         });
-        
-        if (res.ok) {
-            this.form.auth_token = '';
-            this.updatePreview();
-            this.statusText = 'Token revoked successfully';
-            await this.saveConfig();
-        } else {
-            const err = await res.text();
-            this.statusText = `Revoke failed: ${err}`;
-        }
-      },
-
-      copyToken() {
-        if (!this.form.auth_token) return;
-        
-        const text = this.form.auth_token;
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(() => {
-                this.statusText = 'Token copied to clipboard';
-                setTimeout(() => { this.statusText = `Current: configs/${this.current}.yaml`; }, 2000);
-            });
-        } else {
-            // Fallback for non-secure context (HTTP)
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-9999px";
-            textArea.style.top = "0";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                this.statusText = 'Token copied to clipboard (fallback)';
-            } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
-                this.statusText = 'Copy failed. Use manual select.';
-            }
-            document.body.removeChild(textArea);
-            setTimeout(() => { this.statusText = `Current: configs/${this.current}.yaml`; }, 2000);
-        }
-      },
-
-      updatePreview() {
-        this.yamlPreview = this.toYAML(this.form);
-      },
-
-      toYAML(f) {
-        const masked = '*'.repeat(Math.min((f.auth_token || '').length, 12));
-        const lines = [];
-        lines.push(`# Koneksi ke listener tunnel (di VPS)`);
-        lines.push(`tunnel_addr: "${f.tunnel_addr}"`);
-        lines.push(`skip_tls_verify: ${f.skip_tls_verify}`);
-        lines.push(`# Authentication`);
-        lines.push(`client_id: "${f.client_id}"`);
-        lines.push(`auth_token: "${masked}"`);
-        lines.push(`# Mapping host -> target lokal`);
-        lines.push(`tunnels:`);
-        if (f.tunnels && f.tunnels.length > 0) {
-          f.tunnels.forEach(t => {
-            lines.push(`  - hostname: "${t.hostname}"`);
-            lines.push(`    target: "${t.target}"`);
-            lines.push(`    mode: "${t.mode}"`);
-          });
-        } else {
-          lines.push(`  []`);
-        }
-        return lines.join('\n');
-      },
+      }
     };
   }
 </script>

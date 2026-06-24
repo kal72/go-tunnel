@@ -1,0 +1,17 @@
+@echo off
+set DL_URL={{DL_URL}}
+
+echo Downloading gotunnel from %DL_URL%/gotunnel-windows-amd64.exe...
+curl -fsSL "%DL_URL%/gotunnel-windows-amd64.exe" -o gotunnel.exe
+
+set INSTALL_DIR=%USERPROFILE%\.gotunnel\bin
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+move /y gotunnel.exe "%INSTALL_DIR%\gotunnel.exe" >nul
+
+echo.
+echo Checking environment variables...
+powershell -Command "$userPath = [Environment]::GetEnvironmentVariable('Path', 'User'); if ($userPath -notlike '*%INSTALL_DIR%*') { [Environment]::SetEnvironmentVariable('Path', $userPath + ';%INSTALL_DIR%', 'User'); Write-Host 'Added %INSTALL_DIR% to your PATH. Please restart your terminal for changes to take effect.' } else { Write-Host '%INSTALL_DIR% is already in your PATH.' }"
+
+echo.
+echo [OK] gotunnel installed successfully.
+echo You can now run it from anywhere using: gotunnel login
