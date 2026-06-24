@@ -33,12 +33,13 @@ type Handler struct {
 	tunnelAddr     string
 	wildcardDomain string
 	gatewayDomain  string
-	acmeEnable     bool
-	maxFreeDomains int
+	acmeEnable       bool
+	maxFreeDomains   int
+	cliLatestVersion string
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -87,8 +88,9 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		tunnelAddr:     tunnelAddr,
 		wildcardDomain: wildcardDomain,
 		gatewayDomain:  gatewayDomain,
-		acmeEnable:     acmeEnable,
-		maxFreeDomains: maxFreeDomains,
+		acmeEnable:       acmeEnable,
+		maxFreeDomains:   maxFreeDomains,
+		cliLatestVersion: cliLatestVersion,
 	}
 }
 
@@ -134,9 +136,10 @@ func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
 	username, _ := r.Context().Value(UserNameKey).(string)
 
 	data := map[string]any{
-		"DomainEnabled": h.wildcardDomain != "",
-		"UserRole":      role,
-		"UserName":      username,
+		"DomainEnabled":    h.wildcardDomain != "",
+		"UserRole":         role,
+		"UserName":         username,
+		"CLILatestVersion": h.cliLatestVersion,
 	}
 	if err := h.downTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
