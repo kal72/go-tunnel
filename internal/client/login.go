@@ -3,6 +3,11 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -105,12 +110,17 @@ func Login(serverURL, username, password string) error {
 		Token: res.Token,
 	}
 
-	b, err := json.MarshalIndent(creds, "", "  ")
+	b, err := json.Marshal(creds)
 	if err != nil {
 		return fmt.Errorf("failed to encode credentials: %w", err)
 	}
 
-	if err := os.WriteFile(credPath, b, 0600); err != nil {
+	encryptedStr, err := encryptData(b)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt credentials: %w", err)
+	}
+
+	if err := os.WriteFile(credPath, []byte(encryptedStr), 0600); err != nil {
 		return fmt.Errorf("failed to save credentials: %w", err)
 	}
 
@@ -119,7 +129,7 @@ func Login(serverURL, username, password string) error {
 	oldTokenPath := filepath.Join(home, ".gotunnel", "token")
 	os.Remove(oldTokenPath)
 
-	fmt.Printf("Login successful. Credentials saved to %s\n", credPath)
+	fmt.Printf("Login successful.\n")
 	return nil
 }
 
@@ -133,8 +143,18 @@ func ReadCredentials() (*Credentials, error) {
 		return nil, fmt.Errorf("could not read credentials (have you logged in?): %w", err)
 	}
 
+	decrypted, err := decryptData(string(bytes.TrimSpace(b)))
+	if err != nil {
+		// Fallback for unencrypted json backward-compatibility
+		if json.Valid(b) {
+			decrypted = b
+		} else {
+			return nil, fmt.Errorf("invalid or corrupted credentials, please login again")
+		}
+	}
+
 	var creds Credentials
-	if err := json.Unmarshal(b, &creds); err != nil {
+	if err := json.Unmarshal(decrypted, &creds); err != nil {
 		return nil, fmt.Errorf("failed to decode credentials: %w", err)
 	}
 
@@ -143,4 +163,81 @@ func ReadCredentials() (*Credentials, error) {
 	}
 
 	return &creds, nil
+}
+
+func Logout() error {
+	credPath, err := GetCredentialsPath()
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(credPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("Already logged out.")
+			return nil
+		}
+		return fmt.Errorf("failed to logout: %w", err)
+	}
+
+	fmt.Println("Successfully logged out.")
+	return nil
+}
+
+func getEncryptionKey() []byte {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "unknown_user"
+	}
+	hash := sha256.Sum256([]byte("gotunnel-client-super-secret-key-123" + home))
+	return hash[:]
+}
+
+func encryptData(data []byte) (string, error) {
+	block, err := aes.NewCipher(getEncryptionKey())
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func decryptData(cryptoText string) ([]byte, error) {
+	data, err := base64.StdEncoding.DecodeString(cryptoText)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(getEncryptionKey())
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) < gcm.NonceSize() {
+		return nil, fmt.Errorf("malformed ciphertext")
+	}
+
+	nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
 }

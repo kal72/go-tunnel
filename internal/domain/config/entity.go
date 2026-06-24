@@ -62,6 +62,7 @@ type ServerConfig struct {
 	JWTSecret      string
 	JWTExpireHours int
 	ACMEEnable     bool
+	CLILatestVersion string
 	ACMECache  string
 	ACMEEnv    string
 

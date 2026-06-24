@@ -34,7 +34,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\033[1mAvailable Commands:\033[0m\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mlogin\033[0m                      Login to the WebUI server\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mlist\033[0m                       List available remote configurations\n")
-		fmt.Fprintf(os.Stderr, "  \033[32mrun\033[0m <config_name>          Run a remote configuration\n\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mrun\033[0m <config_name>          Run a remote configuration\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mupdate\033[0m                     Update gotunnel to the latest version\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mlogout\033[0m                     Logout and clear credentials\n")
+		fmt.Fprintf(os.Stderr, "  \033[32muninstall\033[0m                  Uninstall gotunnel and clear local data\n\n")
 
 		fmt.Fprintf(os.Stderr, "\033[1mOptions:\033[0m\n")
 		flag.PrintDefaults()
@@ -64,6 +67,21 @@ func main() {
 
 		if err := client.Login(ServerURL, *username, *password); err != nil {
 			log.Fatalf("Login failed: %v", err)
+		}
+
+	case "logout":
+		if err := client.Logout(); err != nil {
+			log.Fatalf("Logout error: %v", err)
+		}
+
+	case "update":
+		if err := client.UpdateClient(ServerURL, version); err != nil {
+			log.Fatalf("Update error: %v", err)
+		}
+
+	case "uninstall":
+		if err := client.UninstallClient(); err != nil {
+			log.Fatalf("Uninstall error: %v", err)
 		}
 
 	case "list":

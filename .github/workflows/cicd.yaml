@@ -23,6 +23,9 @@ on:
         required: false
         type: string
 
+env:
+  CLI_VERSION: "v1.0"
+
 jobs:
 
   # ========== MANUAL DEV ==========
@@ -49,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Clients
         run: |
-          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
       - name: Copy binaries to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -90,6 +93,7 @@ jobs:
               -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
               -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
+              -e CLI_LATEST_VERSION="${{ env.CLI_VERSION }}" \
               -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \
               -e DOMAIN_REDIS_DB="1" \
@@ -175,7 +179,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Clients
         run: |
-          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
+          docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
       - name: Copy binaries to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -217,6 +221,7 @@ jobs:
               -e TUNNEL_DOMAIN=${{ secrets.TUNNEL_DOMAIN }} \
               -e ACME_ENABLE="${{ secrets.ACME_ENABLE }}" \
               -e ACME_ENV="$ACME_ENV" \
+              -e CLI_LATEST_VERSION="${{ env.CLI_VERSION }}" \
               -e REDIS_ADDR="host.containers.internal:6379" \
               -e REDIS_DB="0" \
               -e DOMAIN_REDIS_DB="1" \

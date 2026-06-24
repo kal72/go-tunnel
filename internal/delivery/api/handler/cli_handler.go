@@ -14,16 +14,18 @@ import (
 )
 
 type CLIHandler struct {
-	configUsecase usecaseConfig.ConfigUsecase
-	tunnelAddr    string
-	acmeEnable    bool
+	configUsecase  usecaseConfig.ConfigUsecase
+	tunnelAddr     string
+	acmeEnable     bool
+	latestVersion  string
 }
 
-func NewCLIHandler(configUsecase usecaseConfig.ConfigUsecase, tunnelAddr string, acmeEnable bool) *CLIHandler {
+func NewCLIHandler(configUsecase usecaseConfig.ConfigUsecase, tunnelAddr string, acmeEnable bool, latestVersion string) *CLIHandler {
 	return &CLIHandler{
-		configUsecase: configUsecase,
-		tunnelAddr:    tunnelAddr,
-		acmeEnable:    acmeEnable,
+		configUsecase:  configUsecase,
+		tunnelAddr:     tunnelAddr,
+		acmeEnable:     acmeEnable,
+		latestVersion:  latestVersion,
 	}
 }
 
@@ -82,4 +84,12 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// ClientGetVersion returns the latest version info for the CLI.
+func (h *CLIHandler) ClientGetVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]string{
+		"version": h.latestVersion,
+		"download_url": "/downloads/gotunnel-{os}-{arch}",
+	})
 }

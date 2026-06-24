@@ -28,6 +28,7 @@ func SetupRouter(
 	r.Get("/login", authH.LoginPage)
 	r.Post("/login", authH.Login)
 	r.Post("/api/cli/login", authH.APILogin)
+	r.Get("/api/cli/version", cliH.ClientGetVersion)
 	r.Get("/logout", authH.Logout)
 	r.Get("/docs", h.Docs)
 

@@ -29,6 +29,7 @@ DB_NAME ?= gotunnel
 DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
 
 SERVER_URL ?= https://tun.yourdomain.com
+VERSION ?= v1.0
 
 all: generate build test
 
@@ -44,11 +45,11 @@ build-clients:
 	@mkdir -p ./downloads
 	@sed 's|{{DL_URL}}|$(SERVER_URL)/dl|g' ./scripts/install/install.sh.tmpl > ./downloads/install.sh || true
 	@sed 's|{{DL_URL}}|$(SERVER_URL)/dl|g' ./scripts/install/install.cmd.tmpl > ./downloads/install.cmd || true
-	GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL)" -o ./downloads/gotunnel-darwin-amd64 ./cmd/client/main.go
-	GOOS=darwin GOARCH=arm64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL)" -o ./downloads/gotunnel-darwin-arm64 ./cmd/client/main.go
-	GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL)" -o ./downloads/gotunnel-linux-amd64 ./cmd/client/main.go
-	GOOS=linux GOARCH=arm64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL)" -o ./downloads/gotunnel-linux-arm64 ./cmd/client/main.go
-	GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL)" -o ./downloads/gotunnel-windows-amd64.exe ./cmd/client/main.go
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-darwin-amd64 ./cmd/client/main.go
+	GOOS=darwin GOARCH=arm64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-darwin-arm64 ./cmd/client/main.go
+	GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-linux-amd64 ./cmd/client/main.go
+	GOOS=linux GOARCH=arm64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-linux-arm64 ./cmd/client/main.go
+	GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-windows-amd64.exe ./cmd/client/main.go
 
 
 test:

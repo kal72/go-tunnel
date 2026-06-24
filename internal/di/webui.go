@@ -57,7 +57,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
-	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable)
+	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
 
 	// Router
 	router := web.SetupRouter(h, authH, userH, cliH, http.FS(assets.EmbeddedFS))

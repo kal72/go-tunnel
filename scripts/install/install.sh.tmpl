@@ -28,18 +28,35 @@ BINARY_NAME="gotunnel-${OS}-${ARCH}"
 
 echo "Detected OS: $OS"
 echo "Detected Architecture: $ARCH"
-echo "Downloading gotunnel from ${DL_URL}/${BINARY_NAME}..."
+echo "Downloading..."
 curl -fsSL "${DL_URL}/${BINARY_NAME}" -o gotunnel
 
 chmod +x gotunnel
 
 INSTALL_DIR="/usr/local/bin"
-echo "Installing gotunnel to ${INSTALL_DIR}..."
+echo "Installing gotunnel..."
+
 if [ -w "$INSTALL_DIR" ]; then
     mv gotunnel "${INSTALL_DIR}/gotunnel"
-else
+    echo "Installed to ${INSTALL_DIR}/gotunnel"
+elif command -v sudo >/dev/null 2>&1 && sudo -v >/dev/null 2>&1; then
     echo "Root privileges required to install to ${INSTALL_DIR}."
     sudo mv gotunnel "${INSTALL_DIR}/gotunnel"
+    echo "Installed to ${INSTALL_DIR}/gotunnel"
+else
+    echo "Root access unavailable. Falling back to local installation..."
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+    mv gotunnel "${INSTALL_DIR}/gotunnel"
+    echo "Installed to ${INSTALL_DIR}/gotunnel"
+    
+    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+        echo ""
+        echo "⚠️  WARNING: ${INSTALL_DIR} is not in your PATH."
+        echo "Please add it by running: export PATH=\"\$HOME/.local/bin:\$PATH\""
+        echo "And add it to your ~/.bashrc or ~/.zshrc profile."
+        echo ""
+    fi
 fi
 
 echo "✅ gotunnel installed successfully."
