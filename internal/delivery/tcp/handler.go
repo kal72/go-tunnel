@@ -9,6 +9,7 @@ import (
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	domainUser "gotunnel/internal/domain/user"
 	"gotunnel/internal/shared/protocol"
+	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	usecaseUser "gotunnel/internal/usecase/user"
 	"io"
@@ -50,6 +51,7 @@ type Server struct {
 	wildcardDomain  string
 	tunnelUsecase   usecaseTunnel.TunnelUsecase
 	authUsecase     usecaseUser.AuthUsecase
+	settingUsecase  usecaseSetting.SettingUsecase
 }
 
 type dashItem struct {
@@ -60,7 +62,7 @@ type dashItem struct {
 	LastPing    string
 }
 
-func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain string, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain string, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -71,6 +73,7 @@ func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serv
 		wildcardDomain:  wildcardDomain,
 		tunnelUsecase:   tunnelUsecase,
 		authUsecase:     authUsecase,
+		settingUsecase:  settingUsecase,
 	}, nil
 }
 
@@ -179,6 +182,18 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener,
 	return ln, nil
 }
 
+func (s *Server) activeTunnelsForUser(username string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	uniqueSessions := make(map[*yamux.Session]struct{})
+	for _, ts := range s.hostToSes {
+		if ts.Username == username {
+			uniqueSessions[ts.Session] = struct{}{}
+		}
+	}
+	return len(uniqueSessions)
+}
+
 func (s *Server) handleClientConn(conn net.Conn) {
 	ip := conn.RemoteAddr().String()
 	s.logger.Info("new tunnel", zap.String("addr", ip))
@@ -225,6 +240,15 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		session.Close()
 		return
 	}
+
+	maxActive := s.settingUsecase.GetMaxTunnelsPerUser(context.Background(), 5)
+	if s.activeTunnelsForUser(user.Username) >= maxActive {
+		s.logger.Warn("[edge] max active tunnels limit reached", zap.String("username", user.Username))
+		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "max active tunnels limit reached"})
+		session.Close()
+		return
+	}
+
 	rawRoutes, ok := msg["routes"].(map[string]any)
 	if !ok || len(rawRoutes) == 0 {
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "no routes"})
