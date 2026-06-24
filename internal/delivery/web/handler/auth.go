@@ -140,7 +140,7 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, UserRoleKey, user.Role)
-		ctx = context.WithValue(ctx, UserNameKey, user.Username)
+		ctx = context.WithValue(ctx, UserNameKey, strings.ToUpper(user.Username))
 		ctx = context.WithValue(ctx, UserIDKey, user.ID.String())
 		r = r.WithContext(ctx)
 
