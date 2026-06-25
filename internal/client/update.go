@@ -11,6 +11,40 @@ import (
 	"strings"
 )
 
+func CheckForNewVersion(serverURL string, currentVersion string) {
+	if currentVersion == "dev" || currentVersion == "v0.0" {
+		return
+	}
+	resp, err := http.Get(fmt.Sprintf("%s/api/cli/version", serverURL))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return
+	}
+	defer resp.Body.Close()
+
+	var verResp struct {
+		Version string `json:"version"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&verResp); err != nil {
+		return
+	}
+
+	if verResp.Version != "" && verResp.Version != currentVersion {
+		yellow := "\033[1;33m"
+		cyan := "\033[1;36m"
+		green := "\033[1;32m"
+		reset := "\033[0m"
+		gray := "\033[90m"
+		bold := "\033[1m"
+
+		fmt.Printf("\n  %s╭──────────────────────────────────────────────╮%s\n", yellow, reset)
+		fmt.Printf("  %s│%s                                              %s│%s\n", yellow, reset, yellow, reset)
+		fmt.Printf("  %s│%s  🚀  %sUpdate Available:%s %s%s%s (current: %s%s%s)\n", yellow, reset, bold, reset, green, verResp.Version, reset, gray, currentVersion, reset)
+		fmt.Printf("  %s│%s  👉  Run %sgotunnel update%s to upgrade now     \n", yellow, reset, cyan, reset)
+		fmt.Printf("  %s│%s                                              %s│%s\n", yellow, reset, yellow, reset)
+		fmt.Printf("  %s╰──────────────────────────────────────────────╯%s\n\n", yellow, reset)
+	}
+}
+
 func UpdateClient(serverURL string, currentVersion string) error {
 	fmt.Println("Checking for updates...")
 

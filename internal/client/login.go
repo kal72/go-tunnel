@@ -145,12 +145,7 @@ func ReadCredentials() (*Credentials, error) {
 
 	decrypted, err := decryptData(string(bytes.TrimSpace(b)))
 	if err != nil {
-		// Fallback for unencrypted json backward-compatibility
-		if json.Valid(b) {
-			decrypted = b
-		} else {
-			return nil, fmt.Errorf("invalid or corrupted credentials, please login again")
-		}
+		return nil, fmt.Errorf("invalid or corrupted credentials, please login again")
 	}
 
 	var creds Credentials

@@ -58,6 +58,10 @@ func main() {
 
 	command := flag.Args()[0]
 
+	if command != "update" && command != "uninstall" {
+		client.CheckForNewVersion(ServerURL, version)
+	}
+
 	switch command {
 	case "login":
 		loginCmd := flag.NewFlagSet("login", flag.ExitOnError)

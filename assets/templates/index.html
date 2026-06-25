@@ -396,6 +396,26 @@
       async saveConfig() {
         if (!this.current) return;
 
+        for (let i = 0; i < this.form.tunnels.length; i++) {
+          const t = this.form.tunnels[i];
+          if (!t.hostname || !t.hostname.trim()) {
+            alert(`Validation Error (Tunnel #${i+1}): Hostname cannot be empty.`);
+            return;
+          }
+          if (!t.target || !t.target.trim()) {
+            alert(`Validation Error (Tunnel #${i+1}): Target cannot be empty.`);
+            return;
+          }
+          if (t.hostname.includes(' ') || t.hostname.includes('://')) {
+            alert(`Validation Error (Tunnel #${i+1}): Hostname '${t.hostname}' is invalid. Do not include protocols (http://) or spaces.`);
+            return;
+          }
+          if (!t.target.includes(':') || t.target.includes(' ')) {
+            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format without spaces.`);
+            return;
+          }
+        }
+
         const res = await fetch(`/api/configs/${this.current.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
