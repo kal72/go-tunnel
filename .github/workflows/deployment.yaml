@@ -1,4 +1,4 @@
-name: Manual CI/CD Gotunnel
+name: Manual Deployment Pipeline
 
 on:
   workflow_dispatch:
@@ -22,9 +22,13 @@ on:
         description: "Version tag (e.g. v1.0.0). Required for release if not running from tag."
         required: false
         type: string
+      cli_version:
+        description: "CLI Client Version override (leave blank for auto tag / 'dev')"
+        required: false
+        type: string
 
 env:
-  CLI_VERSION: "v1.0"
+  CLI_VERSION: ${{ github.event.inputs.cli_version != '' && github.event.inputs.cli_version || (github.ref_type == 'tag' && github.ref_name || 'dev') }}
 
 jobs:
 

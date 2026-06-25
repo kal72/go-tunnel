@@ -1,4 +1,4 @@
-name: PR Automation (Quality & Security Checks)
+name: Automation (Quality & Security Checks)
 
 on:
   pull_request:
@@ -42,7 +42,7 @@ jobs:
       - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Execute Unit Tests & Capture Logs
@@ -118,7 +118,7 @@ jobs:
       - name: Official Go Vulnerability Check
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: "1.24"
+          go-version-file: 'go.mod'
           check-latest: true
 
   # ================= 4. GOLANGCI-LINT =================
@@ -132,7 +132,7 @@ jobs:
       - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: 'go.mod'
           cache: false
 
       - name: Run GolangCI-Lint Action
@@ -152,7 +152,7 @@ jobs:
       - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Verify Binary Compilation
