@@ -179,7 +179,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12
-          args: --timeout=5m --out-format=colored-line-number,github-actions
+          args: --timeout=5m
 
       - name: Write Step Summary
         if: always()
