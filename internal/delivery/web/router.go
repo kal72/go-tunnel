@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"gotunnel/internal/delivery/web/handler"
+	webMiddleware "gotunnel/internal/delivery/web/middleware"
 )
 
 // SetupRouter creates and configures the Chi router for the WebUI and API.
@@ -37,6 +38,7 @@ func SetupRouter(
 	// WebUI & WebUI API routes (with CORS & CSRF)
 	r.Group(func(r chi.Router) {
 		r.Use(corsMiddleware(corsAllowedOrigins))
+		r.Use(webMiddleware.SecurityHeaders())
 
 		// Auth routes
 		r.Get("/login", authH.LoginPage)
