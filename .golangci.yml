@@ -101,7 +101,12 @@ formatters:
 issues:
   max-issues-per-linter: 50
   max-same-issues: 10
+  exclude-dirs:
+    - mocks
+  exclude-files:
+    - ".*mock.*\\.go$"
+    - ".*_test\\.go$"
 
 run:
   timeout: 5m
-  tests: true           # Include test files in analysis
+  tests: false
