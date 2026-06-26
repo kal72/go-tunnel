@@ -31,17 +31,16 @@ func (r *settingRepository) GetSetting(ctx context.Context, key string) (string,
 		}
 		return "", err
 	}
-	
+
 	// Value is stored as JSONB, so it might be wrapped in quotes if it's a string
 	var strVal string
-	if err := json.Unmarshal(val, &strVal); err != nil {
-		// If unmarshalling fails, it might just be a raw value (though we enforce JSONB in DB)
-		return string(val), nil
+	if json.Unmarshal(val, &strVal) == nil {
+		return strVal, nil
 	}
-	return strVal, nil
+	return string(val), nil
 }
 
-func (r *settingRepository) SetSetting(ctx context.Context, key string, value string) error {
+func (r *settingRepository) SetSetting(ctx context.Context, key, value string) error {
 	// Marshal the value to ensure valid JSONB storage
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
@@ -64,7 +63,7 @@ func (r *settingRepository) GetAllSettings(ctx context.Context) (map[string]stri
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	settings := make(map[string]string)
 	for rows.Next() {
@@ -73,13 +72,13 @@ func (r *settingRepository) GetAllSettings(ctx context.Context) (map[string]stri
 		if err := rows.Scan(&key, &val); err != nil {
 			return nil, err
 		}
-		
+
 		var strVal string
 		if err := json.Unmarshal(val, &strVal); err != nil {
 			strVal = string(val)
 		}
 		settings[key] = strVal
 	}
-	
+
 	return settings, rows.Err()
 }

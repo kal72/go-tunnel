@@ -67,7 +67,7 @@ func main() {
 		loginCmd := flag.NewFlagSet("login", flag.ExitOnError)
 		username := loginCmd.String("username", "", "Username")
 		password := loginCmd.String("password", "", "Password")
-		loginCmd.Parse(flag.Args()[1:])
+		_ = loginCmd.Parse(flag.Args()[1:])
 
 		if err := client.Login(ServerURL, *username, *password); err != nil {
 			log.Fatalf("Login failed: %v", err)

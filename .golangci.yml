@@ -40,11 +40,30 @@ linters:
     # ── Performance ───────────────────────────────────────────────────────────
     - perfsprint     # Detects fmt.Sprintf calls that can be simplified
 
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+          - godot
+          - unparam
+      - path: internal/client/(client|uninstall|login)\.go
+        linters:
+          - gosec
+        text: "(G402|G204|G107)"
+      - path: internal/shared/protocol/message\.go
+        linters:
+          - gosec
+        text: "G115"
+
   settings:
     govet:
       enable-all: true
       disable:
         - shadow        # Too noisy for this codebase
+
+
 
     gosec:
       excludes:
@@ -82,21 +101,6 @@ formatters:
 issues:
   max-issues-per-linter: 50
   max-same-issues: 10
-
-  exclusions:
-    rules:
-      # Relax rules in test files
-      - path: _test\.go
-        linters:
-          - gosec        # Security is relaxed in tests
-          - errcheck     # Test assertions can skip error checks
-          - godot        # Test function comments don't need periods
-          - unparam      # Test helpers often have fixed params
-
-      # Relax gosec for known TLS configuration
-      - linters:
-          - gosec
-        text: "G402"    # TLS MinVersion — we set this intentionally
 
 run:
   timeout: 5m

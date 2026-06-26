@@ -13,7 +13,7 @@ import (
 type HostPolicyFunc func(ctx context.Context, host string) error
 
 // NewAutocertManager creates an autocert.Manager with the given host policy.
-func NewAutocertManager(acmeCache string, acmeEnv string, hostPolicy HostPolicyFunc) *autocert.Manager {
+func NewAutocertManager(acmeCache, acmeEnv string, hostPolicy HostPolicyFunc) *autocert.Manager {
 	acmeClient := &acme.Client{
 		DirectoryURL: acmeDirectoryURL(acmeEnv),
 	}

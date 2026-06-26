@@ -16,7 +16,7 @@ import (
 )
 
 type authUsecase struct {
-	userRepo  domainUser.UserRepository
+	userRepo       domainUser.UserRepository
 	store          domainTunnel.TunnelStore
 	jwtSecret      string
 	jwtExpireHours int
@@ -121,7 +121,7 @@ func (u *authUsecase) CreateUser(ctx context.Context, username, password string,
 
 	user := &domainUser.User{
 		Username: username,
-		Password: string(hash),
+		Password: hash,
 		Role:     role,
 		Status:   1,
 	}
@@ -142,7 +142,7 @@ func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, pass
 	if err != nil {
 		return err
 	}
-	return u.userRepo.UpdateUserPassword(ctx, id, string(hash))
+	return u.userRepo.UpdateUserPassword(ctx, id, hash)
 }
 
 func (u *authUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {

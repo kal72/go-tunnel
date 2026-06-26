@@ -6,12 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	domainTunnel "gotunnel/internal/domain/tunnel"
-	domainUser "gotunnel/internal/domain/user"
-	"gotunnel/internal/shared/protocol"
-	usecaseSetting "gotunnel/internal/usecase/setting"
-	usecaseTunnel "gotunnel/internal/usecase/tunnel"
-	usecaseUser "gotunnel/internal/usecase/user"
 	"io"
 	"net"
 	"net/http"
@@ -19,50 +13,42 @@ import (
 	"sync"
 	"time"
 
+	domainTunnel "gotunnel/internal/domain/tunnel"
+	domainUser "gotunnel/internal/domain/user"
+	"gotunnel/internal/shared/protocol"
+	usecaseSetting "gotunnel/internal/usecase/setting"
+	usecaseTunnel "gotunnel/internal/usecase/tunnel"
+	usecaseUser "gotunnel/internal/usecase/user"
+
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 )
 
 type TunnelSession struct {
+	Connected  time.Time
 	Session    *yamux.Session
-	ClientName string
-	Username   string
 	Hostnames  map[string]struct{}
 	Modes      map[string]string
 	Ctrl       *yamux.Stream
+	ClientName string
+	Username   string
 	ClientIP   string
-	Connected  time.Time
 }
 
 type Server struct {
-	jwtSecret    []byte
-	logger       *zap.Logger
-	hostRegistry domainTunnel.HostRegistry
-
-	// host -> session
-	mu        sync.RWMutex
-	hostToSes map[string]*TunnelSession
-
-	// dashboard cache
-	dashMu  sync.RWMutex
-	summary []dashItem
-
-	dashboardDomain string
-	wildcardDomain  string
+	hostRegistry    domainTunnel.HostRegistry
 	tunnelUsecase   usecaseTunnel.TunnelUsecase
 	authUsecase     usecaseUser.AuthUsecase
 	settingUsecase  usecaseSetting.SettingUsecase
+	logger          *zap.Logger
+	hostToSes       map[string]*TunnelSession
+	dashboardDomain string
+	wildcardDomain  string
+	jwtSecret       []byte
+	mu              sync.RWMutex
 }
 
-type dashItem struct {
-	ClientID    string
-	Client      string
-	Hosts       string
-	ConnectedAt string
-	LastPing    string
-}
-
-func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain string, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) (*Server, error) {
+func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) (*Server, error) {
 	logger, _ := zap.NewProduction()
 	return &Server{
 		jwtSecret:       []byte(jwtSecret),
@@ -91,7 +77,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "open stream failed", http.StatusBadGateway)
 		return
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	// Header biner: hostname
 	if err := protocol.WriteDataHeader(stream, host); err != nil {
@@ -110,10 +96,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "bad response from agent", http.StatusBadGateway)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		copyHeader(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		_, _ = io.Copy(w, resp.Body)
 		return
 	}
 
@@ -130,11 +116,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go func() {
-		io.Copy(stream, conn)
-		stream.Close()
+		_, _ = io.Copy(stream, conn)
+		_ = stream.Close()
 	}()
-	io.Copy(conn, stream)
-	conn.Close()
+	_, _ = io.Copy(conn, stream)
+	_ = conn.Close()
 }
 
 func (s *Server) updateState(ts *TunnelSession) {
@@ -157,7 +143,7 @@ func (s *Server) updateState(ts *TunnelSession) {
 	}
 }
 
-// client listening
+// client listening.
 func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener, error) {
 	ln, err := tls.Listen("tcp", addr, tlsCfg)
 	if err != nil {
@@ -201,7 +187,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	session, err := yamux.Server(conn, nil)
 	if err != nil {
 		s.logger.Error("[edge] yamux server", zap.Error(err))
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 
@@ -209,7 +195,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	ctrl, err := session.AcceptStream()
 	if err != nil {
 		s.logger.Error("[edge] no control stream", zap.Error(err))
-		session.Close()
+		_ = session.Close()
 		return
 	}
 
@@ -217,13 +203,13 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	msg, err := protocol.ReadJSON(ctrl)
 	if err != nil {
 		s.logger.Error("[edge] read register", zap.Error(err))
-		session.Close()
+		_ = session.Close()
 		return
 	}
 	typ, _ := protocol.GetString(msg, "type")
 	if typ != protocol.MsgTypeRegister {
 		s.logger.Warn("[edge] first msg not register")
-		session.Close()
+		_ = session.Close()
 		return
 	}
 	authToken, _ := protocol.GetString(msg, "auth_token")
@@ -237,7 +223,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	if err != nil {
 		s.logger.Warn("[edge] auth failed", zap.String("client_name", clientName), zap.Error(err))
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "auth failed"})
-		session.Close()
+		_ = session.Close()
 		return
 	}
 
@@ -245,14 +231,14 @@ func (s *Server) handleClientConn(conn net.Conn) {
 	if s.activeTunnelsForUser(user.Username) >= maxActive {
 		s.logger.Warn("[edge] max active tunnels limit reached", zap.String("username", user.Username))
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "max active tunnels limit reached"})
-		session.Close()
+		_ = session.Close()
 		return
 	}
 
 	rawRoutes, ok := msg["routes"].(map[string]any)
 	if !ok || len(rawRoutes) == 0 {
 		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "no routes"})
-		session.Close()
+		_ = session.Close()
 		return
 	}
 
@@ -287,33 +273,35 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		addedHosts []string
 		conflict   string
 	)
+RouteLoop:
 	for hn := range rawRoutes {
 		// 1. Check if it's a system domain (Dashboard/Gateway)
-		if hn == s.dashboardDomain {
+		switch {
+		case hn == s.dashboardDomain:
 			// Allowed automatically
-		} else if s.tunnelUsecase != nil {
+		case s.tunnelUsecase != nil:
 			// 2. Check Database allowlist based on RBAC (Admin or specific User)
 			allowed, err := s.tunnelUsecase.IsDomainAllowed(context.Background(), hn, user.ID, user.Role)
 			if err != nil || !allowed {
-				conflict = fmt.Sprintf("%s (not authorized or you do not own this domain)", hn)
-				break
+				conflict = hn + " (not authorized or you do not own this domain)"
+				break RouteLoop
 			}
-		} else {
+		default:
 			// No domain store and not dashboard domain
-			conflict = fmt.Sprintf("%s (no authorization store)", hn)
-			break
+			conflict = hn + " (no authorization store)"
+			break RouteLoop
 		}
 
 		// 3. Check if already active locally
 		if _, exists := s.hostToSes[hn]; exists {
 			conflict = hn
-			break
+			break RouteLoop
 		}
 		if s.hostRegistry != nil && !s.hostRegistry.Register(hn) {
 			conflict = hn
-			break
+			break RouteLoop
 		}
-		
+
 		// 4. Check if already active globally (Redis Active Lock)
 		if s.tunnelUsecase != nil {
 			err := s.tunnelUsecase.SetActiveDomain(context.Background(), hn, fmt.Sprintf("%p", ts))
@@ -322,7 +310,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 				if s.hostRegistry != nil {
 					s.hostRegistry.Unregister(hn)
 				}
-				conflict = fmt.Sprintf("%s (domain is currently actively tunneled)", hn)
+				conflict = hn + " (domain is currently actively tunneled)"
 				break
 			}
 		}
@@ -343,12 +331,12 @@ func (s *Server) handleClientConn(conn net.Conn) {
 				s.hostRegistry.Unregister(hn)
 			}
 			if s.tunnelUsecase != nil {
-				s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
+				_ = s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
 			}
 		}
 		s.mu.Unlock()
-		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: fmt.Sprintf("host already registered: %s", conflict)})
-		session.Close()
+		_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: false, Error: "host already registered: " + conflict})
+		_ = session.Close()
 		return
 	}
 	s.mu.Unlock()
@@ -364,20 +352,20 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		for range ticker.C {
 			if err := protocol.SendJSON(ctrl, protocol.PingMessage{Type: protocol.MsgTypePing, Ts: protocol.NowMillis()}); err != nil {
 				s.logger.Error("[edge] ping err", zap.Error(err))
-				session.Close() // trigger cleanup
+				_ = session.Close() // trigger cleanup
 				return
 			}
 			_ = ctrl.SetReadDeadline(time.Now().Add(20 * time.Second))
 			m, err := protocol.ReadJSON(ctrl)
 			if err != nil {
 				s.logger.Error("[edge] read pong err", zap.Error(err))
-				session.Close()
+				_ = session.Close()
 				return
 			}
 			t, _ := protocol.GetString(m, "type")
 			if t != protocol.MsgTypePong {
 				s.logger.Warn("[edge] expected pong, got: " + t)
-				session.Close()
+				_ = session.Close()
 				return
 			}
 			_ = ctrl.SetReadDeadline(time.Time{})
@@ -401,17 +389,19 @@ func (s *Server) cleanup(ts *TunnelSession) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for hn := range ts.Hostnames {
-		if cur, ok := s.hostToSes[hn]; ok && cur == ts {
-			delete(s.hostToSes, hn)
-			if s.hostRegistry != nil {
-				s.hostRegistry.Unregister(hn)
-			}
-			if s.tunnelUsecase != nil {
-				s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
-			}
-			delete(ts.Modes, hn)
-			s.logger.Info("[edge] deregistered host", zap.String("host", hn))
+		cur, ok := s.hostToSes[hn]
+		if !ok || cur != ts {
+			continue
 		}
+		delete(s.hostToSes, hn)
+		if s.hostRegistry != nil {
+			s.hostRegistry.Unregister(hn)
+		}
+		if s.tunnelUsecase != nil {
+			_ = s.tunnelUsecase.RemoveActiveDomain(context.Background(), hn)
+		}
+		delete(ts.Modes, hn)
+		s.logger.Info("[edge] deregistered host", zap.String("host", hn))
 	}
 	if s.tunnelUsecase != nil {
 		_ = s.tunnelUsecase.UnregisterTunnel(context.Background(), fmt.Sprintf("%p", ts))
@@ -463,7 +453,7 @@ func (ts *TunnelSession) modeForHost(host string) string {
 func (s *Server) verifyAuthToken(providedToken string) (*domainUser.User, error) {
 	user, err := s.authUsecase.VerifyToken(context.Background(), providedToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid auth token: %v", err)
+		return nil, fmt.Errorf("invalid auth token: %w", err)
 	}
 
 	return user, nil
@@ -488,11 +478,4 @@ func canonicalHost(hostport string) string {
 		}
 	}
 	return strings.ToLower(hostport)
-}
-func matchWildcard(host, pattern string) bool {
-	if !strings.HasPrefix(pattern, "*.") {
-		return host == pattern
-	}
-	base := strings.TrimPrefix(pattern, "*.")
-	return strings.HasSuffix(host, "."+base) && !strings.Contains(strings.TrimSuffix(host, "."+base), ".")
 }

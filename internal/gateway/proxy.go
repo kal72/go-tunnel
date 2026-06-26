@@ -84,7 +84,7 @@ func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainSto
 	}
 
 	cert.WrapWithWildcardCert(tlsCfg, env.WildcardDomain, env.WildcardCertPath, env.WildcardKeyPath)
-	
+
 	if len(tlsCfg.Certificates) == 0 && tlsCfg.GetCertificate == nil {
 		log.Println("[proxy] Dev Mode / Fallback: Generating self-signed certificate.")
 		fallback, err := cert.GenerateSelfSignedCert(env.GatewayDomain + "," + env.TunnelDomain + "," + env.WebUIDomain + ",localhost,127.0.0.1")
@@ -130,7 +130,8 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 	if p.httpSrv.TLSConfig != nil {
 		// Listen raw TCP for SNI multiplexing
 		addr := fmt.Sprintf("0.0.0.0:%d", p.cfg.ProxyHttpsPort)
-		ln, err := net.Listen("tcp", addr)
+		lc := net.ListenConfig{}
+		ln, err := lc.Listen(ctx, "tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -159,7 +160,7 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 				go p.handleConnection(conn)
 			}
 		}()
-	} 
+	}
 
 	if p.acmeSrv == nil {
 		go func() {
@@ -181,9 +182,9 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 }
 
 func (p *ProxyServer) handleConnection(conn net.Conn) {
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	sni, bConn, err := peekSNI(conn)
-	bConn.SetReadDeadline(time.Time{}) // reset deadline
+	_ = bConn.SetReadDeadline(time.Time{}) // reset deadline
 
 	if err != nil {
 		// Could not read SNI, maybe plain HTTP or malformed. We let HTTPS server handle it to throw error.
@@ -196,10 +197,11 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 	if sni == p.cfg.TunnelDomain {
 		// Tunnel Client connection, route to localhost:9443
 		log.Printf("[proxy] SNI matched TunnelDomain %s, routing to localhost:%d", sni, p.cfg.TunnelPort)
-		target, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", p.cfg.TunnelPort))
+		dialer := &net.Dialer{Timeout: 5 * time.Second}
+		target, err := dialer.DialContext(context.Background(), "tcp", fmt.Sprintf("127.0.0.1:%d", p.cfg.TunnelPort))
 		if err != nil {
 			log.Printf("[proxy] tunnel dial error: %v", err)
-			bConn.Close()
+			_ = bConn.Close()
 			return
 		}
 		go proxyConn(bConn, target)
@@ -212,8 +214,8 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 }
 
 func proxyConn(src, dst net.Conn) {
-	defer src.Close()
-	defer dst.Close()
+	defer func() { _ = src.Close() }()
+	defer func() { _ = dst.Close() }()
 	errc := make(chan error, 1)
 	go func() {
 		_, err := io.Copy(src, dst)
@@ -234,7 +236,13 @@ func buildACMEServer(m interface {
 	acmeHandler := m.HTTPHandler(nil)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
-			http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
+			target := &url.URL{
+				Scheme:   "https",
+				Host:     r.Host,
+				Path:     r.URL.Path,
+				RawQuery: r.URL.RawQuery,
+			}
+			http.Redirect(w, r, target.String(), http.StatusMovedPermanently)
 			return
 		}
 		acmeHandler.ServeHTTP(w, r)
@@ -254,13 +262,13 @@ func (p *ProxyServer) shutdown() error {
 	defer cancel()
 
 	if p.httpSrv != nil {
-		p.httpSrv.Shutdown(ctx)
+		_ = p.httpSrv.Shutdown(ctx)
 	}
 	if p.acmeSrv != nil {
-		p.acmeSrv.Shutdown(ctx)
+		_ = p.acmeSrv.Shutdown(ctx)
 	}
 	if p.ln != nil {
-		p.ln.Close()
+		_ = p.ln.Close()
 	}
 	log.Println("[proxy] shutdown complete")
 	return nil

@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"gotunnel/internal/domain/config"
 
 	"encoding/json"
@@ -18,8 +20,8 @@ func ListConfigs(serverURL string) error {
 		return err
 	}
 
-	endpoint := fmt.Sprintf("%s/api/cli/configs", serverURL)
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	endpoint := serverURL + "/api/cli/configs"
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, endpoint, http.NoBody)
 	if err != nil {
 		return err
 	}
@@ -29,7 +31,7 @@ func ListConfigs(serverURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch configs: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server returned status %d", resp.StatusCode)
@@ -52,14 +54,14 @@ func ListConfigs(serverURL string) error {
 	return nil
 }
 
-func FetchConfig(serverURL string, configName string) (*config.ClientAppConfig, error) {
+func FetchConfig(serverURL, configName string) (*config.ClientAppConfig, error) {
 	creds, err := ReadCredentials()
 	if err != nil {
 		return nil, err
 	}
 
 	endpoint := fmt.Sprintf("%s/api/cli/config/%s", serverURL, configName)
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, endpoint, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +71,7 @@ func FetchConfig(serverURL string, configName string) (*config.ClientAppConfig, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch config: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("configuration '%s' not found", configName)

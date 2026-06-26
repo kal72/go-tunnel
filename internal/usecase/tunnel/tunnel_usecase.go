@@ -60,7 +60,7 @@ func (u *tunnelUsecase) RemoveDomain(ctx context.Context, domain string, userID 
 	return u.domainStore.RemoveDomain(ctx, domain, userID, role)
 }
 
-func (u *tunnelUsecase) SetActiveDomain(ctx context.Context, domain string, sessionID string) error {
+func (u *tunnelUsecase) SetActiveDomain(ctx context.Context, domain, sessionID string) error {
 	return u.tunnelStore.SetActiveDomain(ctx, domain, sessionID)
 }
 

@@ -3,8 +3,10 @@ package protocol
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"time"
 )
 
@@ -14,23 +16,23 @@ const (
 	MsgTypePing     = "ping"     // server -> client
 	MsgTypePong     = "pong"     // client -> server
 
-	// Versi header data stream biner
+	// Versi header data stream biner.
 	DataHeaderVersion byte = 1
 )
 
 type RegisterMessage struct {
+	Routes     map[string]string `json:"routes"`
+	Modes      map[string]string `json:"modes,omitempty"`
 	Type       string            `json:"type"`
 	ClientID   string            `json:"client_id,omitempty"`
 	ClientName string            `json:"client_name,omitempty"`
 	AuthToken  string            `json:"auth_token"`
-	Routes     map[string]string `json:"routes"` // hostname -> target
-	Modes      map[string]string `json:"modes,omitempty"`
 }
 
 type AckMessage struct {
 	Type  string `json:"type"`
-	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
+	OK    bool   `json:"ok"`
 }
 
 type PingMessage struct {
@@ -72,8 +74,8 @@ func GetString(m map[string]any, k string) (string, error) {
 // ------------------------
 
 func WriteDataHeader(w io.Writer, hostname string) error {
-	if len(hostname) == 0 || len(hostname) > 65535 {
-		return fmt.Errorf("invalid hostname length")
+	if hostname == "" || len(hostname) > math.MaxUint16 {
+		return errors.New("invalid hostname length")
 	}
 	h := []byte{DataHeaderVersion, 0, 0}
 	binary.BigEndian.PutUint16(h[1:], uint16(len(hostname)))
@@ -94,7 +96,7 @@ func ReadDataHeader(r io.Reader) (string, error) {
 	}
 	n := int(binary.BigEndian.Uint16(h[1:3]))
 	if n <= 0 {
-		return "", fmt.Errorf("empty hostname")
+		return "", errors.New("empty hostname")
 	}
 	hn := make([]byte, n)
 	if _, err := io.ReadFull(r, hn); err != nil {

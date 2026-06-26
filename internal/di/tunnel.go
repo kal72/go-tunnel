@@ -2,13 +2,15 @@ package di
 
 import (
 	"crypto/tls"
-	"gotunnel/internal/infrastructure/cert"
 	"net/http"
+
+	"gotunnel/internal/infrastructure/cert"
 
 	"context"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	tunnelhandler "gotunnel/internal/delivery/tcp"
 	domainConfig "gotunnel/internal/domain/config"
@@ -58,7 +60,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tunnelLn.Close()
+	defer func() { _ = tunnelLn.Close() }()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -70,7 +72,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		a.httpSrv.Shutdown(context.Background())
+		_ = a.httpSrv.Shutdown(context.Background())
 		return nil
 	case err := <-errCh:
 		return err
@@ -115,13 +117,14 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 	// Handlers
 	tunnelSrv, err := tunnelhandler.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayDomain, env.WildcardDomain, tunnelUsecase, authUsecase, settingUsecase)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("init tunnel server: %w", err)
 	}
 
 	httpSrv := &http.Server{
-		Addr:    fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
-		Handler: tunnelSrv,
+		Addr:              fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
+		Handler:           tunnelSrv,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	app := &TunnelApp{
@@ -132,7 +135,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up resources...")
-		db.Close()
+		_ = db.Close()
 	}
 
 	return app, cleanup, nil

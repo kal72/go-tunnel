@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -84,7 +85,7 @@ func (s *TunnelRedisStore) SetToken(ctx context.Context, token string, expiratio
 
 func (s *TunnelRedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, error) {
 	val, err := s.client.Get(ctx, s.authPrefix+token).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return true, nil // If not in redis, consider it revoked or expired
 	}
 	if err != nil {
@@ -101,18 +102,21 @@ func (s *TunnelRedisStore) RevokeToken(ctx context.Context, token string) error 
 	return s.client.Del(ctx, s.authPrefix+token).Err()
 }
 
-func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain string, sessionID string) error {
-	// SETNX active_domain:<domain> <sessionID> EX 24h
+func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain, sessionID string) error {
+	// SET active_domain:<domain> <sessionID> NX EX 24h
 	// Set the key only if it doesn't exist to guarantee atomic locking.
 	key := "active_domain:" + domain
 	// Expiration is a safety net in case of dirty disconnects. The cleanup normally removes this key.
-	ok, err := s.client.SetNX(ctx, key, sessionID, 24*time.Hour).Result()
+	_, err := s.client.SetArgs(ctx, key, sessionID, redis.SetArgs{
+		Mode: "NX",
+		TTL:  24 * time.Hour,
+	}).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			// Key already exists, domain is active somewhere else
+			return errors.New("domain is currently actively tunneled")
+		}
 		return fmt.Errorf("failed to set active domain lock: %w", err)
-	}
-	if !ok {
-		// Key already exists, domain is active somewhere else
-		return fmt.Errorf("domain is currently actively tunneled")
 	}
 	return nil
 }

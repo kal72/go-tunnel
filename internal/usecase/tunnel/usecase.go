@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+
 	domainTunnel "gotunnel/internal/domain/tunnel"
 
 	"github.com/google/uuid"
@@ -18,6 +19,6 @@ type TunnelUsecase interface {
 	RemoveDomain(ctx context.Context, domain string, userID uuid.UUID, role int16) error
 
 	// Active Domain Tracking
-	SetActiveDomain(ctx context.Context, domain string, sessionID string) error
+	SetActiveDomain(ctx context.Context, domain, sessionID string) error
 	RemoveActiveDomain(ctx context.Context, domain string) error
 }

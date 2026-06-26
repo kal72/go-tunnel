@@ -5,12 +5,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"gotunnel/internal/config"
 	"gotunnel/internal/di"
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	var configPath string
 	flag.StringVar(&configPath, "config", ".env", "Path to the .env configuration file")
 	flag.StringVar(&configPath, "c", ".env", "Path to the .env configuration file (shorthand)")
@@ -23,11 +31,17 @@ func main() {
 
 	router, cleanup, err := di.BuildWebUIApp(env)
 	if err != nil {
-		log.Fatalf("failed to build webui app: %v", err)
+		return fmt.Errorf("failed to build webui app: %w", err)
 	}
 	defer cleanup()
 
-	port := fmt.Sprintf("%d", env.WebUIPort)
+	port := strconv.Itoa(env.WebUIPort)
 	log.Printf("Tunnel Manager running on http://%s:%s", env.WebUIDomain, port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	return srv.ListenAndServe()
 }

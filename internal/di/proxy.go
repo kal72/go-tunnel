@@ -35,7 +35,7 @@ func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func()
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up Proxy resources...")
-		db.Close()
+		_ = db.Close()
 	}
 
 	return proxySrv, cleanup, nil
