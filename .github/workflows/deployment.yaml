@@ -1,4 +1,4 @@
-name: Manual CI/CD Gotunnel
+name: Manual Deployment Pipeline
 
 on:
   workflow_dispatch:
@@ -22,9 +22,13 @@ on:
         description: "Version tag (e.g. v1.0.0). Required for release if not running from tag."
         required: false
         type: string
+      cli_version:
+        description: "CLI Client Version override (leave blank for auto tag / 'dev')"
+        required: false
+        type: string
 
 env:
-  CLI_VERSION: "v1.0"
+  CLI_VERSION: ${{ github.event.inputs.cli_version != '' && github.event.inputs.cli_version || (github.ref_type == 'tag' && github.ref_name || 'dev') }}
 
 jobs:
 
@@ -33,8 +37,8 @@ jobs:
     if: ${{ github.event.inputs.target == 'dev' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -49,19 +53,19 @@ jobs:
     needs: build-dev
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Clients
         run: |
           docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
       - name: Copy binaries to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "downloads/"
           target: "."
-      - uses: appleboy/ssh-action@v0.1.8
+      - uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -134,9 +138,9 @@ jobs:
       version: ${{ steps.setver.outputs.version }}
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -176,19 +180,19 @@ jobs:
     needs: build-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Clients
         run: |
           docker run --rm -v $(pwd):/app -w /app -e SERVER_URL="https://${{ secrets.WEBUI_DOMAIN }}" -e VERSION="${{ env.CLI_VERSION }}" golang:1.26-alpine sh -c "apk add --no-cache make && make build-clients"
       - name: Copy binaries to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "downloads/"
           target: "."
-      - uses: appleboy/ssh-action@v0.1.8
+      - uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}

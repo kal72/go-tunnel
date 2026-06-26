@@ -2,8 +2,9 @@ package postgres
 
 import (
 	"fmt"
-	domainConfig "gotunnel/internal/domain/config"
 	"log"
+
+	domainConfig "gotunnel/internal/domain/config"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"

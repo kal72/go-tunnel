@@ -1,0 +1,107 @@
+# golangci-lint configuration for go-tunnel
+# Compatible with golangci-lint v2.x
+version: "2"
+
+linters:
+  # Start from a clean slate — only enable linters with clear value
+  default: none
+  enable:
+    # ── Bug detection ─────────────────────────────────────────────────────────
+    - govet          # Reports suspicious Go code (wrong printf verbs, struct copies, etc.)
+    - errcheck       # Ensures all errors are checked/handled
+    - staticcheck    # Comprehensive static analysis (SA*, ST*, QF* checks)
+    - ineffassign    # Detects assignments whose value is never used
+    - unused         # Reports unused code (functions, types, variables)
+    - bodyclose      # Ensures HTTP response bodies are closed
+    - nilerr         # Detects returning nil error with non-nil value
+    - nilnil         # Detects returning both nil error and nil value
+    - durationcheck  # Detects incorrect time.Duration multiplications
+    - reassign       # Detects reassignment of package-level variables
+    - makezero       # Detects incorrect slice operations
+
+    # ── Security ──────────────────────────────────────────────────────────────
+    - gosec          # Detects security vulnerabilities (SQLi, weak crypto, etc.)
+
+    # ── Code quality ──────────────────────────────────────────────────────────
+    - gocritic       # Comprehensive code style and correctness checks
+    - prealloc       # Suggests pre-allocating slices where possible
+    - unconvert      # Detects unnecessary type conversions
+    - unparam        # Reports unused function parameters
+    - wastedassign   # Detects wasted assignments
+
+    # ── Style & formatting ────────────────────────────────────────────────────
+    - misspell       # Detects common spelling mistakes in comments/strings
+    - godot          # Checks comment sentences end with a period
+
+    # ── Error handling ────────────────────────────────────────────────────────
+    - errorlint      # Detects issues with error wrapping (errors.Is, errors.As)
+    - noctx          # Detects HTTP requests sent without context.Context
+
+    # ── Performance ───────────────────────────────────────────────────────────
+    - perfsprint     # Detects fmt.Sprintf calls that can be simplified
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+          - godot
+          - unparam
+      - path: internal/client/(client|uninstall|login)\.go
+        linters:
+          - gosec
+        text: "(G402|G204|G107)"
+      - path: internal/shared/protocol/message\.go
+        linters:
+          - gosec
+        text: "G115"
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - shadow        # Too noisy for this codebase
+
+
+
+    gosec:
+      excludes:
+        - G104          # Errors unhandled (already covered by errcheck)
+        - G304          # File path provided as taint input (too noisy for config loading)
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - hugeParam     # Too opinionated for domain structs
+        - rangeValCopy  # Covered by govet copylock
+
+    godot:
+      scope: declarations  # Only check exported declarations, not inline comments
+
+    errorlint:
+      errorf: true
+      errorf-multi: true
+      asserts: true
+      comparison: true
+
+formatters:
+  enable:
+    - gofmt          # Checks Go code is formatted correctly
+    - goimports      # Checks imports are sorted and formatted
+
+  settings:
+    goimports:
+      local-prefixes:
+        - gotunnel   # Group internal imports separately
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+
+run:
+  timeout: 5m
+  tests: true           # Include test files in analysis

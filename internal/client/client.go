@@ -1,17 +1,21 @@
 package client
 
 import (
+	"context"
+	"errors"
+
 	"gotunnel/internal/domain/config"
 
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"gotunnel/internal/shared/protocol"
 	"io"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"gotunnel/internal/shared/protocol"
 
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
@@ -69,17 +73,23 @@ func (c *Client) runOnce() error {
 	}
 
 	c.logger.Info("[agent] connecting to", zap.String("server", c.cfg.TunnelAddr))
-	
+
 	dialAddr := c.cfg.TunnelAddr
 	if !strings.Contains(dialAddr, ":") {
-		dialAddr = dialAddr + ":443"
+		dialAddr += ":443"
 	}
 
-	conn, err := tls.Dial("tcp", dialAddr, tlsCfg)
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{
+			Timeout: 30 * time.Second,
+		},
+		Config: tlsCfg,
+	}
+	conn, err := dialer.DialContext(context.Background(), "tcp", dialAddr)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	sess, err := yamux.Client(conn, nil)
 	if err != nil {
@@ -121,7 +131,7 @@ func (c *Client) runOnce() error {
 			m, err := protocol.ReadJSON(ctrl)
 			if err != nil {
 				c.logger.Error("[agent] ctrl read", zap.Error(err))
-				sess.Close()
+				_ = sess.Close()
 				return
 			}
 			t, _ := protocol.GetString(m, "type")
@@ -142,7 +152,7 @@ func (c *Client) runOnce() error {
 }
 
 func (c *Client) handleDataStream(stream *yamux.Stream) {
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	hostname, err := protocol.ReadDataHeader(stream)
 	if err != nil {
@@ -165,15 +175,15 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 
 	// Default HTTP mode
 	if mode == "https" {
-		c.handleHTTPSStream(stream, target, hostname)
+		c.handleHTTPSStream(stream, target)
 		return
 	}
 	c.handleHTTPStream(stream, target)
 
 }
 
-func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain string) {
-	defer stream.Close()
+func (c *Client) handleHTTPSStream(stream *yamux.Stream, target string) {
+	defer func() { _ = stream.Close() }()
 	reader := bufio.NewReader(stream)
 
 	// Extract host without port for Host header.
@@ -182,7 +192,7 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain st
 		targetHost = h
 	} else {
 		// No port specified — default to 443 for HTTPS.
-		target = target + ":443"
+		target += ":443"
 	}
 
 	// Use http.Client so redirects (e.g. google.com → www.google.com)
@@ -195,7 +205,7 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain st
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
-				return fmt.Errorf("too many redirects")
+				return errors.New("too many redirects")
 			}
 			return nil
 		},
@@ -204,7 +214,7 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain st
 	for {
 		req, err := http.ReadRequest(reader)
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				c.logger.Error("read https request", zap.Error(err))
 			}
 			return
@@ -225,10 +235,10 @@ func (c *Client) handleHTTPSStream(stream *yamux.Stream, target, tunnelDomain st
 
 		if err := resp.Write(stream); err != nil {
 			c.logger.Error("write response", zap.Error(err))
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if req.Close || resp.Close {
 			return
@@ -256,38 +266,40 @@ func hostOnly(addr string) string {
 }
 
 func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
-	local, err := net.Dial("tcp", target)
+	dialer := &net.Dialer{Timeout: 30 * time.Second}
+	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
 		c.logger.Error("dial tcp target", zap.Error(err), zap.String("target", target))
 		return
 	}
-	defer local.Close()
+	defer func() { _ = local.Close() }()
 
 	bufA := make([]byte, 32*1024)
 	bufB := make([]byte, 32*1024)
 
 	go func() {
-		io.CopyBuffer(local, stream, bufA)
-		local.Close()
+		_, _ = io.CopyBuffer(local, stream, bufA)
+		_ = local.Close()
 	}()
-	io.CopyBuffer(stream, local, bufB)
+	_, _ = io.CopyBuffer(stream, local, bufB)
 }
 
 func (c *Client) handleHTTPStream(stream *yamux.Stream, target string) {
-	local, err := net.Dial("tcp", target)
+	dialer := &net.Dialer{Timeout: 30 * time.Second}
+	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
 		c.logger.Error("dial local http", zap.Error(err))
-		writeHTTPError(stream, http.StatusBadGateway, "cannot reach local target")
+		writeHTTPError(stream, http.StatusServiceUnavailable, "cannot reach local target")
 		return
 	}
-	defer local.Close()
+	defer func() { _ = local.Close() }()
 
 	bufA := make([]byte, 32*1024)
 	bufB := make([]byte, 32*1024)
 
 	go func() {
-		io.CopyBuffer(local, stream, bufA)
-		local.Close()
+		_, _ = io.CopyBuffer(local, stream, bufA)
+		_ = local.Close()
 	}()
-	io.CopyBuffer(stream, local, bufB)
+	_, _ = io.CopyBuffer(stream, local, bufB)
 }

@@ -64,7 +64,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")
-		db.Close()
+		_ = db.Close()
 	}
 
 	return router, cleanup, nil

@@ -42,8 +42,6 @@ func SetupRouter(
 		r.Get("/domains", h.Domains)
 		r.Get("/downloads", h.Downloads)
 
-
-
 		// API
 		r.Get("/api/configs", h.ListConfigs)
 		r.Post("/api/configs", h.CreateConfig)
@@ -61,7 +59,7 @@ func SetupRouter(
 		// Admin only routes
 		r.Group(func(r chi.Router) {
 			r.Use(handler.AdminMiddleware)
-			
+
 			// Settings Admin
 			r.Get("/settings", h.SettingsPage)
 			r.Get("/api/settings", h.GetSettings)

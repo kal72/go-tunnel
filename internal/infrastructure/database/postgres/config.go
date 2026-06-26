@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+
 	domainConfig "gotunnel/internal/domain/config"
 
 	"github.com/google/uuid"
@@ -22,8 +24,8 @@ func (r *sqlxConfigRepository) GetConfigByName(ctx context.Context, userID uuid.
 	var cfg domainConfig.ClientConfig
 	err := r.db.GetContext(ctx, &cfg, "SELECT id, user_id, name, tunnels, created_at, updated_at FROM client_configs WHERE user_id = $1 AND name = $2", userID, name)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil //nolint:nilnil // intentional nil,nil return for not found
 		}
 		return nil, fmt.Errorf("GetConfigByName error: %w", err)
 	}
@@ -34,8 +36,8 @@ func (r *sqlxConfigRepository) GetConfigByID(ctx context.Context, id uuid.UUID) 
 	var cfg domainConfig.ClientConfig
 	err := r.db.GetContext(ctx, &cfg, "SELECT id, user_id, name, tunnels, created_at, updated_at FROM client_configs WHERE id = $1", id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil //nolint:nilnil // intentional nil,nil return for not found
 		}
 		return nil, fmt.Errorf("GetConfigByID error: %w", err)
 	}

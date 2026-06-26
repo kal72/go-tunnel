@@ -36,60 +36,50 @@ func (t TunnelsJSONB) Value() (driver.Value, error) {
 }
 
 type ClientConfig struct {
-	ID        uuid.UUID    `db:"id" json:"id"`
-	UserID    uuid.UUID    `db:"user_id" json:"user_id"`
-	Name      string       `db:"name" json:"name"`
-	Tunnels   TunnelsJSONB `db:"tunnels" json:"tunnels"`
 	CreatedAt time.Time    `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time    `db:"updated_at" json:"updated_at"`
+	Name      string       `db:"name" json:"name"`
+	Tunnels   TunnelsJSONB `db:"tunnels" json:"tunnels"`
+	ID        uuid.UUID    `db:"id" json:"id"`
+	UserID    uuid.UUID    `db:"user_id" json:"user_id"`
 }
 
 type ServerConfig struct {
-	GatewayDomain string
-	GatewayPort   int
-
-	TunnelDomain string
-	TunnelPort   int
-
-	WebUIDomain string
-	WebUIPort   int
-
-	ProxyHttpPort  int
-	ProxyHttpsPort int
-
-	MaxFreeDomains int
-
-	JWTSecret      string
-	JWTExpireHours int
-	ACMEEnable     bool
-	CLILatestVersion string
-	ACMECache  string
-	ACMEEnv    string
-
-	RedisAddr string
-	RedisPass string
-	RedisDB   int
-
+	DBHost           string
+	JWTSecret        string
+	TunnelDomain     string
+	DBName           string
+	WebUIDomain      string
+	DBPass           string
+	DBUser           string
+	GatewayDomain    string
+	DBSSLMode        string
+	WildcardKeyPath  string
 	WildcardDomain   string
 	WildcardCertPath string
-	WildcardKeyPath  string
+	CLILatestVersion string
+	ACMECache        string
+	ACMEEnv          string
+	RedisAddr        string
+	RedisPass        string
+	ProxyHttpsPort   int
+	RedisDB          int
+	JWTExpireHours   int
 	DomainRedisDB    int
-
-	DBHost    string
-	DBPort    int
-	DBUser    string
-	DBPass    string
-	DBName    string
-	DBSSLMode string
+	MaxFreeDomains   int
+	DBPort           int
+	ProxyHttpPort    int
+	WebUIPort        int
+	TunnelPort       int
+	GatewayPort      int
+	ACMEEnable       bool
 }
 
 type ClientAppConfig struct {
-	TunnelAddr    string `yaml:"tunnel_addr" json:"tunnel_addr"`
-	SkipTLSVerify bool   `yaml:"skip_tls_verify" json:"skip_tls_verify"`
-
-	ClientID   string `yaml:"client_id" json:"client_id"`
-	ClientName string `yaml:"client_name" json:"client_name"`
-	AuthToken  string `yaml:"auth_token" json:"auth_token"`
-
-	Tunnels []TunnelEntry `yaml:"tunnels" json:"tunnels"`
+	TunnelAddr    string        `yaml:"tunnel_addr" json:"tunnel_addr"`
+	ClientID      string        `yaml:"client_id" json:"client_id"`
+	ClientName    string        `yaml:"client_name" json:"client_name"`
+	AuthToken     string        `yaml:"auth_token" json:"auth_token"`
+	Tunnels       []TunnelEntry `yaml:"tunnels" json:"tunnels"`
+	SkipTLSVerify bool          `yaml:"skip_tls_verify" json:"skip_tls_verify"`
 }

@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"gotunnel/internal/domain/config"
-	domainConfig "gotunnel/internal/domain/config"
 	"os"
 	"strconv"
 	"strings"
+
+	domainConfig "gotunnel/internal/domain/config"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
@@ -72,12 +72,12 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 	return s, nil
 }
 
-func LoadClientConfig(path string) (*config.ClientAppConfig, error) {
+func LoadClientConfig(path string) (*domainConfig.ClientAppConfig, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var c config.ClientAppConfig
+	var c domainConfig.ClientAppConfig
 	if err := yaml.Unmarshal(b, &c); err != nil {
 		return nil, err
 	}

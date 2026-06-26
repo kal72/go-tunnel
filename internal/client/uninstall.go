@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -31,7 +32,7 @@ func UninstallClient() error {
 	if runtime.GOOS == "windows" {
 		// On Windows, we cannot delete the running executable.
 		// We spawn a detached command to delete it after a short delay.
-		cmd := exec.Command("cmd", "/C", "ping 127.0.0.1 -n 2 > nul & del /F /Q", fmt.Sprintf("\"%s\"", exePath))
+		cmd := exec.CommandContext(context.Background(), "cmd", "/C", "ping 127.0.0.1 -n 2 > nul & del /F /Q", fmt.Sprintf("%q", exePath))
 		err = cmd.Start()
 		if err != nil {
 			fmt.Printf("⚠️  Could not auto-delete executable. Please delete it manually: %s\n", exePath)

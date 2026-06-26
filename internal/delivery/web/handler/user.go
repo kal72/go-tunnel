@@ -29,7 +29,7 @@ func NewUserHandler(fs embed.FS, authUsecase usecaseUser.AuthUsecase) *UserHandl
 	}
 }
 
-// AdminMiddleware ensures the user has role == 1 (admin)
+// AdminMiddleware ensures the user has role == 1 (admin).
 func AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		role, ok := r.Context().Value(UserRoleKey).(int16)
@@ -64,7 +64,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	_ = json.NewEncoder(w).Encode(users)
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {

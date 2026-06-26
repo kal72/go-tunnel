@@ -1,0 +1,213 @@
+name: Automation (Quality & Security Checks)
+
+on:
+  pull_request:
+    branches: [ "dev" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ================= 1. CONVENTIONAL PR TITLE VALIDATOR =================
+  pr-title:
+    name: 🏷️ Validate PR Title Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Conventional Commits Adherence
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?: .+"
+          shopt -s nocasematch
+          if [[ ! "$TITLE" =~ $REGEX ]]; then
+            echo "❌ ERROR: PR Title '$TITLE' does not follow Conventional Commits format!"
+            echo ""
+            echo "Allowed prefixes: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+            echo "Example: 'feat: add CLI version check' or 'fix(install): remove sudo requirement'"
+            exit 1
+          else
+            echo "✅ SUCCESS: PR Title '$TITLE' adheres to Conventional Commits!"
+          fi
+
+  # ================= 2. AUTOMATED UNIT TESTING & COVERAGE COMMENTER =================
+  unit-test:
+    name: 🧪 Unit Testing (-race)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for posting PR coverage report comments
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v7
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Execute Unit Tests & Capture Logs
+        run: |
+          echo "::group::Running Unit Tests & Race Detector"
+          set -o pipefail
+          go test -v -race -coverprofile=coverage.out \
+            ./internal/infrastructure/... \
+            ./internal/usecase/... \
+            2>&1 | tee test_output.log
+          echo "::endgroup::"
+
+      - name: Generate Markdown Summary Report
+        id: summary
+        run: |
+          TOTAL=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+          SUMMARY_FILE="coverage_report.md"
+          echo "### 🧪 Unit Test Coverage Report" > $SUMMARY_FILE
+          echo "**Overall Project Coverage:** \`$TOTAL\`" >> $SUMMARY_FILE
+          echo "" >> $SUMMARY_FILE
+          echo "| Package | Coverage |" >> $SUMMARY_FILE
+          echo "| :--- | :---: |" >> $SUMMARY_FILE
+          
+          # Extract package-level coverage figures
+          grep -E "coverage: [0-9.]+% of statements" test_output.log | while read -r line; do
+            PKG=$(echo "$line" | awk '{print $2}' | sed 's|gotunnel/||')
+            COV=$(echo "$line" | sed -n 's/.*coverage: \([0-9.]*%\).*/\1/p')
+            echo "| \`$PKG\` | $COV |" >> $SUMMARY_FILE
+          done
+          
+          cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment Coverage on PR (Sticky Comment)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('coverage_report.md', 'utf8');
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => c.user.type === 'Bot' && c.body.includes('Unit Test Coverage Report'));
+            
+            if (botComment) {
+              console.log("Updating existing bot comment ID:", botComment.id);
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: report
+              });
+            } else {
+              console.log("Creating new bot comment...");
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: report
+              });
+            }
+
+  # ================= 3. GOVULNCHECK =================
+  govulncheck:
+    name: 🛡️ Govulncheck (Vulnerability Scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v7
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck & Build Summary
+        run: |
+          echo "## 🛡️ Govulncheck — Vulnerability Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Run govulncheck, capture output, allow non-zero exit (vulnerabilities found)
+          set +e
+          OUTPUT=$(govulncheck ./... 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ **No vulnerabilities found.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> All dependencies are clean. No known vulnerabilities detected." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Vulnerabilities detected!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Print to console log as well
+          echo "$OUTPUT"
+
+          # Fail the job if vulnerabilities were found
+          exit $EXIT_CODE
+
+  # ================= 4. GOLANGCI-LINT =================
+  golangci-lint:
+    name: 🔍 GolangCI-Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Required for inline PR annotations
+      checks: write         # Required for GitHub check run annotations
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v7
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Run GolangCI-Lint Action
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12
+          args: --timeout=5m
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          echo "## 🔍 GolangCI-Lint Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **No lint issues found.** All checks passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Lint issues detected!** Please check the inline PR annotations in the *Files Changed* tab." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ================= 5. AUTOMATED BUILD CHECK =================
+  build-check:
+    name: 🔨 Build Check (Binary Compile Verification)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v7
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Verify Binary Compilation
+        run: |
+          echo "::group::Compiling All Go Binaries (Server, Proxy, WebUI, Client)"
+          make build
+          echo "::endgroup::"

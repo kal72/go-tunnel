@@ -1,18 +1,19 @@
 package handler
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"html/template"
+	"net/http"
+	"strings"
+
 	domainConfig "gotunnel/internal/domain/config"
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
-	"html/template"
-	"net/http"
-	"strings"
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
 
 	"github.com/google/uuid"
 
@@ -20,26 +21,26 @@ import (
 )
 
 type Handler struct {
-	dashTmpl       *template.Template
-	confTmpl       *template.Template
-	domainTmpl     *template.Template
-	docsTmpl       *template.Template
-	downTmpl       *template.Template
-	tunnelUsecase  usecaseTunnel.TunnelUsecase
-	configUsecase  usecaseConfig.ConfigUsecase
-	settingUsecase usecaseSetting.SettingUsecase
-	settingTmpl    *template.Template
-	masterSecret   string
-	tunnelAddr     string
-	wildcardDomain string
-	gatewayDomain  string
-	acmeEnable       bool
-	maxFreeDomains   int
+	tunnelUsecase    usecaseTunnel.TunnelUsecase
+	settingUsecase   usecaseSetting.SettingUsecase
+	configUsecase    usecaseConfig.ConfigUsecase
+	settingTmpl      *template.Template
+	downTmpl         *template.Template
+	docsTmpl         *template.Template
+	domainTmpl       *template.Template
+	confTmpl         *template.Template
+	dashTmpl         *template.Template
+	masterSecret     string
+	tunnelAddr       string
+	wildcardDomain   string
+	gatewayDomain    string
 	cliLatestVersion string
+	maxFreeDomains   int
+	acmeEnable       bool
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret string, tunnelAddr string, wildcardDomain string, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -75,19 +76,19 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 	))
 
 	return &Handler{
-		dashTmpl:       dashTmpl,
-		confTmpl:       confTmpl,
-		domainTmpl:     domainTmpl,
-		docsTmpl:       docsTmpl,
-		downTmpl:       downTmpl,
-		settingTmpl:    settingTmpl,
-		tunnelUsecase:  tunnelUsecase,
-		configUsecase:  configUsecase,
-		settingUsecase: settingUsecase,
-		masterSecret:   masterSecret,
-		tunnelAddr:     tunnelAddr,
-		wildcardDomain: wildcardDomain,
-		gatewayDomain:  gatewayDomain,
+		dashTmpl:         dashTmpl,
+		confTmpl:         confTmpl,
+		domainTmpl:       domainTmpl,
+		docsTmpl:         docsTmpl,
+		downTmpl:         downTmpl,
+		settingTmpl:      settingTmpl,
+		tunnelUsecase:    tunnelUsecase,
+		configUsecase:    configUsecase,
+		settingUsecase:   settingUsecase,
+		masterSecret:     masterSecret,
+		tunnelAddr:       tunnelAddr,
+		wildcardDomain:   wildcardDomain,
+		gatewayDomain:    gatewayDomain,
 		acmeEnable:       acmeEnable,
 		maxFreeDomains:   maxFreeDomains,
 		cliLatestVersion: cliLatestVersion,
@@ -417,7 +418,7 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 
 	// Validate prefix/domain
 	for _, char := range prefix {
-		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-' || char == '.') {
+		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' && char != '.' {
 			http.Error(w, "invalid characters in domain", http.StatusBadRequest)
 			return
 		}
@@ -451,7 +452,7 @@ func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
 		if h.wildcardDomain != "" {
 			base = strings.TrimPrefix(h.wildcardDomain, "*.")
 		}
-		
+
 		for _, d := range domains {
 			if base != "" && strings.HasSuffix(d.Domain, "."+base) {
 				freeDomainCount++
@@ -496,11 +497,11 @@ func (h *Handler) RemoveDomain(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "ok", "message": "domain removed"})
 }
 
-// generateSubdomain menghasilkan format: app-[16_karakter_hex]
+// generateSubdomain menghasilkan format: app-[16_karakter_hex].
 func generateSubdomain() (string, error) {
 	// 8 bytes akan menghasilkan 16 karakter hexadecimal (karena 1 byte = 2 karakter hex)
 	bytes := make([]byte, 8)
-	
+
 	// Mengisi byte dengan data acak yang aman secara kriptografi
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -511,7 +512,7 @@ func generateSubdomain() (string, error) {
 	randomHex := hex.EncodeToString(bytes)
 
 	// Menggabungkan dengan prefix dan mengembalikan hasil
-	return fmt.Sprintf("app-%s", randomHex), nil
+	return "app-" + randomHex, nil
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

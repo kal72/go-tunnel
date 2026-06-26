@@ -3,7 +3,8 @@ package handler
 import (
 	"context"
 	"embed"
-	"fmt"
+	"encoding/json"
+	"errors"
 	"html/template"
 	"net/http"
 	"strings"
@@ -69,6 +70,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(expiration),
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -86,11 +89,13 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// JWTMiddleware handles JWT validation and revocation check
+// JWTMiddleware handles JWT validation and revocation check.
 func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow login page and assets
@@ -119,7 +124,7 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"unauthorized"}`))
+				_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 				return
 			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -131,7 +136,7 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"unauthorized"}`))
+				_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 				return
 			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -160,7 +165,7 @@ func (h *AuthHandler) APILogin(w http.ResponseWriter, r *http.Request) {
 
 	tokenString, err := h.authUsecase.Login(r.Context(), userStr, passStr)
 	if err != nil {
-		if err == domainErrors.ErrUnauthorized {
+		if errors.Is(err, domainErrors.ErrUnauthorized) {
 			http.Error(w, "Invalid credentials or inactive account", http.StatusUnauthorized)
 			return
 		}
@@ -170,5 +175,5 @@ func (h *AuthHandler) APILogin(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"token":"%s"}`, tokenString)
+	_ = json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }

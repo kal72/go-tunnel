@@ -10,7 +10,7 @@ import (
 //go:generate mockery --name=SettingUsecase --case=underscore --output=mocks --outpkg=mocks
 type SettingUsecase interface {
 	GetSetting(ctx context.Context, key string) (string, error)
-	SetSetting(ctx context.Context, key string, value string) error
+	SetSetting(ctx context.Context, key, value string) error
 	GetAllSettings(ctx context.Context) (map[string]string, error)
 
 	// Typed Helpers
@@ -33,7 +33,7 @@ func (u *settingUsecase) GetSetting(ctx context.Context, key string) (string, er
 	return u.store.GetSetting(ctx, key)
 }
 
-func (u *settingUsecase) SetSetting(ctx context.Context, key string, value string) error {
+func (u *settingUsecase) SetSetting(ctx context.Context, key, value string) error {
 	return u.store.SetSetting(ctx, key, value)
 }
 

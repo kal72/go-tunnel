@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -59,7 +60,7 @@ func (r *DomainRepository) RemoveDomain(ctx context.Context, domain string, user
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("domain not found or unauthorized to delete")
+		return errors.New("domain not found or unauthorized to delete")
 	}
 
 	return nil
