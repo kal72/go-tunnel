@@ -64,6 +64,8 @@ type ServerConfig struct {
 	DBHost             string
 	CORSAllowedOrigins []string
 	JWTExpireHours     int
+	WebJWTExpireHours  int
+	CliJWTExpireHours  int
 	RedisDB            int
 	DomainRedisDB      int
 	MaxFreeDomains     int

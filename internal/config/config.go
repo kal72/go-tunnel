@@ -57,6 +57,8 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 
 		JWTSecret:          get("JWT_SECRET", "defaultjwtsecret"),
 		JWTExpireHours:     parsePort(get("JWT_EXPIRE_HOURS", "24"), 24),
+		WebJWTExpireHours:  parsePort(get("WEB_JWT_EXPIRE_HOURS", get("JWT_EXPIRE_HOURS", "24")), 24),
+		CliJWTExpireHours:  parsePort(get("CLI_JWT_EXPIRE_HOURS", "24"), 24),
 		ACMEEnable:         strings.ToLower(get("ACME_ENABLE", "false")) == "true",
 		CLILatestVersion:   get("CLI_LATEST_VERSION", "v1.0"),
 		ACMECache:          get("ACME_CACHE", "./cert-cache"),

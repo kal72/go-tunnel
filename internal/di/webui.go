@@ -47,7 +47,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
 	configUsecase := usecaseConfig.NewConfigUsecase(configRepo)
 	settingUsecase := usecaseSetting.NewSettingUsecase(settingRepo)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.JWTExpireHours)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 
 	// Handlers
 	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion)

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"time"
 
 	domainUser "gotunnel/internal/domain/user"
 
@@ -11,6 +12,8 @@ import (
 //go:generate mockery --name=AuthUsecase --case=underscore --output=mocks --outpkg=mocks
 type AuthUsecase interface {
 	Login(ctx context.Context, username, password string) (token string, err error)
+	LoginCLI(ctx context.Context, username, password string) (token string, err error)
+	GetWebExpireDuration() time.Duration
 	VerifyToken(ctx context.Context, token string) (*domainUser.User, error)
 	Logout(ctx context.Context, token string) error
 	CreateUser(ctx context.Context, username, password string, role int16) error

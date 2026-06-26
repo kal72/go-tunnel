@@ -18,45 +18,54 @@ import (
 )
 
 type authUsecase struct {
-	userRepo       domainUser.UserRepository
-	store          domainTunnel.TunnelStore
-	jwtSecret      string
-	jwtExpireHours int
+	userRepo          domainUser.UserRepository
+	store             domainTunnel.TunnelStore
+	jwtSecret         string
+	webJWTExpireHours int
+	cliJWTExpireHours int
 }
 
-func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string, jwtExpireHours int) AuthUsecase {
-	if jwtExpireHours <= 0 {
-		jwtExpireHours = 24
+func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string, webExpireHours, cliExpireHours int) AuthUsecase {
+	if webExpireHours <= 0 {
+		webExpireHours = 24
+	}
+	if cliExpireHours <= 0 {
+		cliExpireHours = 720
 	}
 	return &authUsecase{
-		userRepo:       userRepo,
-		store:          store,
-		jwtSecret:      jwtSecret,
-		jwtExpireHours: jwtExpireHours,
+		userRepo:          userRepo,
+		store:             store,
+		jwtSecret:         jwtSecret,
+		webJWTExpireHours: webExpireHours,
+		cliJWTExpireHours: cliExpireHours,
 	}
 }
 
-func (u *authUsecase) Login(ctx context.Context, username, password string) (string, error) {
+func (u *authUsecase) GetWebExpireDuration() time.Duration {
+	return time.Duration(u.webJWTExpireHours) * time.Hour
+}
+
+func (u *authUsecase) authenticateUser(ctx context.Context, username, password string) (*domainUser.User, error) {
 	user, err := u.userRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if user == nil {
-		return "", domainErrors.ErrUnauthorized
-	}
-	if user.Status != 1 {
-		return "", domainErrors.ErrUnauthorized
+	if user == nil || user.Status != 1 {
+		return nil, domainErrors.ErrUnauthorized
 	}
 
 	if !util.CheckPasswordHash(password, user.Password) {
-		return "", domainErrors.ErrUnauthorized
+		return nil, domainErrors.ErrUnauthorized
 	}
+	return user, nil
+}
 
+func (u *authUsecase) issueToken(ctx context.Context, user *domainUser.User, expireHours int) (string, error) {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	csrfToken := hex.EncodeToString(b)
 
-	expiration := time.Duration(u.jwtExpireHours) * time.Hour
+	expiration := time.Duration(expireHours) * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID.String(),
 		"user": user.Username,
@@ -76,6 +85,22 @@ func (u *authUsecase) Login(ctx context.Context, username, password string) (str
 	}
 
 	return tokenString, nil
+}
+
+func (u *authUsecase) Login(ctx context.Context, username, password string) (string, error) {
+	user, err := u.authenticateUser(ctx, username, password)
+	if err != nil {
+		return "", err
+	}
+	return u.issueToken(ctx, user, u.webJWTExpireHours)
+}
+
+func (u *authUsecase) LoginCLI(ctx context.Context, username, password string) (string, error) {
+	user, err := u.authenticateUser(ctx, username, password)
+	if err != nil {
+		return "", err
+	}
+	return u.issueToken(ctx, user, u.cliJWTExpireHours)
 }
 
 func (u *authUsecase) VerifyToken(ctx context.Context, tokenStr string) (*domainUser.User, error) {

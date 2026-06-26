@@ -106,7 +106,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.JWTExpireHours)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 	settingUsecase := usecaseSetting.NewSettingUsecase(postgresrepo.NewSettingRepository(db))
 
 	// Handlers

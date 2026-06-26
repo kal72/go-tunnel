@@ -64,7 +64,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set cookie
-	expiration := 24 * time.Hour
+	expiration := h.authUsecase.GetWebExpireDuration()
 	http.SetCookie(w, &http.Cookie{
 		Name:     jwtCookieName,
 		Value:    tokenString,
@@ -165,7 +165,7 @@ func (h *AuthHandler) APILogin(w http.ResponseWriter, r *http.Request) {
 	userStr := r.FormValue("username")
 	passStr := r.FormValue("password")
 
-	tokenString, err := h.authUsecase.Login(r.Context(), userStr, passStr)
+	tokenString, err := h.authUsecase.LoginCLI(r.Context(), userStr, passStr)
 	if err != nil {
 		if errors.Is(err, domainErrors.ErrUnauthorized) {
 			http.Error(w, "Invalid credentials or inactive account", http.StatusUnauthorized)
