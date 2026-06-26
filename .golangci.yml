@@ -1,5 +1,6 @@
 # golangci-lint configuration for go-tunnel
 # Compatible with golangci-lint v2.x
+version: "2"
 
 linters:
   # Start from a clean slate, only enable what we need
