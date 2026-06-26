@@ -29,6 +29,20 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		return def
 	}
 
+	parseSlice := func(val string) []string {
+		if val == "" {
+			return nil
+		}
+		parts := strings.Split(val, ",")
+		var res []string
+		for _, p := range parts {
+			if trimmed := strings.TrimSpace(p); trimmed != "" {
+				res = append(res, trimmed)
+			}
+		}
+		return res
+	}
+
 	s := &domainConfig.ServerConfig{
 		GatewayDomain:  get("GATEWAY_DOMAIN", ""),
 		GatewayPort:    parsePort(get("GATEWAY_PORT", "8443"), 8443),
@@ -41,25 +55,26 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 
 		MaxFreeDomains: parsePort(get("MAX_FREE_DOMAINS", "5"), 5),
 
-		JWTSecret:        get("JWT_SECRET", "defaultjwtsecret"),
-		JWTExpireHours:   parsePort(get("JWT_EXPIRE_HOURS", "24"), 24),
-		ACMEEnable:       strings.ToLower(get("ACME_ENABLE", "false")) == "true",
-		CLILatestVersion: get("CLI_LATEST_VERSION", "v1.0"),
-		ACMECache:        get("ACME_CACHE", "./cert-cache"),
-		ACMEEnv:          get("ACME_ENV", "staging"), // production or staging
-		RedisAddr:        get("REDIS_ADDR", "localhost:6379"),
-		RedisPass:        get("REDIS_PASS", ""),
-		RedisDB:          parsePort(get("REDIS_DB", "0"), 0),
-		WildcardDomain:   get("WILDCARD_DOMAIN", ""),
-		WildcardCertPath: get("WILDCARD_CERT_PATH", ""),
-		WildcardKeyPath:  get("WILDCARD_KEY_PATH", ""),
-		DomainRedisDB:    parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
-		DBHost:           get("DB_HOST", "localhost"),
-		DBPort:           parsePort(get("DB_PORT", "5432"), 5432),
-		DBUser:           get("DB_USER", "postgres"),
-		DBPass:           get("DB_PASS", "postgres"),
-		DBName:           get("DB_NAME", "gotunnel"),
-		DBSSLMode:        get("DB_SSLMODE", "disable"),
+		JWTSecret:          get("JWT_SECRET", "defaultjwtsecret"),
+		JWTExpireHours:     parsePort(get("JWT_EXPIRE_HOURS", "24"), 24),
+		ACMEEnable:         strings.ToLower(get("ACME_ENABLE", "false")) == "true",
+		CLILatestVersion:   get("CLI_LATEST_VERSION", "v1.0"),
+		ACMECache:          get("ACME_CACHE", "./cert-cache"),
+		ACMEEnv:            get("ACME_ENV", "staging"), // production or staging
+		RedisAddr:          get("REDIS_ADDR", "localhost:6379"),
+		RedisPass:          get("REDIS_PASS", ""),
+		RedisDB:            parsePort(get("REDIS_DB", "0"), 0),
+		WildcardDomain:     get("WILDCARD_DOMAIN", ""),
+		WildcardCertPath:   get("WILDCARD_CERT_PATH", ""),
+		WildcardKeyPath:    get("WILDCARD_KEY_PATH", ""),
+		DomainRedisDB:      parsePort(get("DOMAIN_REDIS_DB", "1"), 1),
+		DBHost:             get("DB_HOST", "localhost"),
+		DBPort:             parsePort(get("DB_PORT", "5432"), 5432),
+		DBUser:             get("DB_USER", "postgres"),
+		DBPass:             get("DB_PASS", "postgres"),
+		DBName:             get("DB_NAME", "gotunnel"),
+		DBSSLMode:          get("DB_SSLMODE", "disable"),
+		CORSAllowedOrigins: parseSlice(get("CORS_ALLOWED_ORIGINS", "*")),
 	}
 
 	if strings.TrimSpace(s.GatewayDomain) == "" {

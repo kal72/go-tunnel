@@ -1,18 +1,16 @@
-package api
+package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"gotunnel/internal/domain/config"
+	domainConfig "gotunnel/internal/domain/config"
 	usecaseConfig "gotunnel/internal/usecase/config"
-
-	webhandler "gotunnel/internal/delivery/web/handler"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
+// CLIHandler serves API endpoints consumed by the gotunnel CLI client.
 type CLIHandler struct {
 	configUsecase usecaseConfig.ConfigUsecase
 	tunnelAddr    string
@@ -20,6 +18,7 @@ type CLIHandler struct {
 	acmeEnable    bool
 }
 
+// NewCLIHandler creates a new CLIHandler.
 func NewCLIHandler(configUsecase usecaseConfig.ConfigUsecase, tunnelAddr string, acmeEnable bool, latestVersion string) *CLIHandler {
 	return &CLIHandler{
 		configUsecase: configUsecase,
@@ -31,7 +30,7 @@ func NewCLIHandler(configUsecase usecaseConfig.ConfigUsecase, tunnelAddr string,
 
 // ClientGetConfigs returns a list of config names for the CLI.
 func (h *CLIHandler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
-	userID, _ := r.Context().Value(webhandler.UserIDKey).(string)
+	userID, _ := r.Context().Value(UserIDKey).(string)
 	uid, _ := uuid.Parse(userID)
 
 	configs, err := h.configUsecase.GetConfigsByUserID(r.Context(), uid)
@@ -40,7 +39,7 @@ func (h *CLIHandler) ClientGetConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	names := make([]map[string]string, 0)
+	names := make([]map[string]string, 0, len(configs))
 	for _, c := range configs {
 		names = append(names, map[string]string{"name": c.Name})
 	}
@@ -56,7 +55,7 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := r.Context().Value(webhandler.UserIDKey).(string)
+	userID, _ := r.Context().Value(UserIDKey).(string)
 	uid, _ := uuid.Parse(userID)
 
 	cfg, err := h.configUsecase.GetConfigByName(r.Context(), uid, name)
@@ -69,21 +68,16 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientConfig := config.ClientAppConfig{
+	clientConfig := domainConfig.ClientAppConfig{
 		TunnelAddr:    h.tunnelAddr,
 		SkipTLSVerify: !h.acmeEnable,
 		ClientID:      cfg.ID.String(),
 		ClientName:    cfg.Name,
-		AuthToken:     "", // Client uses its own JWT
+		AuthToken:     "", // Client uses its own JWT.
 		Tunnels:       cfg.Tunnels,
 	}
 
 	writeJSON(w, clientConfig)
-}
-
-func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
 }
 
 // ClientGetVersion returns the latest version info for the CLI.

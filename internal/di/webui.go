@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"gotunnel/assets"
-	api "gotunnel/internal/delivery/api/handler"
 	"gotunnel/internal/delivery/web"
 	webui "gotunnel/internal/delivery/web/handler"
 	domainConfig "gotunnel/internal/domain/config"
@@ -57,10 +56,10 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
-	cliH := api.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
+	cliH := webui.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
 
 	// Router
-	router := web.SetupRouter(h, authH, userH, cliH, http.FS(assets.EmbeddedFS))
+	router := web.SetupRouter(h, authH, userH, cliH, env.CORSAllowedOrigins, http.FS(assets.EmbeddedFS))
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")

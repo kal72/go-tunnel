@@ -116,6 +116,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
 		"Tunnels":        tunnels,
@@ -124,6 +125,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		"WildcardDomain": h.wildcardDomain,
 		"UserRole":       role,
 		"UserName":       username,
+		"CSRFToken":      csrf,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -135,11 +137,13 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
 		"DomainEnabled":    h.wildcardDomain != "",
 		"UserRole":         role,
 		"UserName":         username,
+		"CSRFToken":        csrf,
 		"CLILatestVersion": h.cliLatestVersion,
 	}
 	if err := h.downTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -155,12 +159,14 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 	}
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	data := map[string]any{
 		"DomainEnabled":  true,
 		"WildcardDomain": h.wildcardDomain,
 		"GatewayDomain":  h.gatewayDomain,
 		"UserRole":       role,
 		"UserName":       username,
+		"CSRFToken":      csrf,
 	}
 	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -171,12 +177,14 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	data := map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
 		"GatewayDomain": h.gatewayDomain,
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 		"HideSidebar":   true,
 	}
 	if err := h.docsTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -188,12 +196,14 @@ func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
 		"DomainEnabled": h.wildcardDomain != "",
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

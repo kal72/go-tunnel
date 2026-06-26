@@ -44,9 +44,11 @@ func AdminMiddleware(next http.Handler) http.Handler {
 func (h *UserHandler) UsersPage(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	_ = h.tmpl.ExecuteTemplate(w, "base", map[string]any{
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 		"DomainEnabled": true, // Assume domain enabled or we can pass actual value if needed, but we don't have wildcardDomain here. Let's just pass UserRole.
 	})
 }

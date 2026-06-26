@@ -45,34 +45,35 @@ type ClientConfig struct {
 }
 
 type ServerConfig struct {
-	DBHost           string
-	JWTSecret        string
-	TunnelDomain     string
-	DBName           string
-	WebUIDomain      string
-	DBPass           string
-	DBUser           string
-	GatewayDomain    string
-	DBSSLMode        string
-	WildcardKeyPath  string
-	WildcardDomain   string
-	WildcardCertPath string
-	CLILatestVersion string
-	ACMECache        string
-	ACMEEnv          string
-	RedisAddr        string
-	RedisPass        string
-	ProxyHttpsPort   int
-	RedisDB          int
-	JWTExpireHours   int
-	DomainRedisDB    int
-	MaxFreeDomains   int
-	DBPort           int
-	ProxyHttpPort    int
-	WebUIPort        int
-	TunnelPort       int
-	GatewayPort      int
-	ACMEEnable       bool
+	ACMEEnv            string
+	WildcardKeyPath    string
+	TunnelDomain       string
+	DBName             string
+	WebUIDomain        string
+	DBPass             string
+	DBUser             string
+	GatewayDomain      string
+	DBSSLMode          string
+	RedisAddr          string
+	WildcardDomain     string
+	WildcardCertPath   string
+	CLILatestVersion   string
+	ACMECache          string
+	JWTSecret          string
+	RedisPass          string
+	DBHost             string
+	CORSAllowedOrigins []string
+	JWTExpireHours     int
+	RedisDB            int
+	DomainRedisDB      int
+	MaxFreeDomains     int
+	DBPort             int
+	ProxyHttpPort      int
+	WebUIPort          int
+	TunnelPort         int
+	GatewayPort        int
+	ProxyHttpsPort     int
+	ACMEEnable         bool
 }
 
 type ClientAppConfig struct {

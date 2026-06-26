@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -50,11 +52,16 @@ func (u *authUsecase) Login(ctx context.Context, username, password string) (str
 		return "", domainErrors.ErrUnauthorized
 	}
 
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	csrfToken := hex.EncodeToString(b)
+
 	expiration := time.Duration(u.jwtExpireHours) * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID.String(),
 		"user": user.Username,
 		"role": user.Role,
+		"csrf": csrfToken,
 		"exp":  time.Now().Add(expiration).Unix(),
 	})
 
@@ -104,6 +111,10 @@ func (u *authUsecase) VerifyToken(ctx context.Context, tokenStr string) (*domain
 	user, err := u.userRepo.GetUserByUsername(ctx, username)
 	if err != nil || user == nil {
 		return nil, domainErrors.ErrUnauthorized
+	}
+
+	if csrf, ok := claims["csrf"].(string); ok {
+		user.CSRFToken = csrf
 	}
 
 	return user, nil
