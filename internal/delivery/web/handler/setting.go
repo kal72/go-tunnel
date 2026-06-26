@@ -18,7 +18,7 @@ func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 	data["UserRole"] = role
 	data["UserName"] = username
 	data["CSRFToken"] = csrf
-	data["DomainEnabled"] = h.wildcardDomain != ""
+	data["DomainEnabled"] = true
 
 	err := h.settingTmpl.ExecuteTemplate(w, "base", data)
 	if err != nil {

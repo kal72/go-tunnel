@@ -18,10 +18,7 @@ func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func()
 		return nil, nil, fmt.Errorf("init db: %w", err)
 	}
 
-	var domainStore domainTunnel.DomainStore
-	if env.WildcardDomain != "" {
-		domainStore = postgresrepo.NewDomainRepository(db)
-	}
+	var domainStore domainTunnel.DomainStore = postgresrepo.NewDomainRepository(db)
 
 	hostPolicy := func(ctx context.Context, host string) error {
 		// Just a basic ACME host policy

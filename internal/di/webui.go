@@ -32,10 +32,7 @@ func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
 		return nil, nil, fmt.Errorf("init db: %w", err)
 	}
 
-	var domainStore domainTunnel.DomainStore
-	if env.WildcardDomain != "" {
-		domainStore = postgresrepo.NewDomainRepository(db)
-	}
+	var domainStore domainTunnel.DomainStore = postgresrepo.NewDomainRepository(db)
 
 	tunnelAddr := env.TunnelDomain
 	if env.ProxyHttpsPort != 0 && env.ProxyHttpsPort != 443 {
