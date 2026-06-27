@@ -9,9 +9,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"gotunnel/assets"
+	"gotunnel/internal/config"
 	"gotunnel/internal/delivery/web"
 	webui "gotunnel/internal/delivery/web/handler"
-	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
 	postgresrepo "gotunnel/internal/infrastructure/database/postgres"

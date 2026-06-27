@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	tunnelhandler "gotunnel/internal/delivery/tcp"
 	"gotunnel/internal/config"
+	tunnelhandler "gotunnel/internal/delivery/tcp"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cache/memory"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
