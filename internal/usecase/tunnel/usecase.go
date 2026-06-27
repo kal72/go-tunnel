@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=TunnelUsecase --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type TunnelUsecase interface {
 	RegisterTunnel(ctx context.Context, sessionID string, info domainTunnel.TunnelInfo) error
 	UnregisterTunnel(ctx context.Context, sessionID string) error

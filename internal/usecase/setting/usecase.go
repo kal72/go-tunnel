@@ -7,7 +7,7 @@ import (
 	domainSetting "gotunnel/internal/domain/setting"
 )
 
-//go:generate mockery --name=SettingUsecase --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type SettingUsecase interface {
 	GetSetting(ctx context.Context, key string) (string, error)
 	SetSetting(ctx context.Context, key, value string) error

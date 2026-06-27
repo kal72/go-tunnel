@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=AuthUsecase --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type AuthUsecase interface {
 	Login(ctx context.Context, username, password string) (token string, err error)
 	LoginCLI(ctx context.Context, username, password string) (token string, err error)

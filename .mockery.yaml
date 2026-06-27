@@ -1,0 +1,8 @@
+all: false
+packages:
+  gotunnel/internal:
+    config:
+      recursive: true
+      dir: "{{.InterfaceDir}}/mocks"
+      filename: "mock_{{.InterfaceName | snakecase}}.go"
+      pkgname: "mocks"

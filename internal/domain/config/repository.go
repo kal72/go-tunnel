@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=ConfigRepository --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type ConfigRepository interface {
 	GetConfigByName(ctx context.Context, userID uuid.UUID, name string) (*ClientConfig, error)
 	GetConfigByID(ctx context.Context, id uuid.UUID) (*ClientConfig, error)

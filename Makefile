@@ -53,11 +53,15 @@ build-clients:
 
 test:
 	@echo "Running unit tests..."
-	$(GOTEST) -v -race ./...
+	$(GOTEST) -v -race -coverprofile=coverage.out $(shell go list ./internal/... | grep -v "/mocks")
+
+test-report:
+	@echo "Generating HTML coverage report..."
+	go tool cover -html=coverage.out
 
 generate:
 	@echo "Generating mocks with mockery..."
-	$(GOGENERATE) ./...
+	mockery
 
 run-server:
 	@echo "Starting server..."
