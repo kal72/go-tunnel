@@ -51,14 +51,17 @@ build-clients:
 	GOOS=linux GOARCH=arm64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-linux-arm64 ./cmd/client/main.go
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-X main.ServerURL=$(SERVER_URL) -X main.version=$(VERSION)" -o ./downloads/gotunnel-windows-amd64.exe ./cmd/client/main.go
 
-
 test:
 	@echo "Running unit tests..."
-	$(GOTEST) -v -race ./...
+	$(GOTEST) -v -race -coverprofile=coverage.out $(shell go list ./internal/... | grep -v "/mocks")
+
+test-report:
+	@echo "Generating HTML coverage report..."
+	go tool cover -html=coverage.out
 
 generate:
 	@echo "Generating mocks with mockery..."
-	$(GOGENERATE) ./...
+	mockery
 
 run-server:
 	@echo "Starting server..."
@@ -103,3 +106,7 @@ migrate-up:
 migrate-down:
 	@echo "Running migrations down..."
 	migrate -path db/migrations -database $(DB_URL) down -all
+
+lint:
+	@echo "Running golangci linter..."
+	golangci-lint run

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"gotunnel/internal/config"
 	tunnelhandler "gotunnel/internal/delivery/tcp"
-	domainConfig "gotunnel/internal/domain/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cache/memory"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
@@ -27,7 +27,7 @@ import (
 type TunnelApp struct {
 	tunnelSrv *tunnelhandler.Server
 	httpSrv   *http.Server
-	cfg       *domainConfig.ServerConfig
+	cfg       *config.ServerConfig
 }
 
 func (a *TunnelApp) Run(ctx context.Context) error {
@@ -79,7 +79,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 	}
 }
 
-func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) {
+func BuildTunnelApp(env *config.ServerConfig) (*TunnelApp, func(), error) {
 	db, err := postgresrepo.InitDB(env)
 	if err != nil {
 		return nil, nil, fmt.Errorf("init db: %w", err)
@@ -91,12 +91,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 	tunnelStore := redisrepo.NewTunnelRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())
 
-	var domainStore domainTunnel.DomainStore
-	if env.WildcardDomain != "" {
-		domainStore = postgresrepo.NewDomainRepository(db)
-	} else {
-		log.Printf("[gateway] Domain Management disabled (WILDCARD_DOMAIN is empty)")
-	}
+	var domainStore domainTunnel.DomainStore = postgresrepo.NewDomainRepository(db)
 
 	// HostRegistry
 	hostRegistry := memory.NewHostRegistry()
@@ -111,7 +106,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.JWTExpireHours)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 	settingUsecase := usecaseSetting.NewSettingUsecase(postgresrepo.NewSettingRepository(db))
 
 	// Handlers

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=TunnelStore --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type TunnelStore interface {
 	Ping(ctx context.Context)
 	SetTunnel(ctx context.Context, sessionID string, info TunnelInfo) error
@@ -24,7 +24,7 @@ type TunnelStore interface {
 	RemoveActiveDomain(ctx context.Context, domain string) error
 }
 
-//go:generate mockery --name=DomainStore --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type DomainStore interface {
 	Ping(ctx context.Context)
 	AddDomain(ctx context.Context, domain string, userID uuid.UUID) error

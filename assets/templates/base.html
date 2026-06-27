@@ -5,6 +5,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ .CSRFToken }}">
   <title>Tunnel Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -14,6 +15,23 @@
   </script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script>
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+      options = options || {};
+      options.headers = options.headers || {};
+      const method = (options.method || 'GET').toUpperCase();
+      if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const token = meta ? meta.content : '';
+        if (options.headers instanceof Headers) {
+          options.headers.set('X-CSRF-Token', token);
+        } else {
+          options.headers['X-CSRF-Token'] = token;
+        }
+      }
+      return originalFetch(url, options);
+    };
+
     document.addEventListener('alpine:init', () => {
       Alpine.store('app', {
         dark: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),

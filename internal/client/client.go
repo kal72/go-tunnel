@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"gotunnel/internal/domain/config"
+	clientconfig "gotunnel/internal/client/config"
 
 	"bufio"
 	"crypto/tls"
@@ -23,13 +23,13 @@ import (
 )
 
 type Client struct {
-	cfg    *config.ClientAppConfig
+	cfg    *clientconfig.TunnelClientConfig
 	logger *zap.Logger
 	routes map[string]string // hostname -> target
 	modes  map[string]string
 }
 
-func NewClient(cfg *config.ClientAppConfig) *Client {
+func NewClient(cfg *clientconfig.TunnelClientConfig) *Client {
 	r := make(map[string]string, len(cfg.Tunnels))
 	m := make(map[string]string)
 	for _, t := range cfg.Tunnels {

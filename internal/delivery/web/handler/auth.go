@@ -21,9 +21,10 @@ const (
 type contextKey string
 
 const (
-	UserRoleKey contextKey = "user_role"
-	UserNameKey contextKey = "user_name"
-	UserIDKey   contextKey = "user_id"
+	UserRoleKey  contextKey = "user_role"
+	UserNameKey  contextKey = "user_name"
+	UserIDKey    contextKey = "user_id"
+	CSRFTokenKey contextKey = "csrf_token"
 )
 
 // AuthHandler handles login and session management.
@@ -63,7 +64,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set cookie
-	expiration := 24 * time.Hour
+	expiration := h.authUsecase.GetWebExpireDuration()
 	http.SetCookie(w, &http.Cookie{
 		Name:     jwtCookieName,
 		Value:    tokenString,
@@ -71,7 +72,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(expiration),
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -90,7 +91,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	})
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
@@ -147,6 +148,7 @@ func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, UserRoleKey, user.Role)
 		ctx = context.WithValue(ctx, UserNameKey, strings.ToUpper(user.Username))
 		ctx = context.WithValue(ctx, UserIDKey, user.ID.String())
+		ctx = context.WithValue(ctx, CSRFTokenKey, user.CSRFToken)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
@@ -163,7 +165,7 @@ func (h *AuthHandler) APILogin(w http.ResponseWriter, r *http.Request) {
 	userStr := r.FormValue("username")
 	passStr := r.FormValue("password")
 
-	tokenString, err := h.authUsecase.Login(r.Context(), userStr, passStr)
+	tokenString, err := h.authUsecase.LoginCLI(r.Context(), userStr, passStr)
 	if err != nil {
 		if errors.Is(err, domainErrors.ErrUnauthorized) {
 			http.Error(w, "Invalid credentials or inactive account", http.StatusUnauthorized)

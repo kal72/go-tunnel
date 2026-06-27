@@ -51,8 +51,7 @@ jobs:
           echo "::group::Running Unit Tests & Race Detector"
           set -o pipefail
           go test -v -race -coverprofile=coverage.out \
-            ./internal/infrastructure/... \
-            ./internal/usecase/... \
+            $(go list ./internal/infrastructure... ./internal/usecase... ./internal/delivery... | grep -v "/mocks") \
             2>&1 | tee test_output.log
           echo "::endgroup::"
 

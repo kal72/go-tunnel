@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-func InitDB(env *domainConfig.ServerConfig) (*sqlx.DB, error) {
+//coverage:ignore file
+func InitDB(env *config.ServerConfig) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		env.DBHost, env.DBPort, env.DBUser, env.DBPass, env.DBName, env.DBSSLMode)
 

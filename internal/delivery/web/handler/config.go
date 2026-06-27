@@ -116,14 +116,16 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
 		"Tunnels":        tunnels,
-		"DomainEnabled":  h.wildcardDomain != "",
+		"DomainEnabled":  true,
 		"TunnelAddr":     h.tunnelAddr,
 		"WildcardDomain": h.wildcardDomain,
 		"UserRole":       role,
 		"UserName":       username,
+		"CSRFToken":      csrf,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -135,11 +137,13 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
-		"DomainEnabled":    h.wildcardDomain != "",
+		"DomainEnabled":    true,
 		"UserRole":         role,
 		"UserName":         username,
+		"CSRFToken":        csrf,
 		"CLILatestVersion": h.cliLatestVersion,
 	}
 	if err := h.downTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -149,18 +153,16 @@ func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
 
 // Domains renders the domain management page.
 func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
-	if h.wildcardDomain == "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	data := map[string]any{
 		"DomainEnabled":  true,
 		"WildcardDomain": h.wildcardDomain,
 		"GatewayDomain":  h.gatewayDomain,
 		"UserRole":       role,
 		"UserName":       username,
+		"CSRFToken":      csrf,
 	}
 	if err := h.domainTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -171,12 +173,14 @@ func (h *Handler) Domains(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	data := map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
-		"DomainEnabled": h.wildcardDomain != "",
+		"DomainEnabled": true,
 		"GatewayDomain": h.gatewayDomain,
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 		"HideSidebar":   true,
 	}
 	if err := h.docsTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -188,12 +192,14 @@ func (h *Handler) Docs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Configs(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	if err := h.confTmpl.ExecuteTemplate(w, "base", map[string]any{
 		"TunnelAddr":    h.tunnelAddr,
-		"DomainEnabled": h.wildcardDomain != "",
+		"DomainEnabled": true,
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -358,10 +364,6 @@ func (h *Handler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 
 // ListDomains returns all domains from Redis.
 func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {
-	if h.wildcardDomain == "" {
-		http.Error(w, "Domain management is disabled (WILDCARD_DOMAIN is empty)", http.StatusForbidden)
-		return
-	}
 	if h.tunnelUsecase == nil {
 		writeJSON(w, []any{})
 		return
@@ -384,10 +386,6 @@ func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {
 
 // AddDomain adds a new domain to Redis.
 func (h *Handler) AddDomain(w http.ResponseWriter, r *http.Request) {
-	if h.wildcardDomain == "" {
-		http.Error(w, "Domain management is disabled", http.StatusForbidden)
-		return
-	}
 	if h.tunnelUsecase == nil {
 		http.Error(w, "domain store not configured", http.StatusInternalServerError)
 		return

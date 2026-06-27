@@ -12,7 +12,7 @@ type Setting struct {
 	Value     string    `db:"value" json:"value"`
 }
 
-//go:generate mockery --name=SettingStore --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type SettingStore interface {
 	GetSetting(ctx context.Context, key string) (string, error)
 	SetSetting(ctx context.Context, key string, value string) error
