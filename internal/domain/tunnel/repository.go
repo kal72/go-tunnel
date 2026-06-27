@@ -15,9 +15,10 @@ type TunnelStore interface {
 	ListTunnels(ctx context.Context) ([]TunnelInfo, error)
 
 	// Token management
-	SetToken(ctx context.Context, token string, expiration time.Duration) error
+	SetToken(ctx context.Context, userID, token string, expiration time.Duration) error
 	IsTokenRevoked(ctx context.Context, token string) (bool, error)
 	RevokeToken(ctx context.Context, token string) error
+	RevokeUserTokens(ctx context.Context, userID string) error
 
 	// Active tunnel global lock
 	SetActiveDomain(ctx context.Context, domain string, sessionID string) error

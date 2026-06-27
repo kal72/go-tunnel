@@ -29,7 +29,11 @@
           options.headers['X-CSRF-Token'] = token;
         }
       }
-      return originalFetch(url, options);
+      const res = await originalFetch(url, options);
+      if (res.status === 401 && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      return res;
     };
 
     document.addEventListener('alpine:init', () => {

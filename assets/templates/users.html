@@ -55,6 +55,14 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </button>
+                  {{if eq .UserRole 1}}
+                  <button @click="revokeTokens(u)" title="Revoke All Tokens"
+                    class="text-gray-400 dark:text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors p-1 rounded-md hover:bg-yellow-50 dark:hover:bg-yellow-500/10 focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </button>
+                  {{end}}
                   <button @click="deleteUser(u)" title="Delete User"
                     class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,6 +237,20 @@
           const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
           if (res.ok) {
             await this.fetchUsers();
+          } else {
+            alert(`Failed: ${await res.text()}`);
+          }
+        } catch (e) {
+          alert(`Error: ${e.message}`);
+        }
+      },
+
+      async revokeTokens(user) {
+        if (!confirm(`Are you sure you want to revoke all JWT tokens for ${user.username}?`)) return;
+        try {
+          const res = await fetch(`/api/users/${user.id}/revoke-tokens`, { method: 'POST' });
+          if (res.ok) {
+            alert(`All tokens for ${user.username} have been revoked.`);
           } else {
             alert(`Failed: ${await res.text()}`);
           }

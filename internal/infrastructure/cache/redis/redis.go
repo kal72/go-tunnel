@@ -79,8 +79,19 @@ func (s *TunnelRedisStore) ListTunnels(ctx context.Context) ([]domainTunnel.Tunn
 	return infos, nil
 }
 
-func (s *TunnelRedisStore) SetToken(ctx context.Context, token string, expiration time.Duration) error {
-	return s.client.Set(ctx, s.authPrefix+token, "valid", expiration).Err()
+func (s *TunnelRedisStore) SetToken(ctx context.Context, userID, token string, expiration time.Duration) error {
+	err := s.client.Set(ctx, s.authPrefix+token, "valid", expiration).Err()
+	if err != nil {
+		return err
+	}
+	if userID != "" {
+		userTokensKey := "user_tokens:" + userID
+		if err := s.client.SAdd(ctx, userTokensKey, token).Err(); err != nil {
+			return err
+		}
+		_ = s.client.Expire(ctx, userTokensKey, 30*24*time.Hour)
+	}
+	return nil
 }
 
 func (s *TunnelRedisStore) IsTokenRevoked(ctx context.Context, token string) (bool, error) {
@@ -100,6 +111,18 @@ func (s *TunnelRedisStore) RevokeToken(ctx context.Context, token string) error 
 	// But deleting it also works as IsTokenRevoked returns true if not found.
 	// For "revoke anytime", deleting is simplest.
 	return s.client.Del(ctx, s.authPrefix+token).Err()
+}
+
+func (s *TunnelRedisStore) RevokeUserTokens(ctx context.Context, userID string) error {
+	userTokensKey := "user_tokens:" + userID
+	tokens, err := s.client.SMembers(ctx, userTokensKey).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return err
+	}
+	for _, t := range tokens {
+		_ = s.client.Del(ctx, s.authPrefix+t).Err()
+	}
+	return s.client.Del(ctx, userTokensKey).Err()
 }
 
 func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain, sessionID string) error {

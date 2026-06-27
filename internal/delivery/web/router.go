@@ -80,6 +80,7 @@ func SetupRouter(
 				r.Post("/api/users", userH.CreateUser)
 				r.Put("/api/users/{id}/status", userH.UpdateStatus)
 				r.Put("/api/users/{id}/password", userH.UpdatePassword)
+				r.Post("/api/users/{id}/revoke-tokens", userH.RevokeTokens)
 				r.Delete("/api/users/{id}", userH.DeleteUser)
 			})
 		})
