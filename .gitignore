@@ -30,6 +30,7 @@ config.yaml
 .idea/
 .vscode/
 .DS_Store
+*.bak
 
 tmp
 downloads
