@@ -13,7 +13,7 @@ import (
 	"time"
 
 	tunnelhandler "gotunnel/internal/delivery/tcp"
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cache/memory"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
@@ -27,7 +27,7 @@ import (
 type TunnelApp struct {
 	tunnelSrv *tunnelhandler.Server
 	httpSrv   *http.Server
-	cfg       *domainConfig.ServerConfig
+	cfg       *config.ServerConfig
 }
 
 func (a *TunnelApp) Run(ctx context.Context) error {
@@ -79,7 +79,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 	}
 }
 
-func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) {
+func BuildTunnelApp(env *config.ServerConfig) (*TunnelApp, func(), error) {
 	db, err := postgresrepo.InitDB(env)
 	if err != nil {
 		return nil, nil, fmt.Errorf("init db: %w", err)

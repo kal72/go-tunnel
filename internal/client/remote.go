@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"gotunnel/internal/domain/config"
+	clientconfig "gotunnel/internal/client/config"
 
 	"encoding/json"
 	"fmt"
@@ -54,7 +54,7 @@ func ListConfigs(serverURL string) error {
 	return nil
 }
 
-func FetchConfig(serverURL, configName string) (*config.ClientAppConfig, error) {
+func FetchConfig(serverURL, configName string) (*clientconfig.TunnelClientConfig, error) {
 	creds, err := ReadCredentials()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func FetchConfig(serverURL, configName string) (*config.ClientAppConfig, error) 
 		return nil, fmt.Errorf("server returned status %d", resp.StatusCode)
 	}
 
-	var cfg config.ClientAppConfig
+	var cfg clientconfig.TunnelClientConfig
 	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to decode config %s: %w", configName, err)
 	}

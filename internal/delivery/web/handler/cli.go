@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/delivery/web/dto"
 	usecaseConfig "gotunnel/internal/usecase/config"
 
 	"github.com/go-chi/chi/v5"
@@ -68,7 +68,7 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientConfig := domainConfig.ClientAppConfig{
+	clientConfig := dto.ClientConfigDTO{
 		TunnelAddr:    h.tunnelAddr,
 		SkipTLSVerify: !h.acmeEnable,
 		ClientID:      cfg.ID.String(),

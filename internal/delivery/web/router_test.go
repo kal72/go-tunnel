@@ -9,7 +9,20 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gotunnel/internal/delivery/web/handler"
+	webMiddleware "gotunnel/internal/delivery/web/middleware"
 )
+
+func TestSetupRouter(t *testing.T) {
+	t.Parallel()
+
+	h := &handler.Handler{}
+	authH := &handler.AuthHandler{}
+	userH := &handler.UserHandler{}
+	cliH := &handler.CLIHandler{}
+
+	r := SetupRouter(h, authH, userH, cliH, []string{"*"}, http.Dir("."))
+	assert.NotNil(t, r)
+}
 
 func TestCSRFMiddleware(t *testing.T) {
 	t.Parallel()
@@ -19,7 +32,7 @@ func TestCSRFMiddleware(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	})
 
-	middlewareFunc := csrfMiddleware()
+	middlewareFunc := webMiddleware.CSRF()
 	h := middlewareFunc(dummyHandler)
 
 	t.Run("GET ignores CSRF", func(t *testing.T) {

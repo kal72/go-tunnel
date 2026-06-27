@@ -6,12 +6,44 @@ import (
 	"strconv"
 	"strings"
 
-	domainConfig "gotunnel/internal/domain/config"
-
 	"github.com/joho/godotenv"
 )
 
-func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
+type ServerConfig struct {
+	ACMEEnv            string
+	WildcardKeyPath    string
+	TunnelDomain       string
+	DBName             string
+	WebUIDomain        string
+	DBPass             string
+	DBUser             string
+	GatewayDomain      string
+	DBSSLMode          string
+	RedisAddr          string
+	WildcardDomain     string
+	WildcardCertPath   string
+	CLILatestVersion   string
+	ACMECache          string
+	JWTSecret          string
+	RedisPass          string
+	DBHost             string
+	CORSAllowedOrigins []string
+	JWTExpireHours     int
+	WebJWTExpireHours  int
+	CliJWTExpireHours  int
+	RedisDB            int
+	DomainRedisDB      int
+	MaxFreeDomains     int
+	DBPort             int
+	ProxyHttpPort      int
+	WebUIPort          int
+	TunnelPort         int
+	GatewayPort        int
+	ProxyHttpsPort     int
+	ACMEEnable         bool
+}
+
+func LoadServerConfig(path string) (*ServerConfig, error) {
 	_ = godotenv.Load(path)
 
 	get := func(key, def string) string {
@@ -42,7 +74,7 @@ func LoadServerConfig(path string) (*domainConfig.ServerConfig, error) {
 		return res
 	}
 
-	s := &domainConfig.ServerConfig{
+	s := &ServerConfig{
 		GatewayDomain:  get("GATEWAY_DOMAIN", ""),
 		GatewayPort:    parsePort(get("GATEWAY_PORT", "8443"), 8443),
 		TunnelDomain:   get("TUNNEL_DOMAIN", ""),

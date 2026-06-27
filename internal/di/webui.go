@@ -11,7 +11,7 @@ import (
 	"gotunnel/assets"
 	"gotunnel/internal/delivery/web"
 	webui "gotunnel/internal/delivery/web/handler"
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
 	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
@@ -21,7 +21,7 @@ import (
 	usecaseUser "gotunnel/internal/usecase/user"
 )
 
-func BuildWebUIApp(env *domainConfig.ServerConfig) (*chi.Mux, func(), error) {
+func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	// Redis Repositories
 	tunnelStore := redisrepo.NewTunnelRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())

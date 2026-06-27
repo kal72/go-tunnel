@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cert"
 
@@ -22,7 +22,7 @@ import (
 )
 
 type ProxyServer struct {
-	cfg         *domainConfig.ServerConfig
+	cfg         *config.ServerConfig
 	domainStore domainTunnel.DomainStore
 	acmeManager interface{ TLSConfig() *tls.Config }
 	httpSrv     *http.Server
@@ -31,7 +31,7 @@ type ProxyServer struct {
 	chanLn      *ChanListener
 }
 
-func NewProxy(env *domainConfig.ServerConfig, domainStore domainTunnel.DomainStore, hostPolicy cert.HostPolicyFunc) (*ProxyServer, error) {
+func NewProxy(env *config.ServerConfig, domainStore domainTunnel.DomainStore, hostPolicy cert.HostPolicyFunc) (*ProxyServer, error) {
 	p := &ProxyServer{
 		cfg:         env,
 		domainStore: domainStore,

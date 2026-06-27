@@ -1,9 +1,7 @@
 package web
 
 import (
-	"crypto/subtle"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -37,7 +35,7 @@ func SetupRouter(
 
 	// WebUI & WebUI API routes (with CORS & CSRF)
 	r.Group(func(r chi.Router) {
-		r.Use(corsMiddleware(corsAllowedOrigins))
+		r.Use(webMiddleware.CORS(corsAllowedOrigins))
 		r.Use(webMiddleware.SecurityHeaders())
 
 		// Auth routes
@@ -49,7 +47,7 @@ func SetupRouter(
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(authH.JWTMiddleware)
-			r.Use(csrfMiddleware())
+			r.Use(webMiddleware.CSRF())
 
 			// Pages
 			r.Get("/", h.Index)
@@ -95,57 +93,4 @@ func SetupRouter(
 	r.Handle("/static/*", http.FileServer(staticFS))
 
 	return r
-}
-
-func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
-	allowedMap := make(map[string]struct{}, len(allowedOrigins))
-	allowAll := false
-	for _, o := range allowedOrigins {
-		o = strings.TrimSpace(o)
-		if o == "*" {
-			allowAll = true
-		}
-		allowedMap[o] = struct{}{}
-	}
-
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			origin := r.Header.Get("Origin")
-			if origin != "" {
-				if allowAll {
-					w.Header().Set("Access-Control-Allow-Origin", "*")
-				} else if _, ok := allowedMap[origin]; ok {
-					w.Header().Set("Access-Control-Allow-Origin", origin)
-				}
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
-			}
-
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func csrfMiddleware() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete || r.Method == http.MethodPatch {
-				sessionToken, _ := r.Context().Value(handler.CSRFTokenKey).(string)
-				reqToken := r.Header.Get("X-CSRF-Token")
-
-				if sessionToken == "" || reqToken == "" || subtle.ConstantTimeCompare([]byte(reqToken), []byte(sessionToken)) != 1 {
-					http.Error(w, "Forbidden - CSRF token mismatch", http.StatusForbidden)
-					return
-				}
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
 }

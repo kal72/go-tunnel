@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/gateway"
 	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
 )
 
-func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func(), error) {
+func BuildProxyApp(env *config.ServerConfig) (*gateway.ProxyServer, func(), error) {
 	// Postgres DB for Domain verification
 	db, err := postgresrepo.InitDB(env)
 	if err != nil {
