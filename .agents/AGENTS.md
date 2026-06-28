@@ -83,3 +83,6 @@ git log -1 --pretty=format:"%B" | grep -E "^(feat|fix|docs|style|refactor|perf|t
 ## Changelog Policy
 - **Record Changes**: Whenever a new feature (`feat`), improvement (`improvement`), or bug fix (`fix`) is completed, the agent **MUST** update `CHANGELOG.md` in the project root.
 - Add the title and brief description under the `## [Unreleased]` section categorized by `### Added`, `### Changed`, or `### Fixed`. This ensures all changes are properly tracked for future release changelogs.
+
+## Release Documentation Policy
+- **Concise & Categorized Release Notes**: When generating release documents or GitHub release notes, keep the output **as concise as possible** using concise 1-line bullet points. Exactly categorize changes under clear sections: `## 🚀 New Features`, `## ⚡ Enhancements & Changes`, and `## 🐛 Bug Fixes & Security`. Avoid lengthy multi-paragraph explanations.
