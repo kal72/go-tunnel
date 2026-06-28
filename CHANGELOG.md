@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-28
+
 ### Added
 - **Web UI & Tunnel Dashboard**: Real-time active tunnel monitoring using Redis Pub/Sub, Server-Sent Events (SSE) streaming handler (`/api/tunnels/stream`), and Alpine.js reactive DOM updates.
 - **Security**: XSS protection via Content Security Policy (CSP) and strict HTTP security headers middleware (`SecurityHeaders`).
