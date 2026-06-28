@@ -31,7 +31,7 @@ DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?ssl
 SERVER_URL ?= https://tun.yourdomain.com
 VERSION ?= dev
 
-all: generate build test
+all: generate test build build-clients
 
 build:
 	@echo "Building binaries..."
