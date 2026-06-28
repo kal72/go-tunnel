@@ -84,6 +84,6 @@ func (h *CLIHandler) ClientGetConfig(w http.ResponseWriter, r *http.Request) {
 func (h *CLIHandler) ClientGetVersion(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{
 		"version":      h.latestVersion,
-		"download_url": "/downloads/gotunnel-{os}-{arch}",
+		"download_url": "/dl/gotunnel-{os}-{arch}",
 	})
 }

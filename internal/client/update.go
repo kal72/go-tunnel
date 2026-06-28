@@ -41,12 +41,12 @@ func CheckForNewVersion(serverURL, currentVersion string) {
 		gray := "\033[90m"
 		bold := "\033[1m"
 
-		fmt.Printf("\n  %s╭──────────────────────────────────────────────╮%s\n", yellow, reset)
-		fmt.Printf("  %s│%s                                              %s│%s\n", yellow, reset, yellow, reset)
-		fmt.Printf("  %s│%s  🚀  %sUpdate Available:%s %s%s%s (current: %s%s%s)\n", yellow, reset, bold, reset, green, verResp.Version, reset, gray, currentVersion, reset)
-		fmt.Printf("  %s│%s  👉  Run %sgotunnel update%s to upgrade now     \n", yellow, reset, cyan, reset)
-		fmt.Printf("  %s│%s                                              %s│%s\n", yellow, reset, yellow, reset)
-		fmt.Printf("  %s╰──────────────────────────────────────────────╯%s\n\n", yellow, reset)
+		fmt.Printf("\n  %s╭─────────────────────────────────────────────────╮%s\n", yellow, reset)
+		fmt.Printf("  %s│%s                                                 %s│%s\n", yellow, reset, yellow, reset)
+		fmt.Printf("  %s│%s  🚀  %sUpdate Available:%s %s%s%s (current: %s%s%s) %s│%s\n", yellow, reset, bold, reset, green, verResp.Version, reset, gray, currentVersion, reset, yellow, reset)
+		fmt.Printf("  %s│%s  👉  Run %sgotunnel update%s to upgrade now         %s│%s\n", yellow, reset, cyan, reset, yellow, reset)
+		fmt.Printf("  %s│%s                                                 %s│%s\n", yellow, reset, yellow, reset)
+		fmt.Printf("  %s╰─────────────────────────────────────────────────╯%s\n\n", yellow, reset)
 	}
 }
 
