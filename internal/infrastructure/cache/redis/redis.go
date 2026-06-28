@@ -48,11 +48,19 @@ func (s *TunnelRedisStore) SetTunnel(ctx context.Context, sessionID string, info
 		return err
 	}
 	// Expire after 1 hour if not refreshed
-	return s.client.Set(ctx, s.prefix+sessionID, data, 1*time.Hour).Err()
+	err = s.client.Set(ctx, s.prefix+sessionID, data, 1*time.Hour).Err()
+	if err == nil {
+		_ = s.PublishTunnelEvent(ctx, "update")
+	}
+	return err
 }
 
 func (s *TunnelRedisStore) DeleteTunnel(ctx context.Context, sessionID string) error {
-	return s.client.Del(ctx, s.prefix+sessionID).Err()
+	err := s.client.Del(ctx, s.prefix+sessionID).Err()
+	if err == nil {
+		_ = s.PublishTunnelEvent(ctx, "delete")
+	}
+	return err
 }
 
 func (s *TunnelRedisStore) ListTunnels(ctx context.Context) ([]domainTunnel.TunnelInfo, error) {
@@ -147,4 +155,34 @@ func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain, sessionI
 func (s *TunnelRedisStore) RemoveActiveDomain(ctx context.Context, domain string) error {
 	key := "active_domain:" + domain
 	return s.client.Del(ctx, key).Err()
+}
+
+func (s *TunnelRedisStore) PublishTunnelEvent(ctx context.Context, eventType string) error {
+	return s.client.Publish(ctx, "tunnel_events", eventType).Err()
+}
+
+func (s *TunnelRedisStore) SubscribeTunnelEvents(ctx context.Context) (<-chan string, error) {
+	pubsub := s.client.Subscribe(ctx, "tunnel_events")
+	if _, err := pubsub.Receive(ctx); err != nil {
+		_ = pubsub.Close()
+		return nil, err
+	}
+	ch := make(chan string, 16)
+	go func() {
+		defer pubsub.Close()
+		for {
+			msg, err := pubsub.ReceiveMessage(ctx)
+			if err != nil {
+				close(ch)
+				return
+			}
+			select {
+			case ch <- msg.Payload:
+			case <-ctx.Done():
+				close(ch)
+				return
+			}
+		}
+	}()
+	return ch, nil
 }

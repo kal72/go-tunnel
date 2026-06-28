@@ -23,6 +23,10 @@ type TunnelStore interface {
 	// Active tunnel global lock
 	SetActiveDomain(ctx context.Context, domain string, sessionID string) error
 	RemoveActiveDomain(ctx context.Context, domain string) error
+
+	// Realtime pub/sub events
+	PublishTunnelEvent(ctx context.Context, eventType string) error
+	SubscribeTunnelEvents(ctx context.Context) (<-chan string, error)
 }
 
 //mockery:generate: true

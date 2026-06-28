@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Web UI & Tunnel Dashboard**: Real-time active tunnel monitoring using Redis Pub/Sub, Server-Sent Events (SSE) streaming handler (`/api/tunnels/stream`), and Alpine.js reactive DOM updates.
 - **Security**: XSS protection via Content Security Policy (CSP) and strict HTTP security headers middleware (`SecurityHeaders`).
 - **Domain Management**: Restriction on Free Domain options in Web UI and backend validation when wildcard domain is unconfigured.
 - **Auth & Tokens**: Admin action to revoke all JWT tokens for a specific user via Redis set index (`user_tokens:<userID>`).
