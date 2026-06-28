@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	version   = "v1.0"
+	version   = "dev"
 	ServerURL = "http://localhost:8080"
 )
 
