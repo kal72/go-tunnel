@@ -29,7 +29,9 @@ func peekSNI(conn net.Conn) (string, net.Conn, error) {
 	recordLen := int(binary.BigEndian.Uint16(buf[3:5]))
 	recordBuf := make([]byte, recordLen)
 	_, err = io.ReadFull(conn, recordBuf)
-	fullBuf := append(buf, recordBuf...)
+	fullBuf := make([]byte, recordHeaderLen+recordLen)
+	copy(fullBuf, buf)
+	copy(fullBuf[recordHeaderLen:], recordBuf)
 	if err != nil {
 		return "", &bufferedConn{Conn: conn, buf: fullBuf}, err
 	}
@@ -92,7 +94,7 @@ func peekSNI(conn net.Conn) (string, net.Conn, error) {
 			if pos+2 > end {
 				break
 			}
-			 _ =  int(binary.BigEndian.Uint16(recordBuf[pos : pos+2]))
+			_ = int(binary.BigEndian.Uint16(recordBuf[pos : pos+2]))
 			snPos := pos + 2
 			for snPos+3 <= pos+extLen && snPos+3 <= end {
 				nameType := recordBuf[snPos]
@@ -128,7 +130,7 @@ func (b *bufferedConn) Read(p []byte) (n int, err error) {
 	return b.Conn.Read(p)
 }
 
-// ChanListener allows passing accepted connections via a channel
+// ChanListener allows passing accepted connections via a channel.
 type ChanListener struct {
 	conns chan net.Conn
 	addr  net.Addr
@@ -153,7 +155,11 @@ func (l *ChanListener) Accept() (net.Conn, error) {
 }
 
 func (l *ChanListener) Close() error {
-	close(l.done)
+	select {
+	case <-l.done:
+	default:
+		close(l.done)
+	}
 	return nil
 }
 
@@ -165,6 +171,6 @@ func (l *ChanListener) SendConn(conn net.Conn) {
 	select {
 	case l.conns <- conn:
 	case <-l.done:
-		conn.Close()
+		_ = conn.Close()
 	}
 }

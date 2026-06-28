@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -48,7 +49,7 @@ func EnsureDefaultServerName(cfg *tls.Config, fallback string) {
 		if len(cfg.Certificates) > 0 {
 			return &cfg.Certificates[0], nil
 		}
-		return nil, fmt.Errorf("no certificates configured")
+		return nil, errors.New("no certificates configured")
 	}
 }
 
@@ -74,7 +75,7 @@ func WrapWithWildcardCert(cfg *tls.Config, wildcardDomain, certPath, keyPath str
 		if len(cfg.Certificates) > 0 {
 			return &cfg.Certificates[0], nil
 		}
-		return nil, fmt.Errorf("no certificates configured")
+		return nil, errors.New("no certificates configured")
 	}
 }
 
@@ -106,9 +107,7 @@ func GenerateSelfSignedCert(host string) (*tls.Config, error) {
 	}
 
 	hosts := strings.Split(host, ",")
-	for _, h := range hosts {
-		template.DNSNames = append(template.DNSNames, h)
-	}
+	template.DNSNames = append(template.DNSNames, hosts...)
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {

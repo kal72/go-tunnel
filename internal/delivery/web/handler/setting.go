@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// Settings Page
+// Settings Page.
 func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"Title": "System Settings - Tunnel Manager",
@@ -13,18 +13,21 @@ func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
-	
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
+
 	data["UserRole"] = role
 	data["UserName"] = username
-	data["DomainEnabled"] = h.wildcardDomain != ""
+	data["CSRFToken"] = csrf
+	data["DomainEnabled"] = true
 
 	err := h.settingTmpl.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
-// GetSettings API
+// GetSettings API.
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	settings, err := h.settingUsecase.GetAllSettings(r.Context())
 	if err != nil {
@@ -49,7 +52,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UpdateSettings API
+// UpdateSettings API.
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		Settings map[string]string `json:"settings"`

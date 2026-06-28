@@ -29,7 +29,7 @@ func NewUserHandler(fs embed.FS, authUsecase usecaseUser.AuthUsecase) *UserHandl
 	}
 }
 
-// AdminMiddleware ensures the user has role == 1 (admin)
+// AdminMiddleware ensures the user has role == 1 (admin).
 func AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		role, ok := r.Context().Value(UserRoleKey).(int16)
@@ -44,9 +44,11 @@ func AdminMiddleware(next http.Handler) http.Handler {
 func (h *UserHandler) UsersPage(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 	_ = h.tmpl.ExecuteTemplate(w, "base", map[string]any{
 		"UserRole":      role,
 		"UserName":      username,
+		"CSRFToken":     csrf,
 		"DomainEnabled": true, // Assume domain enabled or we can pass actual value if needed, but we don't have wildcardDomain here. Let's just pass UserRole.
 	})
 }
@@ -64,7 +66,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	_ = json.NewEncoder(w).Encode(users)
 }
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +157,22 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authUsecase.DeleteUser(r.Context(), id); err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete user: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *UserHandler) RevokeTokens(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authUsecase.RevokeUserTokens(r.Context(), id); err != nil {
+		http.Error(w, fmt.Sprintf("failed to revoke tokens: %v", err), http.StatusInternalServerError)
 		return
 	}
 

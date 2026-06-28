@@ -14,7 +14,7 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 - **Supports HTTP, HTTPS & TCP**: Tunneling for web applications and raw TCP protocols (SSH, DB, etc.).
 
 ## Tech Stack
-- **Language**: Go 1.25
+- **Language**: Go 1.26
 - **Multiplexing**: `github.com/hashicorp/yamux`
 - **Database (Config)**: PostgreSQL (`github.com/jackc/pgx/v5`)
 - **State & Session**: Redis (`github.com/redis/go-redis/v9`)
@@ -50,10 +50,14 @@ Copy `.env.example` and adjust the variables:
 | `PROXY_HTTPS_PORT` | Port for the public Edge Gateway Proxy (default `443`). |
 | `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
 | `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `webui.example.com`). |
+| `CLI_LATEST_VERSION` | Version string distributed to clients (default `dev`). |
 | `GATEWAY_PORT` | Internal port used by the Tunnel to handle local HTTP traffic (default `8443`). |
 | `TUNNEL_DOMAIN` | Domain for agent TCP connections (SNI, e.g. `tunnel.example.com`). |
 | `TUNNEL_PORT` | Port for agent TCP Yamux connections (default `9443`). |
 | `JWT_SECRET` | Master secret used to generate client tokens and JWTs. |
+| `WEB_JWT_EXPIRE_HOURS` | Expiration duration in hours for Web UI login sessions (default `24`). |
+| `CLI_JWT_EXPIRE_HOURS` | Expiration duration in hours for CLI authentication tokens (default `720`). |
+| `ACME_ENABLE` | Enable Let's Encrypt automatic certificate issuance (default `false`). |
 | `ACME_CACHE` | Directory to store Let's Encrypt certificates (default `./cert-cache`). |
 | `ACME_ENV` | Let's Encrypt environment: `production` or `staging`. |
 | `REDIS_ADDR` | Redis server address (default `localhost:6379`). |
@@ -61,6 +65,9 @@ Copy `.env.example` and adjust the variables:
 | `REDIS_DB` | Redis database for sessions/auth (default `0`). |
 | `DOMAIN_REDIS_DB` | Redis database for allowed subdomains (default `1`). |
 | `WILDCARD_DOMAIN` | The base wildcard pattern (e.g., `*.yourdomain.com`). |
+| `WILDCARD_CERT_PATH` | Path to custom wildcard SSL certificate (`fullchain.pem`). |
+| `WILDCARD_KEY_PATH` | Path to custom wildcard SSL private key (`privkey.pem`). |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` | PostgreSQL database connection settings. |
 
 ## How to Run
 
@@ -113,7 +120,6 @@ gotunnel run my-web-app
 4. If authorized, the tunnel is established and ACME SSL issuance is permitted.
 
 ## Architecture Overview
-## Architecture Overview
 | Component | Role |
 | --- | --- |
 | **Edge Proxy (`cmd/proxy`)** | Handles public HTTPS traffic, ACME Let's Encrypt, and L4 SNI Multiplexing. |
@@ -129,25 +135,36 @@ gotunnel run my-web-app
 Our Edge Proxy binds directly to your public port `443` and handles all complex routing internally.
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 graph TD
     Client[Web/API Client] -->|"HTTPS (Port 443)"| EdgeProxy["Edge Proxy<br>(cmd/proxy)"]
-    Agent[Go-Tunnel Agent] -->|"TLS SNI (Port 443)"| EdgeProxy
-    Admin[Admin/User] -->|"HTTPS (Port 443)"| EdgeProxy
+    Agent[Go-Tunnel CLI Agent] -->|"TLS SNI / L4 Yamux (Port 443)"| EdgeProxy
+    Admin[Admin/User Browser] -->|"HTTPS / Short JWT + CSRF (Port 443)"| EdgeProxy
 
-    subgraph "Docker Container / Local Server"
+    subgraph "Server Core Services"
         EdgeProxy -- "Host: *.example.com<br>HTTP Reverse Proxy" --> TunnelHttp["Tunnel Internal HTTP<br>(Port 8443)"]
         EdgeProxy -- "Host: webui.example.com<br>HTTP Reverse Proxy" --> WebUI["Web UI Manager<br>(Port 8080)"]
         EdgeProxy -- "SNI: tunnel.example.com<br>L4 TCP Passthrough" --> TunnelTCP["Tunnel Yamux Listener<br>(Port 9443)"]
         
-        TunnelHttp -.->|"Inject to Stream"| TunnelTCP
+        TunnelHttp -.->|"Multiplexed Traffic"| TunnelTCP
+        
+        WebUI -->|"Session & Revocation"| Redis[(Redis Store<br>DB 0 & DB 1)]
+        TunnelTCP -->|"Domain & Token Check"| Redis
+        
+        WebUI -->|"Users, Configs & Settings"| Postgres[(PostgreSQL DB)]
+        TunnelTCP -->|"Fetch Domain Allowlists"| Postgres
     end
 ```
 
-### Key Considerations
-1. **Single Port Exposure**: The external firewall only needs to open ports `80` (for ACME) and `443`.
-2. **Microservices Routing**: Inside your server, `cmd/proxy` intelligently routes traffic:
+### Key Architectural Highlights
+1. **Single Port Exposure**: The external firewall only needs to open ports `80` (for ACME challenge) and `443` (for Edge Proxy).
+2. **Intelligent Microservices Routing**:
    - Requests to `webui.example.com` are forwarded to the Web UI container (`:8080`).
-   - Requests to `*.example.com` (application subdomains) are validated via Redis and forwarded to the Tunnel Internal HTTP (`:8443`).
-   - Requests to `tunnel.example.com` **MUST** be forwarded using **L4 TCP Stream Passthrough** directly to the Yamux Listener (`:9443`).
+   - Requests to `*.example.com` (*Free Domains* / application subdomains) are validated against Redis DB 1 & PostgreSQL allowlists before forwarding to Tunnel Internal HTTP (`:8443`).
+   - Requests to `tunnel.example.com` are routed via **L4 TCP Stream Passthrough** directly to the Yamux Listener (`:9443`).
+3. **Multi-Tier Security & State**:
+   - **Redis (DB 0 & DB 1)**: Powers ultra-fast Web UI session checks, instant JWT token revocations, and wildcard routing tables.
+   - **PostgreSQL**: Persistent storage for multi-user accounts, dynamic client YAML configurations, and domain metadata.
+   - **Dual JWT Policy**: Web browser login issues short-lived HTTP-only secure cookies (`WEB_JWT_EXPIRE_HOURS`), while CLI login issues long-lived API tokens (`CLI_JWT_EXPIRE_HOURS`).
 
 Happy tunneling!

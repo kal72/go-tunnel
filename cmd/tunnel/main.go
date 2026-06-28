@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -12,9 +13,15 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	env, err := config.LoadServerConfig(".env")
 	if err != nil {
-		log.Fatal("load .env:", err)
+		return fmt.Errorf("load .env: %w", err)
 	}
 
 	log.Printf("[config] Ports: public=%d tunnel=%d",
@@ -26,11 +33,12 @@ func main() {
 
 	tunnelApp, cleanup, err := di.BuildTunnelApp(env)
 	if err != nil {
-		log.Fatalf("failed to build server app: %v", err)
+		return fmt.Errorf("failed to build server app: %w", err)
 	}
 	defer cleanup()
 
 	if err := tunnelApp.Run(ctx); err != nil {
-		log.Fatal("gateway error:", err)
+		return fmt.Errorf("gateway error: %w", err)
 	}
+	return nil
 }

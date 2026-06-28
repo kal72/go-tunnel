@@ -5,23 +5,20 @@ import (
 	"fmt"
 	"log"
 
-	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/gateway"
 	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
 )
 
-func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func(), error) {
+func BuildProxyApp(env *config.ServerConfig) (*gateway.ProxyServer, func(), error) {
 	// Postgres DB for Domain verification
 	db, err := postgresrepo.InitDB(env)
 	if err != nil {
 		return nil, nil, fmt.Errorf("init db: %w", err)
 	}
 
-	var domainStore domainTunnel.DomainStore
-	if env.WildcardDomain != "" {
-		domainStore = postgresrepo.NewDomainRepository(db)
-	}
+	var domainStore domainTunnel.DomainStore = postgresrepo.NewDomainRepository(db)
 
 	hostPolicy := func(ctx context.Context, host string) error {
 		// Just a basic ACME host policy
@@ -35,7 +32,7 @@ func BuildProxyApp(env *domainConfig.ServerConfig) (*gateway.ProxyServer, func()
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up Proxy resources...")
-		db.Close()
+		_ = db.Close()
 	}
 
 	return proxySrv, cleanup, nil

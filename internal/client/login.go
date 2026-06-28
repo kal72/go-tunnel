@@ -3,12 +3,14 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,7 +37,7 @@ func GetCredentialsPath() (string, error) {
 		return "", err
 	}
 	dir := filepath.Join(home, ".gotunnel")
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, "credentials.json"), nil
@@ -44,7 +46,7 @@ func GetCredentialsPath() (string, error) {
 func InteractivePrompt(prompt string, isPassword bool) (string, error) {
 	fmt.Print(prompt)
 	if isPassword {
-		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+		bytePassword, err := term.ReadPassword(syscall.Stdin)
 		fmt.Println() // new line after typing password
 		if err != nil {
 			return "", err
@@ -79,17 +81,22 @@ func Login(serverURL, username, password string) error {
 	// Normalize server URL
 	serverURL = strings.TrimRight(serverURL, "/")
 
-	endpoint := fmt.Sprintf("%s/api/cli/login", serverURL)
+	endpoint := serverURL + "/api/cli/login"
 
 	data := url.Values{}
 	data.Set("username", username)
 	data.Set("password", password)
 
-	resp, err := http.PostForm(endpoint, data)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed to create login request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to connect to server: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -106,9 +113,7 @@ func Login(serverURL, username, password string) error {
 		return fmt.Errorf("failed to get credentials path: %w", err)
 	}
 
-	creds := Credentials{
-		Token: res.Token,
-	}
+	creds := Credentials(res)
 
 	b, err := json.Marshal(creds)
 	if err != nil {
@@ -120,14 +125,14 @@ func Login(serverURL, username, password string) error {
 		return fmt.Errorf("failed to encrypt credentials: %w", err)
 	}
 
-	if err := os.WriteFile(credPath, []byte(encryptedStr), 0600); err != nil {
+	if err := os.WriteFile(credPath, []byte(encryptedStr), 0o600); err != nil {
 		return fmt.Errorf("failed to save credentials: %w", err)
 	}
 
 	// Cleanup old token file if it exists
 	home, _ := os.UserHomeDir()
 	oldTokenPath := filepath.Join(home, ".gotunnel", "token")
-	os.Remove(oldTokenPath)
+	_ = os.Remove(oldTokenPath)
 
 	fmt.Printf("Login successful.\n")
 	return nil
@@ -145,12 +150,7 @@ func ReadCredentials() (*Credentials, error) {
 
 	decrypted, err := decryptData(string(bytes.TrimSpace(b)))
 	if err != nil {
-		// Fallback for unencrypted json backward-compatibility
-		if json.Valid(b) {
-			decrypted = b
-		} else {
-			return nil, fmt.Errorf("invalid or corrupted credentials, please login again")
-		}
+		return nil, errors.New("invalid or corrupted credentials, please login again")
 	}
 
 	var creds Credentials
@@ -159,7 +159,7 @@ func ReadCredentials() (*Credentials, error) {
 	}
 
 	if strings.TrimSpace(creds.Token) == "" {
-		return nil, fmt.Errorf("invalid credentials file, please login again")
+		return nil, errors.New("invalid credentials file, please login again")
 	}
 
 	return &creds, nil
@@ -230,7 +230,7 @@ func decryptData(cryptoText string) ([]byte, error) {
 	}
 
 	if len(data) < gcm.NonceSize() {
-		return nil, fmt.Errorf("malformed ciphertext")
+		return nil, errors.New("malformed ciphertext")
 	}
 
 	nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]

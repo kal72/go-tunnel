@@ -1,0 +1,101 @@
+version: "2"
+run:
+  tests: false
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - durationcheck
+    - errcheck
+    - errorlint
+    - gocritic
+    - godot
+    - gosec
+    - govet
+    - ineffassign
+    - makezero
+    - misspell
+    - nilerr
+    - nilnil
+    - noctx
+    - perfsprint
+    - prealloc
+    - reassign
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+  settings:
+    errorlint:
+      errorf: true
+      errorf-multi: true
+      asserts: true
+      comparison: true
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+    godot:
+      scope: declarations
+    gosec:
+      excludes:
+        - G104
+        - G304
+    govet:
+      disable:
+        - shadow
+      enable-all: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - godot
+          - gosec
+          - unparam
+        path: _test\.go
+      - linters:
+          - gosec
+        path: internal/client/(client|uninstall|login)\.go
+        text: (G402|G204|G107)
+      - linters:
+          - gosec
+        path: internal/shared/protocol/message\.go
+        text: G115
+    paths:
+      - .*mock.*\.go$
+      - .*_test\.go$
+      - mocks
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - gotunnel
+  exclusions:
+    generated: lax
+    paths:
+      - .*mock.*\.go$
+      - .*_test\.go$
+      - mocks
+      - third_party$
+      - builtin$
+      - examples$

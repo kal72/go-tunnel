@@ -6,9 +6,9 @@ import (
 )
 
 type HostRegistry struct {
-	mu      sync.RWMutex
 	allowed map[string]struct{}
 	active  map[string]struct{}
+	mu      sync.RWMutex
 }
 
 func NewHostRegistry() *HostRegistry {
@@ -92,7 +92,7 @@ func (r *HostRegistry) IsActive(host string) bool {
 func (r *HostRegistry) ListAllowed() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []string
+	list := make([]string, 0, len(r.allowed))
 	for host := range r.allowed {
 		list = append(list, host)
 	}

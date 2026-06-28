@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -16,45 +18,59 @@ import (
 )
 
 type authUsecase struct {
-	userRepo  domainUser.UserRepository
-	store          domainTunnel.TunnelStore
-	jwtSecret      string
-	jwtExpireHours int
+	userRepo          domainUser.UserRepository
+	store             domainTunnel.TunnelStore
+	jwtSecret         string
+	webJWTExpireHours int
+	cliJWTExpireHours int
 }
 
-func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string, jwtExpireHours int) AuthUsecase {
-	if jwtExpireHours <= 0 {
-		jwtExpireHours = 24
+func NewAuthUsecase(userRepo domainUser.UserRepository, store domainTunnel.TunnelStore, jwtSecret string, webExpireHours, cliExpireHours int) AuthUsecase {
+	if webExpireHours <= 0 {
+		webExpireHours = 24
+	}
+	if cliExpireHours <= 0 {
+		cliExpireHours = 720
 	}
 	return &authUsecase{
-		userRepo:       userRepo,
-		store:          store,
-		jwtSecret:      jwtSecret,
-		jwtExpireHours: jwtExpireHours,
+		userRepo:          userRepo,
+		store:             store,
+		jwtSecret:         jwtSecret,
+		webJWTExpireHours: webExpireHours,
+		cliJWTExpireHours: cliExpireHours,
 	}
 }
 
-func (u *authUsecase) Login(ctx context.Context, username, password string) (string, error) {
+func (u *authUsecase) GetWebExpireDuration() time.Duration {
+	return time.Duration(u.webJWTExpireHours) * time.Hour
+}
+
+func (u *authUsecase) authenticateUser(ctx context.Context, username, password string) (*domainUser.User, error) {
 	user, err := u.userRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if user == nil {
-		return "", domainErrors.ErrUnauthorized
-	}
-	if user.Status != 1 {
-		return "", domainErrors.ErrUnauthorized
+	if user == nil || user.Status != 1 {
+		return nil, domainErrors.ErrUnauthorized
 	}
 
 	if !util.CheckPasswordHash(password, user.Password) {
-		return "", domainErrors.ErrUnauthorized
+		return nil, domainErrors.ErrUnauthorized
 	}
+	return user, nil
+}
 
-	expiration := time.Duration(u.jwtExpireHours) * time.Hour
+func (u *authUsecase) issueToken(ctx context.Context, user *domainUser.User, expireHours int) (string, error) {
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	csrfToken := hex.EncodeToString(b)
+
+	expiration := time.Duration(expireHours) * time.Hour
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID.String(),
 		"user": user.Username,
 		"role": user.Role,
+		"csrf": csrfToken,
 		"exp":  time.Now().Add(expiration).Unix(),
 	})
 
@@ -63,12 +79,28 @@ func (u *authUsecase) Login(ctx context.Context, username, password string) (str
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
-	err = u.store.SetToken(ctx, tokenString, expiration)
+	err = u.store.SetToken(ctx, user.ID.String(), tokenString, expiration)
 	if err != nil {
 		return "", fmt.Errorf("failed to save token session: %w", err)
 	}
 
 	return tokenString, nil
+}
+
+func (u *authUsecase) Login(ctx context.Context, username, password string) (string, error) {
+	user, err := u.authenticateUser(ctx, username, password)
+	if err != nil {
+		return "", err
+	}
+	return u.issueToken(ctx, user, u.webJWTExpireHours)
+}
+
+func (u *authUsecase) LoginCLI(ctx context.Context, username, password string) (string, error) {
+	user, err := u.authenticateUser(ctx, username, password)
+	if err != nil {
+		return "", err
+	}
+	return u.issueToken(ctx, user, u.cliJWTExpireHours)
 }
 
 func (u *authUsecase) VerifyToken(ctx context.Context, tokenStr string) (*domainUser.User, error) {
@@ -106,6 +138,10 @@ func (u *authUsecase) VerifyToken(ctx context.Context, tokenStr string) (*domain
 		return nil, domainErrors.ErrUnauthorized
 	}
 
+	if csrf, ok := claims["csrf"].(string); ok {
+		user.CSRFToken = csrf
+	}
+
 	return user, nil
 }
 
@@ -121,7 +157,7 @@ func (u *authUsecase) CreateUser(ctx context.Context, username, password string,
 
 	user := &domainUser.User{
 		Username: username,
-		Password: string(hash),
+		Password: hash,
 		Role:     role,
 		Status:   1,
 	}
@@ -134,7 +170,11 @@ func (u *authUsecase) ListUsers(ctx context.Context) ([]domainUser.User, error) 
 }
 
 func (u *authUsecase) UpdateUserStatus(ctx context.Context, id uuid.UUID, status int16) error {
-	return u.userRepo.UpdateUserStatus(ctx, id, status)
+	err := u.userRepo.UpdateUserStatus(ctx, id, status)
+	if err == nil && status != 1 {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
 }
 
 func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, password string) error {
@@ -142,9 +182,21 @@ func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, pass
 	if err != nil {
 		return err
 	}
-	return u.userRepo.UpdateUserPassword(ctx, id, string(hash))
+	err = u.userRepo.UpdateUserPassword(ctx, id, hash)
+	if err == nil {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
 }
 
 func (u *authUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	return u.userRepo.DeleteUser(ctx, id)
+	err := u.userRepo.DeleteUser(ctx, id)
+	if err == nil {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
+}
+
+func (u *authUsecase) RevokeUserTokens(ctx context.Context, targetUserID uuid.UUID) error {
+	return u.store.RevokeUserTokens(ctx, targetUserID.String())
 }

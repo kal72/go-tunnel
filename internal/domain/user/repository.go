@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=UserRepository --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type UserRepository interface {
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	CreateUser(ctx context.Context, user *User) error

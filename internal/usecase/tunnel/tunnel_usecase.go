@@ -60,10 +60,18 @@ func (u *tunnelUsecase) RemoveDomain(ctx context.Context, domain string, userID 
 	return u.domainStore.RemoveDomain(ctx, domain, userID, role)
 }
 
-func (u *tunnelUsecase) SetActiveDomain(ctx context.Context, domain string, sessionID string) error {
+func (u *tunnelUsecase) SetActiveDomain(ctx context.Context, domain, sessionID string) error {
 	return u.tunnelStore.SetActiveDomain(ctx, domain, sessionID)
 }
 
 func (u *tunnelUsecase) RemoveActiveDomain(ctx context.Context, domain string) error {
 	return u.tunnelStore.RemoveActiveDomain(ctx, domain)
+}
+
+func (u *tunnelUsecase) PublishTunnelEvent(ctx context.Context, eventType string) error {
+	return u.tunnelStore.PublishTunnelEvent(ctx, eventType)
+}
+
+func (u *tunnelUsecase) SubscribeTunnelEvents(ctx context.Context) (<-chan string, error) {
+	return u.tunnelStore.SubscribeTunnelEvents(ctx)
 }

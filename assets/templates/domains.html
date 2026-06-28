@@ -10,8 +10,8 @@
         <div class="mt-2 flex flex-wrap gap-2">
           <div
             class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 rounded-full text-xs font-mono transition-colors">
-            <span class="opacity-70">Domain:</span>
-            <span class="font-bold">{{.WildcardDomain}}</span>
+            <span class="opacity-70">Free Domain:</span>
+            <span class="font-bold">{{if .WildcardDomain}}{{.WildcardDomain}}{{else}}Not Configured{{end}}</span>
           </div>
           <div
             class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 rounded-full text-xs font-mono transition-colors">
@@ -41,11 +41,12 @@
                 </div>
                 <input type="text" x-model="newPrefix" :disabled="domainType === 'free_domain' && autoGen"
                   class="block w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-l-lg focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-gray-500 text-sm text-gray-900 dark:text-gray-100"
-                  :placeholder="domainType === 'free_domain' ? (autoGen ? `Format: app-xxxxxxxx.${wildcardBase ? wildcardBase.replace('*.', '') : 'domain.com'}` : 'Enter preferred prefix (e.g. staging)') : 'Enter full external domain (e.g. api.company.com)'">
+                  :placeholder="domainType === 'free_domain' ? (autoGen ? `Format: app-xxxxxxxx.${wildcardBase ? wildcardBase.replace('*.', '') : 'domain.com'}` : 'Enter preferred prefix (e.g. staging)') : 'Enter full external domain (e.g. company.com)'">
               </div>
               <select x-model="domainType"
                 class="block w-auto py-2.5 pl-3 pr-8 bg-gray-50 dark:bg-slate-800 border-y border-r border-gray-300 dark:border-slate-600 border-l-0 rounded-r-lg focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 dark:text-gray-300 transition-colors cursor-pointer outline-none">
-                <option value="free_domain">Free Domain</option>
+                <option value="free_domain" :disabled="!wildcardBase" {{if not .WildcardDomain}}disabled{{end}}>Free
+                  Domain{{if not .WildcardDomain}} (Disabled){{end}}</option>
                 <option value="custom_domain">Custom Domain</option>
               </select>
             </div>
@@ -198,9 +199,9 @@
     return {
       domains: [],
       newPrefix: '',
-      domainType: 'free_domain', // 'free_domain', 'custom_domain'
-      autoGen: true,
-      wildcardBase: '',
+      domainType: '{{if .WildcardDomain}}free_domain{{else}}custom_domain{{end}}', // 'free_domain', 'custom_domain'
+      autoGen: '{{if .WildcardDomain}}true{{else}}false{{end}}' === 'true',
+      wildcardBase: '{{.WildcardDomain}}',
       loading: true,
 
       async init() {
@@ -223,6 +224,10 @@
             const data = await res.json();
             this.domains = data.domains || [];
             this.wildcardBase = data.wildcard_domain || '';
+            if (!this.wildcardBase && this.domainType === 'free_domain') {
+              this.domainType = 'custom_domain';
+              this.autoGen = false;
+            }
             // sort domains by creation date or name
             this.domains.sort((a, b) => a.domain.localeCompare(b.domain));
           }

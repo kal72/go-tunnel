@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=TunnelStore --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type TunnelStore interface {
 	Ping(ctx context.Context)
 	SetTunnel(ctx context.Context, sessionID string, info TunnelInfo) error
@@ -15,16 +15,21 @@ type TunnelStore interface {
 	ListTunnels(ctx context.Context) ([]TunnelInfo, error)
 
 	// Token management
-	SetToken(ctx context.Context, token string, expiration time.Duration) error
+	SetToken(ctx context.Context, userID, token string, expiration time.Duration) error
 	IsTokenRevoked(ctx context.Context, token string) (bool, error)
 	RevokeToken(ctx context.Context, token string) error
+	RevokeUserTokens(ctx context.Context, userID string) error
 
 	// Active tunnel global lock
 	SetActiveDomain(ctx context.Context, domain string, sessionID string) error
 	RemoveActiveDomain(ctx context.Context, domain string) error
+
+	// Realtime pub/sub events
+	PublishTunnelEvent(ctx context.Context, eventType string) error
+	SubscribeTunnelEvents(ctx context.Context) (<-chan string, error)
 }
 
-//go:generate mockery --name=DomainStore --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type DomainStore interface {
 	Ping(ctx context.Context)
 	AddDomain(ctx context.Context, domain string, userID uuid.UUID) error

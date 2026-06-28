@@ -2,12 +2,13 @@ package config
 
 import (
 	"context"
+
 	domainConfig "gotunnel/internal/domain/config"
 
 	"github.com/google/uuid"
 )
 
-//go:generate mockery --name=ConfigUsecase --case=underscore --output=mocks --outpkg=mocks
+//mockery:generate: true
 type ConfigUsecase interface {
 	GetConfigByName(ctx context.Context, userID uuid.UUID, name string) (*domainConfig.ClientConfig, error)
 	GetConfigByID(ctx context.Context, id uuid.UUID) (*domainConfig.ClientConfig, error)

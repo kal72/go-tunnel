@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+
 	domainUser "gotunnel/internal/domain/user"
 
 	"github.com/google/uuid"
@@ -22,8 +24,8 @@ func (r *sqlxUserRepository) GetUserByUsername(ctx context.Context, username str
 	var user domainUser.User
 	err := r.db.GetContext(ctx, &user, "SELECT id, username, password, role, status, created_at, updated_at FROM users WHERE username = $1", username)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil // Return nil if not found
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil //nolint:nilnil // Return nil if not found
 		}
 		return nil, fmt.Errorf("GetUserByUsername error: %w", err)
 	}

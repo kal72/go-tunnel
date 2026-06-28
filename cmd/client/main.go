@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	version   = "v1.0"
+	version   = "dev"
 	ServerURL = "http://localhost:8080"
 )
 
@@ -58,12 +58,16 @@ func main() {
 
 	command := flag.Args()[0]
 
+	if command != "update" && command != "uninstall" {
+		client.CheckForNewVersion(ServerURL, version)
+	}
+
 	switch command {
 	case "login":
 		loginCmd := flag.NewFlagSet("login", flag.ExitOnError)
 		username := loginCmd.String("username", "", "Username")
 		password := loginCmd.String("password", "", "Password")
-		loginCmd.Parse(flag.Args()[1:])
+		_ = loginCmd.Parse(flag.Args()[1:])
 
 		if err := client.Login(ServerURL, *username, *password); err != nil {
 			log.Fatalf("Login failed: %v", err)

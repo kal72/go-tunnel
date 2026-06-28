@@ -2,16 +2,18 @@ package di
 
 import (
 	"crypto/tls"
-	"gotunnel/internal/infrastructure/cert"
 	"net/http"
+
+	"gotunnel/internal/infrastructure/cert"
 
 	"context"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
+	"gotunnel/internal/config"
 	tunnelhandler "gotunnel/internal/delivery/tcp"
-	domainConfig "gotunnel/internal/domain/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cache/memory"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
@@ -25,7 +27,7 @@ import (
 type TunnelApp struct {
 	tunnelSrv *tunnelhandler.Server
 	httpSrv   *http.Server
-	cfg       *domainConfig.ServerConfig
+	cfg       *config.ServerConfig
 }
 
 func (a *TunnelApp) Run(ctx context.Context) error {
@@ -58,7 +60,7 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tunnelLn.Close()
+	defer func() { _ = tunnelLn.Close() }()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -70,14 +72,14 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		a.httpSrv.Shutdown(context.Background())
+		_ = a.httpSrv.Shutdown(context.Background())
 		return nil
 	case err := <-errCh:
 		return err
 	}
 }
 
-func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) {
+func BuildTunnelApp(env *config.ServerConfig) (*TunnelApp, func(), error) {
 	db, err := postgresrepo.InitDB(env)
 	if err != nil {
 		return nil, nil, fmt.Errorf("init db: %w", err)
@@ -89,12 +91,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 	tunnelStore := redisrepo.NewTunnelRedisStore(env.RedisAddr, env.RedisPass, env.RedisDB)
 	tunnelStore.Ping(context.Background())
 
-	var domainStore domainTunnel.DomainStore
-	if env.WildcardDomain != "" {
-		domainStore = postgresrepo.NewDomainRepository(db)
-	} else {
-		log.Printf("[gateway] Domain Management disabled (WILDCARD_DOMAIN is empty)")
-	}
+	var domainStore domainTunnel.DomainStore = postgresrepo.NewDomainRepository(db)
 
 	// HostRegistry
 	hostRegistry := memory.NewHostRegistry()
@@ -109,19 +106,20 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.JWTExpireHours)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 	settingUsecase := usecaseSetting.NewSettingUsecase(postgresrepo.NewSettingRepository(db))
 
 	// Handlers
 	tunnelSrv, err := tunnelhandler.NewServerJWT(env.JWTSecret, hostRegistry, env.GatewayDomain, env.WildcardDomain, tunnelUsecase, authUsecase, settingUsecase)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("init tunnel server: %w", err)
 	}
 
 	httpSrv := &http.Server{
-		Addr:    fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
-		Handler: tunnelSrv,
+		Addr:              fmt.Sprintf("0.0.0.0:%d", env.GatewayPort),
+		Handler:           tunnelSrv,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	app := &TunnelApp{
@@ -132,7 +130,7 @@ func BuildTunnelApp(env *domainConfig.ServerConfig) (*TunnelApp, func(), error) 
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up resources...")
-		db.Close()
+		_ = db.Close()
 	}
 
 	return app, cleanup, nil
