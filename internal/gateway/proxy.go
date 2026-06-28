@@ -258,7 +258,15 @@ func buildACMEServer(m interface {
 }
 
 func (p *ProxyServer) shutdown() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	log.Println("[proxy] starting graceful shutdown (waiting up to 30s for active requests to drain)...")
+	if p.ln != nil {
+		_ = p.ln.Close()
+	}
+	if p.chanLn != nil {
+		_ = p.chanLn.Close()
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if p.httpSrv != nil {
@@ -267,9 +275,6 @@ func (p *ProxyServer) shutdown() error {
 	if p.acmeSrv != nil {
 		_ = p.acmeSrv.Shutdown(ctx)
 	}
-	if p.ln != nil {
-		_ = p.ln.Close()
-	}
-	log.Println("[proxy] shutdown complete")
+	log.Println("[proxy] graceful shutdown complete")
 	return nil
 }

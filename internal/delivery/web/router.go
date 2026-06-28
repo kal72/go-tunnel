@@ -56,6 +56,7 @@ func SetupRouter(
 			r.Get("/downloads", h.Downloads)
 
 			// API
+			r.Get("/api/tunnels/stream", h.HandleTunnelStream)
 			r.Get("/api/configs", h.ListConfigs)
 			r.Post("/api/configs", h.CreateConfig)
 			r.Get("/api/configs/{id}", h.GetConfig)
@@ -80,6 +81,7 @@ func SetupRouter(
 				r.Post("/api/users", userH.CreateUser)
 				r.Put("/api/users/{id}/status", userH.UpdateStatus)
 				r.Put("/api/users/{id}/password", userH.UpdatePassword)
+				r.Post("/api/users/{id}/revoke-tokens", userH.RevokeTokens)
 				r.Delete("/api/users/{id}", userH.DeleteUser)
 			})
 		})

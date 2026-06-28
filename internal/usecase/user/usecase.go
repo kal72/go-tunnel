@@ -21,4 +21,5 @@ type AuthUsecase interface {
 	UpdateUserStatus(ctx context.Context, id uuid.UUID, status int16) error
 	UpdateUserPassword(ctx context.Context, id uuid.UUID, password string) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	RevokeUserTokens(ctx context.Context, targetUserID uuid.UUID) error
 }

@@ -264,6 +264,63 @@ func (_c *MockTunnelStore_Ping_Call) RunAndReturn(run func(ctx context.Context))
 	return _c
 }
 
+// PublishTunnelEvent provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) PublishTunnelEvent(ctx context.Context, eventType string) error {
+	ret := _mock.Called(ctx, eventType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PublishTunnelEvent")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, eventType)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelStore_PublishTunnelEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishTunnelEvent'
+type MockTunnelStore_PublishTunnelEvent_Call struct {
+	*mock.Call
+}
+
+// PublishTunnelEvent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - eventType string
+func (_e *MockTunnelStore_Expecter) PublishTunnelEvent(ctx any, eventType any) *MockTunnelStore_PublishTunnelEvent_Call {
+	return &MockTunnelStore_PublishTunnelEvent_Call{Call: _e.mock.On("PublishTunnelEvent", ctx, eventType)}
+}
+
+func (_c *MockTunnelStore_PublishTunnelEvent_Call) Run(run func(ctx context.Context, eventType string)) *MockTunnelStore_PublishTunnelEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_PublishTunnelEvent_Call) Return(err error) *MockTunnelStore_PublishTunnelEvent_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelStore_PublishTunnelEvent_Call) RunAndReturn(run func(ctx context.Context, eventType string) error) *MockTunnelStore_PublishTunnelEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RemoveActiveDomain provides a mock function for the type MockTunnelStore
 func (_mock *MockTunnelStore) RemoveActiveDomain(ctx context.Context, domain string) error {
 	ret := _mock.Called(ctx, domain)
@@ -378,6 +435,63 @@ func (_c *MockTunnelStore_RevokeToken_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// RevokeUserTokens provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) RevokeUserTokens(ctx context.Context, userID string) error {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeUserTokens")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelStore_RevokeUserTokens_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeUserTokens'
+type MockTunnelStore_RevokeUserTokens_Call struct {
+	*mock.Call
+}
+
+// RevokeUserTokens is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *MockTunnelStore_Expecter) RevokeUserTokens(ctx any, userID any) *MockTunnelStore_RevokeUserTokens_Call {
+	return &MockTunnelStore_RevokeUserTokens_Call{Call: _e.mock.On("RevokeUserTokens", ctx, userID)}
+}
+
+func (_c *MockTunnelStore_RevokeUserTokens_Call) Run(run func(ctx context.Context, userID string)) *MockTunnelStore_RevokeUserTokens_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_RevokeUserTokens_Call) Return(err error) *MockTunnelStore_RevokeUserTokens_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelStore_RevokeUserTokens_Call) RunAndReturn(run func(ctx context.Context, userID string) error) *MockTunnelStore_RevokeUserTokens_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetActiveDomain provides a mock function for the type MockTunnelStore
 func (_mock *MockTunnelStore) SetActiveDomain(ctx context.Context, domain string, sessionID string) error {
 	ret := _mock.Called(ctx, domain, sessionID)
@@ -442,16 +556,16 @@ func (_c *MockTunnelStore_SetActiveDomain_Call) RunAndReturn(run func(ctx contex
 }
 
 // SetToken provides a mock function for the type MockTunnelStore
-func (_mock *MockTunnelStore) SetToken(ctx context.Context, token string, expiration time.Duration) error {
-	ret := _mock.Called(ctx, token, expiration)
+func (_mock *MockTunnelStore) SetToken(ctx context.Context, userID string, token string, expiration time.Duration) error {
+	ret := _mock.Called(ctx, userID, token, expiration)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetToken")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Duration) error); ok {
-		r0 = returnFunc(ctx, token, expiration)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Duration) error); ok {
+		r0 = returnFunc(ctx, userID, token, expiration)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -465,13 +579,14 @@ type MockTunnelStore_SetToken_Call struct {
 
 // SetToken is a helper method to define mock.On call
 //   - ctx context.Context
+//   - userID string
 //   - token string
 //   - expiration time.Duration
-func (_e *MockTunnelStore_Expecter) SetToken(ctx any, token any, expiration any) *MockTunnelStore_SetToken_Call {
-	return &MockTunnelStore_SetToken_Call{Call: _e.mock.On("SetToken", ctx, token, expiration)}
+func (_e *MockTunnelStore_Expecter) SetToken(ctx any, userID any, token any, expiration any) *MockTunnelStore_SetToken_Call {
+	return &MockTunnelStore_SetToken_Call{Call: _e.mock.On("SetToken", ctx, userID, token, expiration)}
 }
 
-func (_c *MockTunnelStore_SetToken_Call) Run(run func(ctx context.Context, token string, expiration time.Duration)) *MockTunnelStore_SetToken_Call {
+func (_c *MockTunnelStore_SetToken_Call) Run(run func(ctx context.Context, userID string, token string, expiration time.Duration)) *MockTunnelStore_SetToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -481,14 +596,19 @@ func (_c *MockTunnelStore_SetToken_Call) Run(run func(ctx context.Context, token
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 time.Duration
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(time.Duration)
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Duration
+		if args[3] != nil {
+			arg3 = args[3].(time.Duration)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -499,7 +619,7 @@ func (_c *MockTunnelStore_SetToken_Call) Return(err error) *MockTunnelStore_SetT
 	return _c
 }
 
-func (_c *MockTunnelStore_SetToken_Call) RunAndReturn(run func(ctx context.Context, token string, expiration time.Duration) error) *MockTunnelStore_SetToken_Call {
+func (_c *MockTunnelStore_SetToken_Call) RunAndReturn(run func(ctx context.Context, userID string, token string, expiration time.Duration) error) *MockTunnelStore_SetToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -563,6 +683,68 @@ func (_c *MockTunnelStore_SetTunnel_Call) Return(err error) *MockTunnelStore_Set
 }
 
 func (_c *MockTunnelStore_SetTunnel_Call) RunAndReturn(run func(ctx context.Context, sessionID string, info tunnel.TunnelInfo) error) *MockTunnelStore_SetTunnel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SubscribeTunnelEvents provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) SubscribeTunnelEvents(ctx context.Context) (<-chan string, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SubscribeTunnelEvents")
+	}
+
+	var r0 <-chan string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (<-chan string, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) <-chan string); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnelStore_SubscribeTunnelEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SubscribeTunnelEvents'
+type MockTunnelStore_SubscribeTunnelEvents_Call struct {
+	*mock.Call
+}
+
+// SubscribeTunnelEvents is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTunnelStore_Expecter) SubscribeTunnelEvents(ctx any) *MockTunnelStore_SubscribeTunnelEvents_Call {
+	return &MockTunnelStore_SubscribeTunnelEvents_Call{Call: _e.mock.On("SubscribeTunnelEvents", ctx)}
+}
+
+func (_c *MockTunnelStore_SubscribeTunnelEvents_Call) Run(run func(ctx context.Context)) *MockTunnelStore_SubscribeTunnelEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_SubscribeTunnelEvents_Call) Return(stringCh <-chan string, err error) *MockTunnelStore_SubscribeTunnelEvents_Call {
+	_c.Call.Return(stringCh, err)
+	return _c
+}
+
+func (_c *MockTunnelStore_SubscribeTunnelEvents_Call) RunAndReturn(run func(ctx context.Context) (<-chan string, error)) *MockTunnelStore_SubscribeTunnelEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

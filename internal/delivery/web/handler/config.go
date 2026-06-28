@@ -9,15 +9,15 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	domainConfig "gotunnel/internal/domain/config"
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
-
-	"github.com/google/uuid"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -114,12 +114,18 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if tunnels == nil {
+		tunnels = []map[string]any{}
+	}
+	tunnelsJSON, _ := json.Marshal(tunnels)
+
 	role, _ := r.Context().Value(UserRoleKey).(int16)
 	username, _ := r.Context().Value(UserNameKey).(string)
 	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
 		"Tunnels":        tunnels,
+		"TunnelsJSON":    string(tunnelsJSON),
 		"DomainEnabled":  true,
 		"TunnelAddr":     h.tunnelAddr,
 		"WildcardDomain": h.wildcardDomain,
@@ -130,6 +136,85 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// HandleTunnelStream streams real-time active tunnel updates via Server-Sent Events (SSE).
+func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	getFormattedTunnels := func() []map[string]any {
+		var tunnels []map[string]any
+		if h.tunnelUsecase != nil {
+			infos, err := h.tunnelUsecase.ListTunnels(r.Context())
+			if err == nil {
+				for _, info := range infos {
+					tunnels = append(tunnels, map[string]any{
+						"TunnelName":  info.Name,
+						"ClientName":  info.ClientName,
+						"Hosts":       strings.Join(info.Hosts, ", "),
+						"ConnectedAt": info.ConnectedAt.Format("01-02-2006 15:04:05"),
+						"LastPing":    info.LastPing.Format("15:04:05"),
+					})
+				}
+			}
+		}
+		if tunnels == nil {
+			tunnels = []map[string]any{}
+		}
+		return tunnels
+	}
+
+	sendTunnels := func() bool {
+		data, err := json.Marshal(getFormattedTunnels())
+		if err != nil {
+			return true
+		}
+		_, err = fmt.Fprintf(w, "data: %s\n\n", data)
+		if err != nil {
+			return false
+		}
+		flusher.Flush()
+		return true
+	}
+
+	if !sendTunnels() {
+		return
+	}
+
+	var ch <-chan string
+	if h.tunnelUsecase != nil {
+		ch, _ = h.tunnelUsecase.SubscribeTunnelEvents(r.Context())
+	}
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case _, ok := <-ch:
+			if !ok {
+				ch = nil
+			}
+			if !sendTunnels() {
+				return
+			}
+		case <-ticker.C:
+			if !sendTunnels() {
+				return
+			}
+		}
 	}
 }
 

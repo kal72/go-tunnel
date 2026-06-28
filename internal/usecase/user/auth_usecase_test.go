@@ -61,7 +61,7 @@ func TestAuthUsecase_Login_and_LoginCLI(t *testing.T) {
 			password: password,
 			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("GetUserByUsername", mock.Anything, "admin").Return(validUser, nil).Once()
-				tunnelStore.On("SetToken", mock.Anything, mock.AnythingOfType("string"), 24*time.Hour).Return(nil).Once()
+				tunnelStore.On("SetToken", mock.Anything, validUser.ID.String(), mock.AnythingOfType("string"), 24*time.Hour).Return(nil).Once()
 			},
 			wantErr: nil,
 		},
@@ -72,7 +72,7 @@ func TestAuthUsecase_Login_and_LoginCLI(t *testing.T) {
 			password: password,
 			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("GetUserByUsername", mock.Anything, "admin").Return(validUser, nil).Once()
-				tunnelStore.On("SetToken", mock.Anything, mock.AnythingOfType("string"), 720*time.Hour).Return(nil).Once()
+				tunnelStore.On("SetToken", mock.Anything, validUser.ID.String(), mock.AnythingOfType("string"), 720*time.Hour).Return(nil).Once()
 			},
 			wantErr: nil,
 		},
@@ -134,7 +134,7 @@ func TestAuthUsecase_Login_and_LoginCLI(t *testing.T) {
 			password: password,
 			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("GetUserByUsername", mock.Anything, "admin").Return(validUser, nil).Once()
-				tunnelStore.On("SetToken", mock.Anything, mock.AnythingOfType("string"), 24*time.Hour).Return(errors.New("redis error")).Once()
+				tunnelStore.On("SetToken", mock.Anything, validUser.ID.String(), mock.AnythingOfType("string"), 24*time.Hour).Return(errors.New("redis error")).Once()
 			},
 			wantErr: errors.New("failed to save token session: redis error"),
 		},
@@ -501,19 +501,20 @@ func TestAuthUsecase_UpdateUserStatus(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		mockSetup func(userRepo *userMocks.MockUserRepository)
+		mockSetup func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore)
 		wantErr   bool
 	}{
 		{
 			name: "success update status",
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("UpdateUserStatus", mock.Anything, userID, status).Return(nil).Once()
+				tunnelStore.On("RevokeUserTokens", mock.Anything, userID.String()).Return(nil).Once()
 			},
 			wantErr: false,
 		},
 		{
 			name: "repo error returns error",
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("UpdateUserStatus", mock.Anything, userID, status).Return(errors.New("db err")).Once()
 			},
 			wantErr: true,
@@ -525,7 +526,7 @@ func TestAuthUsecase_UpdateUserStatus(t *testing.T) {
 			t.Parallel()
 			userRepo := userMocks.NewMockUserRepository(t)
 			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
-			tt.mockSetup(userRepo)
+			tt.mockSetup(userRepo, tunnelStore)
 
 			uc := NewAuthUsecase(userRepo, tunnelStore, "secret", 24, 720)
 			err := uc.UpdateUserStatus(context.Background(), userID, status)
@@ -548,30 +549,31 @@ func TestAuthUsecase_UpdateUserPassword(t *testing.T) {
 	tests := []struct {
 		name      string
 		pass      string
-		mockSetup func(userRepo *userMocks.MockUserRepository)
+		mockSetup func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore)
 		wantErr   bool
 	}{
 		{
 			name: "success update password",
 			pass: newPass,
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("UpdateUserPassword", mock.Anything, userID, mock.MatchedBy(func(hash string) bool {
 					return util.CheckPasswordHash(newPass, hash)
 				})).Return(nil).Once()
+				tunnelStore.On("RevokeUserTokens", mock.Anything, userID.String()).Return(nil).Once()
 			},
 			wantErr: false,
 		},
 		{
 			name: "hash error returns error",
 			pass: strings.Repeat("a", 80),
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 			},
 			wantErr: true,
 		},
 		{
 			name: "repo error returns error",
 			pass: newPass,
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("UpdateUserPassword", mock.Anything, userID, mock.Anything).Return(errors.New("db err")).Once()
 			},
 			wantErr: true,
@@ -583,7 +585,7 @@ func TestAuthUsecase_UpdateUserPassword(t *testing.T) {
 			t.Parallel()
 			userRepo := userMocks.NewMockUserRepository(t)
 			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
-			tt.mockSetup(userRepo)
+			tt.mockSetup(userRepo, tunnelStore)
 
 			uc := NewAuthUsecase(userRepo, tunnelStore, "secret", 24, 720)
 			err := uc.UpdateUserPassword(context.Background(), userID, tt.pass)
@@ -604,19 +606,20 @@ func TestAuthUsecase_DeleteUser(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		mockSetup func(userRepo *userMocks.MockUserRepository)
+		mockSetup func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore)
 		wantErr   bool
 	}{
 		{
 			name: "success delete user",
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("DeleteUser", mock.Anything, userID).Return(nil).Once()
+				tunnelStore.On("RevokeUserTokens", mock.Anything, userID.String()).Return(nil).Once()
 			},
 			wantErr: false,
 		},
 		{
 			name: "repo error returns error",
-			mockSetup: func(userRepo *userMocks.MockUserRepository) {
+			mockSetup: func(userRepo *userMocks.MockUserRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
 				userRepo.On("DeleteUser", mock.Anything, userID).Return(errors.New("db err")).Once()
 			},
 			wantErr: true,
@@ -628,10 +631,55 @@ func TestAuthUsecase_DeleteUser(t *testing.T) {
 			t.Parallel()
 			userRepo := userMocks.NewMockUserRepository(t)
 			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
-			tt.mockSetup(userRepo)
+			tt.mockSetup(userRepo, tunnelStore)
 
 			uc := NewAuthUsecase(userRepo, tunnelStore, "secret", 24, 720)
 			err := uc.DeleteUser(context.Background(), userID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAuthUsecase_RevokeUserTokens(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+
+	tests := []struct {
+		name      string
+		mockSetup func(tunnelStore *tunnelMocks.MockTunnelStore)
+		wantErr   bool
+	}{
+		{
+			name: "success revoke user tokens",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("RevokeUserTokens", mock.Anything, userID.String()).Return(nil).Once()
+			},
+			wantErr: false,
+		},
+		{
+			name: "store error returns error",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("RevokeUserTokens", mock.Anything, userID.String()).Return(errors.New("redis err")).Once()
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			userRepo := userMocks.NewMockUserRepository(t)
+			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
+			tt.mockSetup(tunnelStore)
+
+			uc := NewAuthUsecase(userRepo, tunnelStore, "secret", 24, 720)
+			err := uc.RevokeUserTokens(context.Background(), userID)
 
 			if tt.wantErr {
 				assert.Error(t, err)

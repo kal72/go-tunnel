@@ -79,3 +79,7 @@ Before pushing, validate that the commit message follows the format by running:
 ```bash
 git log -1 --pretty=format:"%B" | grep -E "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?: .+$"
 ```
+
+## Changelog Policy
+- **Record Changes**: Whenever a new feature (`feat`), improvement (`improvement`), or bug fix (`fix`) is completed, the agent **MUST** update `CHANGELOG.md` in the project root.
+- Add the title and brief description under the `## [Unreleased]` section categorized by `### Added`, `### Changed`, or `### Fixed`. This ensures all changes are properly tracked for future release changelogs.

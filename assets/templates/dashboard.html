@@ -1,13 +1,22 @@
 {{define "content"}}
-<div class="flex flex-col h-full">
+<script id="initial-tunnels" type="application/json">{{printf "%s" .TunnelsJSON}}</script>
+<div class="flex flex-col h-full" x-data="tunnelStream()">
 
   <!-- Main Content -->
   <main class="flex-1 overflow-auto p-6 bg-transparent">
     <div class="max-w-6xl mx-auto">
 
-      <div class="mb-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Active Tunnels</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time status of all connected tunnel agents.</p>
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Active Tunnels</h2>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 border border-green-200 dark:border-green-500/20 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+              Realtime
+            </span>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time status of all connected tunnel agents.</p>
+        </div>
       </div>
 
       <!-- Notification Box -->
@@ -56,55 +65,51 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50">
-            {{if .Tunnels}}
-            {{range .Tunnels}}
-            <tr class="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200">
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
+            <template x-for="t in tunnels" :key="t.TunnelName">
+              <tr class="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors duration-200 animate-fadeIn">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                      <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono" x-text="t.TunnelName"></span>
                   </div>
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono">{{.TunnelName}}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                      <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono" x-text="t.ClientName"></span>
                   </div>
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono">{{.ClientName}}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex flex-wrap gap-1.5">
-                  {{$hosts := split .Hosts ","}}
-                  {{range $hosts}}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex flex-wrap gap-1.5">
+                    <template x-for="host in (t.Hosts ? t.Hosts.split(', ') : [])">
+                      <span
+                        class="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 text-xs font-mono rounded border border-gray-200 dark:border-slate-600 transition-colors" x-text="host"></span>
+                    </template>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-sm text-gray-600 dark:text-gray-400" x-text="t.ConnectedAt"></span>
+                </td>
+                <td class="px-6 py-4 text-right">
                   <span
-                    class="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 text-xs font-mono rounded border border-gray-200 dark:border-slate-600 transition-colors">{{.}}</span>
-                  {{end}}
-                </div>
-              </td>
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{.ConnectedAt}}</span>
-              </td>
-              <td class="px-6 py-4 text-right">
-                <span
-                  class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20 transition-colors">
-                  {{.LastPing}}
-                </span>
-              </td>
-            </tr>
-            {{end}}
-            {{else}}
-            <tr>
+                    class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20 transition-colors" x-text="t.LastPing">
+                  </span>
+                </td>
+              </tr>
+            </template>
+            <tr x-show="tunnels.length === 0" x-cloak>
               <td colspan="5" class="px-6 py-12 text-center">
                 <div class="flex flex-col items-center">
                   <div
@@ -119,7 +124,6 @@
                 </div>
               </td>
             </tr>
-            {{end}}
           </tbody>
         </table>
       </div>
@@ -128,10 +132,36 @@
         <div
           class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm transition-colors duration-200">
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Clients</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{len .Tunnels}}</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" x-text="tunnels.length">{{len .Tunnels}}</p>
         </div>
       </div>
     </div>
   </main>
 </div>
+
+<script>
+  function tunnelStream() {
+    return {
+      tunnels: [],
+      init() {
+        try {
+          const el = document.getElementById('initial-tunnels');
+          if (el && el.textContent) {
+            this.tunnels = JSON.parse(el.textContent);
+          }
+        } catch (e) {
+          console.error('Failed to load initial tunnels', e);
+        }
+        const es = new EventSource('/api/tunnels/stream');
+        es.onmessage = (event) => {
+          try {
+            this.tunnels = JSON.parse(event.data);
+          } catch (e) {
+            console.error('Failed to parse SSE tunnel data', e);
+          }
+        };
+      }
+    };
+  }
+</script>
 {{end}}

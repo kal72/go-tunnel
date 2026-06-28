@@ -155,7 +155,11 @@ func (l *ChanListener) Accept() (net.Conn, error) {
 }
 
 func (l *ChanListener) Close() error {
-	close(l.done)
+	select {
+	case <-l.done:
+	default:
+		close(l.done)
+	}
 	return nil
 }
 

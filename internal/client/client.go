@@ -1,25 +1,25 @@
 package client
 
 import (
-	"context"
-	"errors"
-
-	clientconfig "gotunnel/internal/client/config"
-
 	"bufio"
+	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"gotunnel/internal/shared/protocol"
-
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	clientconfig "gotunnel/internal/client/config"
+	"gotunnel/internal/shared/protocol"
 )
 
 type Client struct {
@@ -53,11 +53,30 @@ func NewClient(cfg *clientconfig.TunnelClientConfig) *Client {
 }
 
 func (c *Client) RunForever() {
+	backoff := 1 * time.Second
+	maxBackoff := 30 * time.Second
+
 	for {
+		start := time.Now()
 		if err := c.runOnce(); err != nil {
 			c.logger.Error("[agent] tunnel error", zap.Error(err))
 		}
-		time.Sleep(2 * time.Second)
+
+		if time.Since(start) > 30*time.Second {
+			backoff = 1 * time.Second
+		}
+
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(backoff/2+1)))
+		jitter := time.Duration(n.Int64())
+		sleepDuration := backoff + jitter
+
+		c.logger.Info("[agent] reconnecting after backoff", zap.Duration("sleep", sleepDuration))
+		time.Sleep(sleepDuration)
+
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
 	}
 }
 

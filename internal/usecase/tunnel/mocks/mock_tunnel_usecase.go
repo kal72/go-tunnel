@@ -316,6 +316,63 @@ func (_c *MockTunnelUsecase_ListTunnels_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// PublishTunnelEvent provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) PublishTunnelEvent(ctx context.Context, eventType string) error {
+	ret := _mock.Called(ctx, eventType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PublishTunnelEvent")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, eventType)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelUsecase_PublishTunnelEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishTunnelEvent'
+type MockTunnelUsecase_PublishTunnelEvent_Call struct {
+	*mock.Call
+}
+
+// PublishTunnelEvent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - eventType string
+func (_e *MockTunnelUsecase_Expecter) PublishTunnelEvent(ctx any, eventType any) *MockTunnelUsecase_PublishTunnelEvent_Call {
+	return &MockTunnelUsecase_PublishTunnelEvent_Call{Call: _e.mock.On("PublishTunnelEvent", ctx, eventType)}
+}
+
+func (_c *MockTunnelUsecase_PublishTunnelEvent_Call) Run(run func(ctx context.Context, eventType string)) *MockTunnelUsecase_PublishTunnelEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_PublishTunnelEvent_Call) Return(err error) *MockTunnelUsecase_PublishTunnelEvent_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_PublishTunnelEvent_Call) RunAndReturn(run func(ctx context.Context, eventType string) error) *MockTunnelUsecase_PublishTunnelEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RegisterTunnel provides a mock function for the type MockTunnelUsecase
 func (_mock *MockTunnelUsecase) RegisterTunnel(ctx context.Context, sessionID string, info tunnel.TunnelInfo) error {
 	ret := _mock.Called(ctx, sessionID, info)
@@ -564,6 +621,68 @@ func (_c *MockTunnelUsecase_SetActiveDomain_Call) Return(err error) *MockTunnelU
 }
 
 func (_c *MockTunnelUsecase_SetActiveDomain_Call) RunAndReturn(run func(ctx context.Context, domain string, sessionID string) error) *MockTunnelUsecase_SetActiveDomain_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SubscribeTunnelEvents provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) SubscribeTunnelEvents(ctx context.Context) (<-chan string, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SubscribeTunnelEvents")
+	}
+
+	var r0 <-chan string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (<-chan string, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) <-chan string); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnelUsecase_SubscribeTunnelEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SubscribeTunnelEvents'
+type MockTunnelUsecase_SubscribeTunnelEvents_Call struct {
+	*mock.Call
+}
+
+// SubscribeTunnelEvents is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTunnelUsecase_Expecter) SubscribeTunnelEvents(ctx any) *MockTunnelUsecase_SubscribeTunnelEvents_Call {
+	return &MockTunnelUsecase_SubscribeTunnelEvents_Call{Call: _e.mock.On("SubscribeTunnelEvents", ctx)}
+}
+
+func (_c *MockTunnelUsecase_SubscribeTunnelEvents_Call) Run(run func(ctx context.Context)) *MockTunnelUsecase_SubscribeTunnelEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_SubscribeTunnelEvents_Call) Return(stringCh <-chan string, err error) *MockTunnelUsecase_SubscribeTunnelEvents_Call {
+	_c.Call.Return(stringCh, err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_SubscribeTunnelEvents_Call) RunAndReturn(run func(ctx context.Context) (<-chan string, error)) *MockTunnelUsecase_SubscribeTunnelEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

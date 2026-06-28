@@ -79,7 +79,7 @@ func (u *authUsecase) issueToken(ctx context.Context, user *domainUser.User, exp
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
-	err = u.store.SetToken(ctx, tokenString, expiration)
+	err = u.store.SetToken(ctx, user.ID.String(), tokenString, expiration)
 	if err != nil {
 		return "", fmt.Errorf("failed to save token session: %w", err)
 	}
@@ -170,7 +170,11 @@ func (u *authUsecase) ListUsers(ctx context.Context) ([]domainUser.User, error) 
 }
 
 func (u *authUsecase) UpdateUserStatus(ctx context.Context, id uuid.UUID, status int16) error {
-	return u.userRepo.UpdateUserStatus(ctx, id, status)
+	err := u.userRepo.UpdateUserStatus(ctx, id, status)
+	if err == nil && status != 1 {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
 }
 
 func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, password string) error {
@@ -178,9 +182,21 @@ func (u *authUsecase) UpdateUserPassword(ctx context.Context, id uuid.UUID, pass
 	if err != nil {
 		return err
 	}
-	return u.userRepo.UpdateUserPassword(ctx, id, hash)
+	err = u.userRepo.UpdateUserPassword(ctx, id, hash)
+	if err == nil {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
 }
 
 func (u *authUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	return u.userRepo.DeleteUser(ctx, id)
+	err := u.userRepo.DeleteUser(ctx, id)
+	if err == nil {
+		_ = u.store.RevokeUserTokens(ctx, id.String())
+	}
+	return err
+}
+
+func (u *authUsecase) RevokeUserTokens(ctx context.Context, targetUserID uuid.UUID) error {
+	return u.store.RevokeUserTokens(ctx, targetUserID.String())
 }
