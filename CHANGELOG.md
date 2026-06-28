@@ -23,3 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reliability & Gateway Proxy**: Implement graceful connection draining with a 30-second timeout on shutdown and double-close protection on `ChanListener`.
 - **Web UI**: Improve sidebar navigation menu styling with dynamic active state indicator, coloring text and icons to match the menu item's unique color when selected.
 - **Documentation**: Translate and expand Web UI portal documentation (`docs.html`) with TCP connection examples, detailed root domain CNAME guide, CLI reference table, troubleshooting FAQ, and standardized Table of Contents styling.
+
+### Fixed
+- **Client Build**: Resolve cross-platform compilation error on Windows (`GOOS=windows`) by properly casting `os.Stdin` file descriptor for `term.ReadPassword`.
+- **CI/CD**: Remove manual version input from deployment workflow, enforcing release execution from Git tags.

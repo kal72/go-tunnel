@@ -28,9 +28,6 @@ COPY --from=builder /app/gotunnel-tunnel .
 COPY --from=builder /app/gotunnel-proxy .
 COPY --from=builder /app/gotunnel-webui .
 
-
-RUN mkdir -p /app/assets/configs
-COPY --from=builder /app/assets/configs/client.yaml /app/assets/configs/client.yaml
 RUN mkdir -p /app/cert-cache
 
 # Buat start script untuk menjalankan ketiga service
