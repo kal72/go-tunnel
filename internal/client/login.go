@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"golang.org/x/term"
 )
@@ -46,7 +45,7 @@ func GetCredentialsPath() (string, error) {
 func InteractivePrompt(prompt string, isPassword bool) (string, error) {
 	fmt.Print(prompt)
 	if isPassword {
-		bytePassword, err := term.ReadPassword(syscall.Stdin)
+		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println() // new line after typing password
 		if err != nil {
 			return "", err

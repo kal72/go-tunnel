@@ -18,10 +18,6 @@ on:
         options:
           - production
           - staging
-      version:
-        description: "Version tag (e.g. v1.0.0). Required for release if not running from tag."
-        required: false
-        type: string
       cli_version:
         description: "CLI Client Version override (leave blank for auto tag / 'dev')"
         required: false
@@ -157,13 +153,8 @@ jobs:
             echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
             echo "Auto VERSION from TAG: ${GITHUB_REF_NAME}"
           else
-            if [ -z "${{ github.event.inputs.version }}" ]; then
-              echo "ERROR: Version harus diisi jika tidak menjalankan dari TAG."
-              exit 1
-            fi
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-            echo "Manual VERSION: ${{ github.event.inputs.version }}"
+            echo "ERROR: Release job harus dijalankan dari Git TAG."
+            exit 1
           fi
 
       - name: Build & Push Release Image
