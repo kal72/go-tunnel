@@ -28,7 +28,7 @@ DB_NAME ?= gotunnel
 # DB parameters
 DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
 
-SERVER_URL ?= https://tun.yourdomain.com
+SERVER_URL ?= http://localhost:8080
 VERSION ?= dev
 
 all: generate test build build-clients
