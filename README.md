@@ -50,7 +50,7 @@ Copy `.env.example` and adjust the variables:
 | `PROXY_HTTPS_PORT` | Port for the public Edge Gateway Proxy (default `443`). |
 | `WEBUI_PORT` | Port for the Web UI Manager (default `8080`). |
 | `WEBUI_DOMAIN` | Domain for accessing the Web UI (e.g., `webui.example.com`). |
-| `CLI_LATEST_VERSION` | Version string distributed to clients (default `v1.0`). |
+| `CLI_LATEST_VERSION` | Version string distributed to clients (default `dev`). |
 | `GATEWAY_PORT` | Internal port used by the Tunnel to handle local HTTP traffic (default `8443`). |
 | `TUNNEL_DOMAIN` | Domain for agent TCP connections (SNI, e.g. `tunnel.example.com`). |
 | `TUNNEL_PORT` | Port for agent TCP Yamux connections (default `9443`). |
