@@ -53,6 +53,7 @@ func main() {
 
 	if len(flag.Args()) == 0 {
 		flag.Usage()
+		client.CheckForNewVersion(ServerURL, version)
 		os.Exit(1)
 	}
 
