@@ -50,9 +50,9 @@ jobs:
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          organization: ${{ github.repository_owner }}
+          user: ${{ github.repository_owner }}
           container: ${{ github.event.repository.name }}
-          untagged-only: true  # Keep only untagged (SHA-only) images for deletion
+          prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
           keep-younger-than: 2 # Safety buffer: Keep the 3 newest untagged images just in case
 
   deploy-dev:
@@ -178,9 +178,9 @@ jobs:
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          organization: ${{ github.repository_owner }}
+          user: ${{ github.repository_owner }}
           container: ${{ github.event.repository.name }}
-          untagged-only: true  # Keep only untagged (SHA-only) images for deletion
+          prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
           keep-younger-than: 2 # Safety buffer: Keep the 3 newest untagged images just in case
 
 

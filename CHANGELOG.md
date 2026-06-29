@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CI/CD**: Added cross-compile matrix validation for client binaries across 5 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) inside the automated quality checks workflow.
+- **CI/CD**: Configured GitHub Actions PR labeler tool via `labeler.yml` for automated context tagging of pull requests based on changed paths.
+
+### Changed
+- **CI/CD**: Enhanced unit testing workflow with a 5-minute timeout flag (`-timeout 5m`) to prevent hung runners.
+
+### Fixed
+- **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.
+- **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs in the manual deployment pipeline by replacing `organization` with `user` and using the correct `prune-untagged` key, resolving the `Error: Not Found` issue.
+
 ## [1.1.0] - 2026-06-28
 
 ### Added
