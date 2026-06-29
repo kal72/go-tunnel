@@ -218,6 +218,55 @@ func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StreamInspectEvents pushes live HTTP request logs for a tunnel host via Server-Sent Events (SSE).
+func (h *Handler) StreamInspectEvents(w http.ResponseWriter, r *http.Request) {
+	host := r.URL.Query().Get("host")
+	if host == "" {
+		http.Error(w, "host parameter required", http.StatusBadRequest)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	var ch <-chan string
+	if h.tunnelUsecase != nil {
+		ch, _ = h.tunnelUsecase.SubscribeInspectEvents(r.Context(), host)
+	}
+
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case data, ok := <-ch:
+			if !ok {
+				return
+			}
+			_, err := fmt.Fprintf(w, "data: %s\n\n", data)
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-ticker.C:
+			_, err := fmt.Fprintf(w, ": ping\n\n")
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 // Downloads renders the client downloads page.
 func (h *Handler) Downloads(w http.ResponseWriter, r *http.Request) {
 	role, _ := r.Context().Value(UserRoleKey).(int16)

@@ -186,3 +186,35 @@ func (s *TunnelRedisStore) SubscribeTunnelEvents(ctx context.Context) (<-chan st
 	}()
 	return ch, nil
 }
+
+func (s *TunnelRedisStore) PublishInspectEvent(ctx context.Context, host, payload string) error {
+	channel := "tunnel_inspect:" + host
+	return s.client.Publish(ctx, channel, payload).Err()
+}
+
+func (s *TunnelRedisStore) SubscribeInspectEvents(ctx context.Context, host string) (<-chan string, error) {
+	channel := "tunnel_inspect:" + host
+	pubsub := s.client.Subscribe(ctx, channel)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		_ = pubsub.Close()
+		return nil, err
+	}
+	ch := make(chan string, 16)
+	go func() {
+		defer pubsub.Close()
+		for {
+			msg, err := pubsub.ReceiveMessage(ctx)
+			if err != nil {
+				close(ch)
+				return
+			}
+			select {
+			case ch <- msg.Payload:
+			case <-ctx.Done():
+				close(ch)
+				return
+			}
+		}
+	}()
+	return ch, nil
+}

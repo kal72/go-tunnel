@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Web UI & Tunnel Dashboard**: Added Live Request Inspector featuring real-time HTTP traffic streaming via Redis Pub/Sub ephemeral channels (`tunnel_inspect:<hostname>`), Server-Sent Events (`/api/tunnels/inspect/stream`), and an interactive glassmorphism drawer in Alpine.js with zero persistence. Includes interactive Host Switcher pills (defaults to monitoring all hosts assigned to the tunnel) and a Pause/Resume traffic button.
 - **CI/CD**: Added cross-compile matrix validation for client binaries across 5 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) inside the automated quality checks workflow.
 - **CI/CD**: Configured GitHub Actions PR labeler tool via `labeler.yml` for automated context tagging of pull requests based on changed paths.
 
