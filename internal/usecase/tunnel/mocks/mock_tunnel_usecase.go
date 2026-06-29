@@ -689,8 +689,14 @@ func (_c *MockTunnelUsecase_SetActiveDomain_Call) RunAndReturn(run func(ctx cont
 }
 
 // SubscribeInspectEvents provides a mock function for the type MockTunnelUsecase
-func (_mock *MockTunnelUsecase) SubscribeInspectEvents(ctx context.Context, host string) (<-chan string, error) {
-	ret := _mock.Called(ctx, host)
+func (_mock *MockTunnelUsecase) SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error) {
+	var tmpRet mock.Arguments
+	if len(hosts) > 0 {
+		tmpRet = _mock.Called(ctx, hosts)
+	} else {
+		tmpRet = _mock.Called(ctx)
+	}
+	ret := tmpRet
 
 	if len(ret) == 0 {
 		panic("no return value specified for SubscribeInspectEvents")
@@ -698,18 +704,18 @@ func (_mock *MockTunnelUsecase) SubscribeInspectEvents(ctx context.Context, host
 
 	var r0 <-chan string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (<-chan string, error)); ok {
-		return returnFunc(ctx, host)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...string) (<-chan string, error)); ok {
+		return returnFunc(ctx, hosts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) <-chan string); ok {
-		r0 = returnFunc(ctx, host)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...string) <-chan string); ok {
+		r0 = returnFunc(ctx, hosts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(<-chan string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, host)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, ...string) error); ok {
+		r1 = returnFunc(ctx, hosts...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -723,24 +729,27 @@ type MockTunnelUsecase_SubscribeInspectEvents_Call struct {
 
 // SubscribeInspectEvents is a helper method to define mock.On call
 //   - ctx context.Context
-//   - host string
-func (_e *MockTunnelUsecase_Expecter) SubscribeInspectEvents(ctx any, host any) *MockTunnelUsecase_SubscribeInspectEvents_Call {
-	return &MockTunnelUsecase_SubscribeInspectEvents_Call{Call: _e.mock.On("SubscribeInspectEvents", ctx, host)}
+//   - hosts ...string
+func (_e *MockTunnelUsecase_Expecter) SubscribeInspectEvents(ctx any, hosts ...any) *MockTunnelUsecase_SubscribeInspectEvents_Call {
+	return &MockTunnelUsecase_SubscribeInspectEvents_Call{Call: _e.mock.On("SubscribeInspectEvents",
+		append([]any{ctx}, hosts...)...)}
 }
 
-func (_c *MockTunnelUsecase_SubscribeInspectEvents_Call) Run(run func(ctx context.Context, host string)) *MockTunnelUsecase_SubscribeInspectEvents_Call {
+func (_c *MockTunnelUsecase_SubscribeInspectEvents_Call) Run(run func(ctx context.Context, hosts ...string)) *MockTunnelUsecase_SubscribeInspectEvents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
+		var arg1 []string
+		var variadicArgs []string
+		if len(args) > 1 {
+			variadicArgs = args[1].([]string)
 		}
+		arg1 = variadicArgs
 		run(
 			arg0,
-			arg1,
+			arg1...,
 		)
 	})
 	return _c
@@ -751,7 +760,7 @@ func (_c *MockTunnelUsecase_SubscribeInspectEvents_Call) Return(stringCh <-chan 
 	return _c
 }
 
-func (_c *MockTunnelUsecase_SubscribeInspectEvents_Call) RunAndReturn(run func(ctx context.Context, host string) (<-chan string, error)) *MockTunnelUsecase_SubscribeInspectEvents_Call {
+func (_c *MockTunnelUsecase_SubscribeInspectEvents_Call) RunAndReturn(run func(ctx context.Context, hosts ...string) (<-chan string, error)) *MockTunnelUsecase_SubscribeInspectEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

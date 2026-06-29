@@ -26,5 +26,5 @@ type TunnelUsecase interface {
 	PublishTunnelEvent(ctx context.Context, eventType string) error
 	SubscribeTunnelEvents(ctx context.Context) (<-chan string, error)
 	PublishInspectEvent(ctx context.Context, host, payload string) error
-	SubscribeInspectEvents(ctx context.Context, host string) (<-chan string, error)
+	SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error)
 }

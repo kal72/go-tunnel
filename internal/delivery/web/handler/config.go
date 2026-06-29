@@ -21,26 +21,27 @@ import (
 )
 
 type Handler struct {
-	tunnelUsecase    usecaseTunnel.TunnelUsecase
-	settingUsecase   usecaseSetting.SettingUsecase
-	configUsecase    usecaseConfig.ConfigUsecase
-	settingTmpl      *template.Template
-	downTmpl         *template.Template
-	docsTmpl         *template.Template
-	domainTmpl       *template.Template
-	confTmpl         *template.Template
-	dashTmpl         *template.Template
-	masterSecret     string
-	tunnelAddr       string
-	wildcardDomain   string
-	gatewayDomain    string
-	cliLatestVersion string
-	maxFreeDomains   int
-	acmeEnable       bool
+	tunnelUsecase       usecaseTunnel.TunnelUsecase
+	settingUsecase      usecaseSetting.SettingUsecase
+	configUsecase       usecaseConfig.ConfigUsecase
+	settingTmpl         *template.Template
+	downTmpl            *template.Template
+	docsTmpl            *template.Template
+	domainTmpl          *template.Template
+	confTmpl            *template.Template
+	dashTmpl            *template.Template
+	masterSecret        string
+	tunnelAddr          string
+	wildcardDomain      string
+	gatewayDomain       string
+	cliLatestVersion    string
+	maxFreeDomains      int
+	inspectDefaultLimit int
+	acmeEnable          bool
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string, inspectDefaultLimit int) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -76,22 +77,23 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 	))
 
 	return &Handler{
-		dashTmpl:         dashTmpl,
-		confTmpl:         confTmpl,
-		domainTmpl:       domainTmpl,
-		docsTmpl:         docsTmpl,
-		downTmpl:         downTmpl,
-		settingTmpl:      settingTmpl,
-		tunnelUsecase:    tunnelUsecase,
-		configUsecase:    configUsecase,
-		settingUsecase:   settingUsecase,
-		masterSecret:     masterSecret,
-		tunnelAddr:       tunnelAddr,
-		wildcardDomain:   wildcardDomain,
-		gatewayDomain:    gatewayDomain,
-		acmeEnable:       acmeEnable,
-		maxFreeDomains:   maxFreeDomains,
-		cliLatestVersion: cliLatestVersion,
+		dashTmpl:            dashTmpl,
+		confTmpl:            confTmpl,
+		domainTmpl:          domainTmpl,
+		docsTmpl:            docsTmpl,
+		downTmpl:            downTmpl,
+		settingTmpl:         settingTmpl,
+		tunnelUsecase:       tunnelUsecase,
+		configUsecase:       configUsecase,
+		settingUsecase:      settingUsecase,
+		masterSecret:        masterSecret,
+		tunnelAddr:          tunnelAddr,
+		wildcardDomain:      wildcardDomain,
+		gatewayDomain:       gatewayDomain,
+		acmeEnable:          acmeEnable,
+		maxFreeDomains:      maxFreeDomains,
+		inspectDefaultLimit: inspectDefaultLimit,
+		cliLatestVersion:    cliLatestVersion,
 	}
 }
 
@@ -124,14 +126,15 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
-		"Tunnels":        tunnels,
-		"TunnelsJSON":    string(tunnelsJSON),
-		"DomainEnabled":  true,
-		"TunnelAddr":     h.tunnelAddr,
-		"WildcardDomain": h.wildcardDomain,
-		"UserRole":       role,
-		"UserName":       username,
-		"CSRFToken":      csrf,
+		"Tunnels":             tunnels,
+		"TunnelsJSON":         string(tunnelsJSON),
+		"DomainEnabled":       true,
+		"TunnelAddr":          h.tunnelAddr,
+		"WildcardDomain":      h.wildcardDomain,
+		"UserRole":            role,
+		"UserName":            username,
+		"CSRFToken":           csrf,
+		"InspectDefaultLimit": h.inspectDefaultLimit,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -220,9 +223,25 @@ func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
 
 // StreamInspectEvents pushes live HTTP request logs for a tunnel host via Server-Sent Events (SSE).
 func (h *Handler) StreamInspectEvents(w http.ResponseWriter, r *http.Request) {
-	host := r.URL.Query().Get("host")
-	if host == "" {
-		http.Error(w, "host parameter required", http.StatusBadRequest)
+	hostsParam := r.URL.Query().Get("hosts")
+	if hostsParam == "" {
+		hostsParam = r.URL.Query().Get("host")
+	}
+	if hostsParam == "" {
+		http.Error(w, "hosts parameter required", http.StatusBadRequest)
+		return
+	}
+
+	hostsList := strings.Split(hostsParam, ",")
+	var validHosts []string
+	for _, hst := range hostsList {
+		hst = strings.TrimSpace(hst)
+		if hst != "" {
+			validHosts = append(validHosts, hst)
+		}
+	}
+	if len(validHosts) == 0 {
+		http.Error(w, "valid hosts required", http.StatusBadRequest)
 		return
 	}
 
@@ -238,7 +257,7 @@ func (h *Handler) StreamInspectEvents(w http.ResponseWriter, r *http.Request) {
 
 	var ch <-chan string
 	if h.tunnelUsecase != nil {
-		ch, _ = h.tunnelUsecase.SubscribeInspectEvents(r.Context(), host)
+		ch, _ = h.tunnelUsecase.SubscribeInspectEvents(r.Context(), validHosts...)
 	}
 
 	ticker := time.NewTicker(20 * time.Second)

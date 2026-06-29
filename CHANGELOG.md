@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Web UI & Tunnel Dashboard**: Added Live Request Inspector featuring real-time HTTP traffic streaming via Redis Pub/Sub ephemeral channels (`tunnel_inspect:<hostname>`), Server-Sent Events (`/api/tunnels/inspect/stream`), and an interactive glassmorphism drawer in Alpine.js with zero persistence. Includes interactive Host Switcher pills (defaults to monitoring all hosts assigned to the tunnel) and a Pause/Resume traffic button.
+- **Web UI & Tunnel Dashboard**: Added Live Request Inspector featuring real-time HTTP traffic streaming via Redis Pub/Sub ephemeral channels (`tunnel_inspect:<hostname>`), Server-Sent Events (`/api/tunnels/inspect/stream`), and an interactive glassmorphism drawer in Alpine.js with zero persistence. Features a wider modal layout (`max-w-6xl`), a clean dropdown Host Selector supporting long domain names (defaults to monitoring all hosts), a Pause/Resume traffic button, and a traffic log buffer limit defaulting to 100 items (configured purely via `INSPECT_DEFAULT_LIMIT` environment variable).
 - **CI/CD**: Added cross-compile matrix validation for client binaries across 5 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) inside the automated quality checks workflow.
 - **CI/CD**: Configured GitHub Actions PR labeler tool via `labeler.yml` for automated context tagging of pull requests based on changed paths.
 
 ### Changed
+- **Web UI & Tunnel Dashboard**: Upgraded Live Request Inspector SSE streaming architecture to Single Multiplexed Stream (`/api/tunnels/inspect/stream?hosts=...`). Replaced multi-stream per host connections with a unified single SSE stream per dashboard view, significantly reducing server goroutine allocations and Redis Pub/Sub subscriptions on tunnels with large host counts. Added host badge display on UI request logs for clean multiplexed visual differentiation.
 - **CI/CD**: Enhanced unit testing workflow with a 5-minute timeout flag (`-timeout 5m`) to prevent hung runners.
 
 ### Fixed

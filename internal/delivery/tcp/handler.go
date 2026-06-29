@@ -109,6 +109,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			clientIP = strings.Split(xff, ",")[0]
 		}
 		eventData := map[string]any{
+			"host":        host,
 			"method":      r.Method,
 			"path":        r.URL.Path,
 			"status_code": resp.StatusCode,

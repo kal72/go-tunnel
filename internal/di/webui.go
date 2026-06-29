@@ -50,7 +50,7 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 
 	// Handlers
-	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion)
+	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion, env.InspectDefaultLimit)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
 	cliH := webui.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)

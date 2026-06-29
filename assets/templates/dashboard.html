@@ -1,5 +1,6 @@
 {{define "content"}}
 <script id="initial-tunnels" type="application/json">{{printf "%s" .TunnelsJSON}}</script>
+<script id="inspect-default-limit" type="application/json">{{if .InspectDefaultLimit}}{{.InspectDefaultLimit}}{{else}}100{{end}}</script>
 <div class="flex flex-col h-full" x-data="tunnelStream()">
 
   <!-- Main Content -->
@@ -166,7 +167,7 @@
       <div x-show="inspectModalOpen"
         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        class="inline-block align-bottom bg-white dark:bg-slate-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-gray-200 dark:border-slate-700">
+        class="inline-block align-bottom bg-white dark:bg-slate-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl xl:max-w-7xl sm:w-full border border-gray-200 dark:border-slate-700">
         
         <div class="px-6 py-5 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -193,24 +194,32 @@
 
         <div class="p-6">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-gray-100/60 dark:bg-slate-900/60 p-3 rounded-xl border border-gray-200/80 dark:border-slate-700/80">
-            <!-- Host Filter Pills -->
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">Filter Host:</span>
-              <button @click="switchHost('ALL')" x-show="inspectHosts.length > 1"
-                :class="selectedHost === 'ALL' ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/30' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700'"
-                class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all">
-                All Hosts (<span x-text="inspectHosts.length"></span>)
-              </button>
-              <template x-for="host in inspectHosts" :key="host">
-                <button @click="switchHost(host)"
-                  :class="selectedHost === host ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/30' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700'"
-                  class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all" x-text="host">
-                </button>
-              </template>
+            <!-- Host Filter Dropdown -->
+            <div class="flex items-center gap-2 min-w-0 flex-1 mr-4">
+              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0">Filter Host:</span>
+              <div class="relative min-w-0 max-w-md w-full">
+                <select x-model="selectedHost" @change="switchHost(selectedHost)"
+                  class="w-full appearance-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-xs font-mono font-semibold text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent truncate shadow-sm">
+                  <option value="ALL" x-text="'All Hosts (' + inspectHosts.length + ')'"></option>
+                  <template x-for="host in inspectHosts" :key="host">
+                    <option :value="host" x-text="host"></option>
+                  </template>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
-            <!-- Action Controls (Pause & Clear) -->
-            <div class="flex items-center gap-3 shrink-0">
+            <!-- Configurable Traffic Limit & Action Controls -->
+            <div class="flex items-center flex-wrap gap-3 shrink-0">
+              <div class="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Limit:</span>
+                <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400" x-text="maxLimit"></span>
+              </div>
+
               <div class="flex items-center gap-1.5">
                 <span :class="isPaused ? 'bg-amber-500' : 'bg-green-500 animate-ping'" class="w-2 h-2 rounded-full"></span>
                 <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider" x-text="isPaused ? 'Paused' : 'Listening...'"></span>
@@ -248,6 +257,7 @@
                     'text-amber-600 dark:text-amber-400': req.method === 'PUT' || req.method === 'PATCH',
                     'text-rose-600 dark:text-rose-400': req.method === 'DELETE'
                   }" class="font-bold text-xs shrink-0" x-text="req.method"></span>
+                  <span x-show="req.host" class="text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium shrink-0 border border-indigo-200/60 dark:border-indigo-700/50" x-text="req.host"></span>
                   <span class="text-gray-900 dark:text-gray-100 truncate font-semibold" x-text="req.path"></span>
                 </div>
                 <div class="flex items-center gap-4 shrink-0 text-xs text-gray-500 dark:text-gray-400">
@@ -303,14 +313,27 @@
             console.error('Failed to parse SSE tunnel data', e);
           }
         };
+        let defLim = 100;
+        try {
+          const elLim = document.getElementById('inspect-default-limit');
+          if (elLim && elLim.textContent) {
+            const parsed = parseInt(elLim.textContent, 10);
+            if (!isNaN(parsed) && parsed > 0) defLim = parsed;
+          }
+        } catch (e) {}
+        this.defaultLimit = defLim;
+        this.maxLimit = defLim;
       },
       inspectHosts: [],
       selectedHost: 'ALL',
+      defaultLimit: 100,
+      maxLimit: 100,
       isPaused: false,
       inspectEventSources: [],
       openInspect(hostList) {
         this.inspectHosts = Array.isArray(hostList) ? hostList : [hostList];
         this.selectedHost = 'ALL';
+        this.maxLimit = this.defaultLimit || 100;
         this.isPaused = false;
         this.inspectRequests = [];
         this.inspectModalOpen = true;
@@ -322,28 +345,29 @@
         this.inspectRequests = [];
         this.startStream();
       },
+
       togglePause() {
         this.isPaused = !this.isPaused;
       },
       startStream() {
         this.stopStream();
         const hostsToStream = this.selectedHost === 'ALL' ? this.inspectHosts : [this.selectedHost];
-        hostsToStream.forEach(host => {
-          const es = new EventSource('/api/tunnels/inspect/stream?host=' + encodeURIComponent(host));
-          es.onmessage = (event) => {
-            if (this.isPaused) return;
-            try {
-              const req = JSON.parse(event.data);
-              this.inspectRequests.unshift(req);
-              if (this.inspectRequests.length > 50) {
-                this.inspectRequests.pop();
-              }
-            } catch (e) {
-              console.error('Failed to parse inspect SSE data', e);
+        if (hostsToStream.length === 0) return;
+        const query = hostsToStream.map(encodeURIComponent).join(',');
+        const es = new EventSource('/api/tunnels/inspect/stream?hosts=' + query);
+        es.onmessage = (event) => {
+          if (this.isPaused) return;
+          try {
+            const req = JSON.parse(event.data);
+            this.inspectRequests.unshift(req);
+            if (this.inspectRequests.length > this.maxLimit) {
+              this.inspectRequests = this.inspectRequests.slice(0, this.maxLimit);
             }
-          };
-          this.inspectEventSources.push(es);
-        });
+          } catch (e) {
+            console.error('Failed to parse inspect SSE data', e);
+          }
+        };
+        this.inspectEventSources.push(es);
       },
       stopStream() {
         this.inspectEventSources.forEach(es => es.close());

@@ -80,6 +80,6 @@ func (u *tunnelUsecase) PublishInspectEvent(ctx context.Context, host, payload s
 	return u.tunnelStore.PublishInspectEvent(ctx, host, payload)
 }
 
-func (u *tunnelUsecase) SubscribeInspectEvents(ctx context.Context, host string) (<-chan string, error) {
-	return u.tunnelStore.SubscribeInspectEvents(ctx, host)
+func (u *tunnelUsecase) SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error) {
+	return u.tunnelStore.SubscribeInspectEvents(ctx, hosts...)
 }
