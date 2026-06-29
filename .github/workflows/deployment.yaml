@@ -49,7 +49,7 @@ jobs:
       - name: Prune Untagged Images
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GHCR_TOKEN }}
           user: ${{ github.repository_owner }}
           container: gotunnel
           prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
@@ -177,7 +177,7 @@ jobs:
       - name: Prune Untagged Images
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GHCR_TOKEN }}
           user: ${{ github.repository_owner }}
           container: gotunnel
           prune-untagged: true  # Keep only untagged (SHA-only) images for deletion

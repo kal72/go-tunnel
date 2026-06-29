@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.
-- **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs in the manual deployment pipeline by replacing `organization` with `user`, using the correct `prune-untagged` key, and setting the target container name to `gotunnel`, resolving the `Error: Not Found` issue.
+- **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs and authorization in the manual deployment pipeline by replacing `organization` with `user`, using the correct `prune-untagged` key, setting the target container name to `gotunnel`, and replacing `GITHUB_TOKEN` with `GHCR_TOKEN` to resolve permission and `Error: Not Found` issues.
 
 ## [1.1.0] - 2026-06-28
 
