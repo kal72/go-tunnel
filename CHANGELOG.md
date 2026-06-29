@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD**: Enhanced unit testing workflow with a 5-minute timeout flag (`-timeout 5m`) to prevent hung runners.
 
 ### Fixed
+- **Web UI**: Allowed HTTPS tunnel targets to be configured without a port (e.g., just a domain/hostname) in the configuration form, matching the client agent's automatic fallback behavior.
 - **Web UI**: Fixed sidebar navigation menu flicker by adding default text/SVG color classes in the static HTML and executing a tiny inline script to apply active states immediately on page load before first paint.
 - **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.
 - **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs and authorization in the manual deployment pipeline by replacing `organization` with `user`, using the correct `prune-untagged` key, setting the target container name to `gotunnel`, and replacing `GITHUB_TOKEN` with `GHCR_TOKEN` to resolve permission and `Error: Not Found` issues.
