@@ -53,7 +53,7 @@ jobs:
           user: ${{ github.repository_owner }}
           container: gotunnel
           prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
-          keep-younger-than: 2 # Safety buffer: Keep the 3 newest untagged images just in case
+          keep-younger-than: 0 # Safety buffer: Keep the 3 newest untagged images just in case
 
   deploy-dev:
     if: ${{ github.event.inputs.target == 'dev' }}
@@ -181,7 +181,7 @@ jobs:
           user: ${{ github.repository_owner }}
           container: gotunnel
           prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
-          keep-younger-than: 2 # Safety buffer: Keep the 3 newest untagged images just in case
+          keep-younger-than: 0 # Safety buffer: Keep the 3 newest untagged images just in case
 
 
   deploy-release:
