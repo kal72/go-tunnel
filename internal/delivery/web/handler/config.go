@@ -99,12 +99,19 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 
 // Index renders the dashboard page.
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
+
 	var tunnels []map[string]any
 
 	if h.tunnelUsecase != nil {
 		infos, err := h.tunnelUsecase.ListTunnels(r.Context())
 		if err == nil {
 			for _, info := range infos {
+				if role != 1 && !strings.EqualFold(info.ClientName, username) {
+					continue
+				}
 				tunnels = append(tunnels, map[string]any{
 					"TunnelName":  info.Name,
 					"ClientName":  info.ClientName,
@@ -120,10 +127,6 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		tunnels = []map[string]any{}
 	}
 	tunnelsJSON, _ := json.Marshal(tunnels)
-
-	role, _ := r.Context().Value(UserRoleKey).(int16)
-	username, _ := r.Context().Value(UserNameKey).(string)
-	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
 
 	data := map[string]any{
 		"Tunnels":             tunnels,
@@ -155,12 +158,18 @@ func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+
 	getFormattedTunnels := func() []map[string]any {
 		var tunnels []map[string]any
 		if h.tunnelUsecase != nil {
 			infos, err := h.tunnelUsecase.ListTunnels(r.Context())
 			if err == nil {
 				for _, info := range infos {
+					if role != 1 && !strings.EqualFold(info.ClientName, username) {
+						continue
+					}
 					tunnels = append(tunnels, map[string]any{
 						"TunnelName":  info.Name,
 						"ClientName":  info.ClientName,
@@ -249,6 +258,32 @@ func (h *Handler) StreamInspectEvents(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
+	}
+
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+	if role != 1 && h.tunnelUsecase != nil {
+		infos, _ := h.tunnelUsecase.ListTunnels(r.Context())
+		allowedHosts := make(map[string]bool)
+		for _, info := range infos {
+			if strings.EqualFold(info.ClientName, username) {
+				allowedHosts[info.Name] = true
+				for _, hst := range info.Hosts {
+					allowedHosts[hst] = true
+				}
+			}
+		}
+		var authorizedHosts []string
+		for _, hst := range validHosts {
+			if allowedHosts[hst] {
+				authorizedHosts = append(authorizedHosts, hst)
+			}
+		}
+		validHosts = authorizedHosts
+		if len(validHosts) == 0 {
+			http.Error(w, "forbidden: no valid tunnels found for user", http.StatusForbidden)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
