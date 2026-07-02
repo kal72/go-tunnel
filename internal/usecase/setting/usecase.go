@@ -2,6 +2,8 @@ package setting
 
 import (
 	"context"
+
+	domainSetting "gotunnel/internal/domain/setting"
 )
 
 //mockery:generate: true
@@ -14,4 +16,5 @@ type SettingUsecase interface {
 	GetMaxFreeDomains(ctx context.Context, fallback int) int
 	GetMaxTunnelsPerUser(ctx context.Context, fallback int) int
 	GetAllowRegistration(ctx context.Context, fallback bool) bool
+	GetRateLimitConfig(ctx context.Context) domainSetting.RateLimitConfig
 }

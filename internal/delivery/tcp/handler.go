@@ -14,9 +14,11 @@ import (
 	"sync"
 	"time"
 
+	domainSetting "gotunnel/internal/domain/setting"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	domainUser "gotunnel/internal/domain/user"
 	"gotunnel/internal/shared/protocol"
+	"gotunnel/internal/shared/ratelimit"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	usecaseUser "gotunnel/internal/usecase/user"
@@ -28,25 +30,30 @@ import (
 type TunnelSession struct {
 	Connected  time.Time
 	Session    *yamux.Session
+	Ctrl       *yamux.Stream
 	Hostnames  map[string]struct{}
 	Modes      map[string]string
-	Ctrl       *yamux.Stream
 	ClientName string
 	Username   string
 	ClientIP   string
+	Role       int16
 }
 
 type Server struct {
-	hostRegistry    domainTunnel.HostRegistry
-	tunnelUsecase   usecaseTunnel.TunnelUsecase
-	authUsecase     usecaseUser.AuthUsecase
-	settingUsecase  usecaseSetting.SettingUsecase
-	logger          *zap.Logger
-	hostToSes       map[string]*TunnelSession
-	dashboardDomain string
-	wildcardDomain  string
-	jwtSecret       []byte
-	mu              sync.RWMutex
+	lastRateLimitFetch time.Time
+	hostRegistry       domainTunnel.HostRegistry
+	tunnelUsecase      usecaseTunnel.TunnelUsecase
+	authUsecase        usecaseUser.AuthUsecase
+	settingUsecase     usecaseSetting.SettingUsecase
+	logger             *zap.Logger
+	hostToSes          map[string]*TunnelSession
+	limiter            *ratelimit.Limiter
+	dashboardDomain    string
+	wildcardDomain     string
+	jwtSecret          []byte
+	cachedRateLimitCfg domainSetting.RateLimitConfig
+	mu                 sync.RWMutex
+	rateLimitMu        sync.RWMutex
 }
 
 func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) (*Server, error) {
@@ -61,7 +68,31 @@ func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serv
 		tunnelUsecase:   tunnelUsecase,
 		authUsecase:     authUsecase,
 		settingUsecase:  settingUsecase,
+		limiter:         ratelimit.NewLimiter(),
 	}, nil
+}
+
+func (s *Server) getRateLimitConfig(ctx context.Context) domainSetting.RateLimitConfig {
+	s.rateLimitMu.RLock()
+	if !s.lastRateLimitFetch.IsZero() && time.Since(s.lastRateLimitFetch) < 3*time.Second {
+		cfg := s.cachedRateLimitCfg
+		s.rateLimitMu.RUnlock()
+		return cfg
+	}
+	s.rateLimitMu.RUnlock()
+
+	s.rateLimitMu.Lock()
+	defer s.rateLimitMu.Unlock()
+	if !s.lastRateLimitFetch.IsZero() && time.Since(s.lastRateLimitFetch) < 3*time.Second {
+		return s.cachedRateLimitCfg
+	}
+	if s.settingUsecase != nil {
+		s.cachedRateLimitCfg = s.settingUsecase.GetRateLimitConfig(ctx)
+	} else {
+		s.cachedRateLimitCfg = domainSetting.RateLimitConfig{Enabled: true, Rate: 100, Burst: 20, AdminAllowed: false}
+	}
+	s.lastRateLimitFetch = time.Now()
+	return s.cachedRateLimitCfg
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -71,8 +102,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no tunnel for host", http.StatusBadGateway)
 		return
 	}
+
+	cfg := s.getRateLimitConfig(r.Context())
+	if cfg.Enabled && s.limiter != nil {
+		if ses.Role != 1 || cfg.AdminAllowed {
+			if !s.limiter.Allow(host, cfg.Rate, cfg.Burst) {
+				w.Header().Set("Retry-After", "1")
+				http.Error(w, "429 Too Many Requests", http.StatusTooManyRequests)
+				return
+			}
+		}
+	}
 	mode := ses.modeForHost(host)
 
+	if ses.Session == nil {
+		http.Error(w, "session unavailable", http.StatusBadGateway)
+		return
+	}
 	stream, err := ses.Session.OpenStream()
 	if err != nil {
 		http.Error(w, "open stream failed", http.StatusBadGateway)
@@ -124,7 +170,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						s.logger.Error("panic in publish inspect event", zap.Any("recover", rec))
 					}
 				}()
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
 				defer cancel()
 				_ = s.tunnelUsecase.PublishInspectEvent(ctx, host, string(b))
 			}()
@@ -275,6 +321,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		Session:    session,
 		ClientName: clientName,
 		Username:   user.Username,
+		Role:       user.Role,
 		Hostnames:  map[string]struct{}{},
 		Modes:      map[string]string{},
 		Ctrl:       ctrl,
