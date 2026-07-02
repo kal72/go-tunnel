@@ -10,37 +10,38 @@ import (
 )
 
 type ServerConfig struct {
-	ACMEEnv            string
-	WildcardKeyPath    string
-	TunnelDomain       string
-	DBName             string
-	WebUIDomain        string
-	DBPass             string
-	DBUser             string
-	GatewayDomain      string
-	DBSSLMode          string
-	RedisAddr          string
-	WildcardDomain     string
-	WildcardCertPath   string
-	CLILatestVersion   string
-	ACMECache          string
-	JWTSecret          string
-	RedisPass          string
-	DBHost             string
-	CORSAllowedOrigins []string
-	JWTExpireHours     int
-	WebJWTExpireHours  int
-	CliJWTExpireHours  int
-	RedisDB            int
-	DomainRedisDB      int
-	MaxFreeDomains     int
-	DBPort             int
-	ProxyHttpPort      int
-	WebUIPort          int
-	TunnelPort         int
-	GatewayPort        int
-	ProxyHttpsPort     int
-	ACMEEnable         bool
+	ACMEEnv             string
+	WildcardKeyPath     string
+	TunnelDomain        string
+	DBName              string
+	WebUIDomain         string
+	DBPass              string
+	DBUser              string
+	GatewayDomain       string
+	DBSSLMode           string
+	RedisAddr           string
+	WildcardDomain      string
+	WildcardCertPath    string
+	CLILatestVersion    string
+	ACMECache           string
+	JWTSecret           string
+	RedisPass           string
+	DBHost              string
+	CORSAllowedOrigins  []string
+	JWTExpireHours      int
+	WebJWTExpireHours   int
+	CliJWTExpireHours   int
+	RedisDB             int
+	DomainRedisDB       int
+	MaxFreeDomains      int
+	DBPort              int
+	ProxyHttpPort       int
+	WebUIPort           int
+	TunnelPort          int
+	GatewayPort         int
+	ProxyHttpsPort      int
+	InspectDefaultLimit int
+	ACMEEnable          bool
 }
 
 func LoadServerConfig(path string) (*ServerConfig, error) {
@@ -84,7 +85,8 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		ProxyHttpPort:  parsePort(get("PROXY_HTTP_PORT", "80"), 80),
 		ProxyHttpsPort: parsePort(get("PROXY_HTTPS_PORT", "443"), 443),
 
-		MaxFreeDomains: parsePort(get("MAX_FREE_DOMAINS", "5"), 5),
+		MaxFreeDomains:      parsePort(get("MAX_FREE_DOMAINS", "5"), 5),
+		InspectDefaultLimit: parsePort(get("INSPECT_DEFAULT_LIMIT", "100"), 100),
 
 		JWTSecret:          get("JWT_SECRET", "defaultjwtsecret"),
 		JWTExpireHours:     parsePort(get("JWT_EXPIRE_HOURS", "24"), 24),

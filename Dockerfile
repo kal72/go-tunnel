@@ -23,6 +23,11 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
+# OCI image metadata
+LABEL org.opencontainers.image.source=https://github.com/kal72/go-tunnel
+LABEL org.opencontainers.image.description="Self-hosted reverse tunneling gateway that exposes private services over public TLS/HTTPS with automatic Let's Encrypt certificates, Yamux multiplexing, and a built-in Web UI manager."
+LABEL org.opencontainers.image.licenses=MIT
+
 # Copy binaries dari builder
 COPY --from=builder /app/gotunnel-tunnel .
 COPY --from=builder /app/gotunnel-proxy .

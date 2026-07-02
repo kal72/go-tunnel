@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Auth & Access Control**: Added role-based access control for Active Tunnels list (`/` and `/api/tunnels/stream`) and Live Request Inspector (`/api/tunnels/inspect/stream`). Admins (`role == 1`) can view and inspect all active tunnels, whereas regular users (`role == 0`) can only view and inspect active tunnels registered under their own username.
+- **Web UI & Tunnel Dashboard**: Added Live Request Inspector featuring real-time HTTP traffic streaming via Redis Pub/Sub ephemeral channels (`tunnel_inspect:<hostname>`), Server-Sent Events (`/api/tunnels/inspect/stream`), and an interactive glassmorphism drawer in Alpine.js with zero persistence. Features a wider modal layout (`max-w-6xl`), a clean dropdown Host Selector supporting long domain names (defaults to monitoring all hosts), a Pause/Resume traffic button, and a traffic log buffer limit defaulting to 100 items (configured purely via `INSPECT_DEFAULT_LIMIT` environment variable).
+- **CI/CD**: Added cross-compile matrix validation for client binaries across 5 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) inside the automated quality checks workflow.
+- **CI/CD**: Configured GitHub Actions PR labeler tool via `labeler.yml` for automated context tagging of pull requests based on changed paths.
+
+### Changed
+- **Web UI & Tunnel Dashboard**: Optimized Active Tunnels table column layout by fine-tuning the Tunnel column width (`min-w-[200px] w-1/5`) and constraining the Actions column width (`w-32 max-w-[130px]`) for clean responsiveness.
+- **Web UI & Tunnel Dashboard**: Upgraded Live Request Inspector SSE streaming architecture to Single Multiplexed Stream (`/api/tunnels/inspect/stream?hosts=...`). Replaced multi-stream per host connections with a unified single SSE stream per dashboard view, significantly reducing server goroutine allocations and Redis Pub/Sub subscriptions on tunnels with large host counts. Added host badge display on UI request logs for clean multiplexed visual differentiation.
+- **CI/CD**: Enhanced unit testing workflow with a 5-minute timeout flag (`-timeout 5m`) to prevent hung runners.
+
+### Fixed
+- **Web UI**: Allowed HTTPS tunnel targets to be configured without a port (e.g., just a domain/hostname) in the configuration form, matching the client agent's automatic fallback behavior.
+- **Web UI**: Fixed sidebar navigation menu flicker by adding default text/SVG color classes in the static HTML and executing a tiny inline script to apply active states immediately on page load before first paint.
+- **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.
+- **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs and authorization in the manual deployment pipeline by replacing `organization` with `user`, using the correct `prune-untagged` key, setting the target container name to `gotunnel`, and replacing `GITHUB_TOKEN` with `GHCR_TOKEN` to resolve permission and `Error: Not Found` issues.
+
 ## [1.1.0] - 2026-06-28
 
 ### Added

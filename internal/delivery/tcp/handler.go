@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -87,6 +88,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// --- jika HTTP (default): kirim HTTP request ---
 	if mode != "tcp" {
+		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
@@ -100,6 +102,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		copyHeader(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
+
+		duration := time.Since(start).Milliseconds()
+		clientIP := r.RemoteAddr
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			clientIP = strings.Split(xff, ",")[0]
+		}
+		eventData := map[string]any{
+			"host":        host,
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status_code": resp.StatusCode,
+			"duration_ms": duration,
+			"client_ip":   clientIP,
+			"timestamp":   time.Now().Format("15:04:05"),
+		}
+		if b, err := json.Marshal(eventData); err == nil && s.tunnelUsecase != nil {
+			go func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						s.logger.Error("panic in publish inspect event", zap.Any("recover", rec))
+					}
+				}()
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+				_ = s.tunnelUsecase.PublishInspectEvent(ctx, host, string(b))
+			}()
+		}
 		return
 	}
 
