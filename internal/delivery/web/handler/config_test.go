@@ -110,7 +110,9 @@ func TestHandler_HandleTunnelStream_RoleFiltering(t *testing.T) {
 	h := handler.New(assets.EmbeddedFS, mockUC, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/tunnels/stream", nil)
-	ctx := context.WithValue(req.Context(), handler.UserRoleKey, int16(0))
+	ctx, cancel := context.WithTimeout(req.Context(), 50*time.Millisecond)
+	defer cancel()
+	ctx = context.WithValue(ctx, handler.UserRoleKey, int16(0))
 	ctx = context.WithValue(ctx, handler.UserNameKey, "USER1")
 	req = req.WithContext(ctx)
 
@@ -120,8 +122,17 @@ func TestHandler_HandleTunnelStream_RoleFiltering(t *testing.T) {
 	body := w.Body.String()
 	require.True(t, strings.HasPrefix(body, "data: "))
 
+	lines := strings.Split(body, "\n")
+	var dataPart string
+	for _, line := range lines {
+		if strings.HasPrefix(line, "data: ") {
+			dataPart = strings.TrimPrefix(line, "data: ")
+			break
+		}
+	}
+	require.NotEmpty(t, dataPart)
+
 	var parsed []map[string]any
-	dataPart := strings.TrimSpace(strings.TrimPrefix(body, "data: "))
 	err := json.Unmarshal([]byte(dataPart), &parsed)
 	require.NoError(t, err)
 	assert.Len(t, parsed, 1)

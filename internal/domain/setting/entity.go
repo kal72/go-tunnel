@@ -12,6 +12,14 @@ type Setting struct {
 	Value     string    `db:"value" json:"value"`
 }
 
+// RateLimitConfig defines traffic rate limiting parameters.
+type RateLimitConfig struct {
+	Rate         int  `json:"rate"`
+	Burst        int  `json:"burst"`
+	Enabled      bool `json:"enabled"`
+	AdminAllowed bool `json:"admin_allowed"`
+}
+
 //mockery:generate: true
 type SettingStore interface {
 	GetSetting(ctx context.Context, key string) (string, error)
