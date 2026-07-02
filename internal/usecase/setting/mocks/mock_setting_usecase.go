@@ -38,6 +38,63 @@ func (_m *MockSettingUsecase) EXPECT() *MockSettingUsecase_Expecter {
 	return &MockSettingUsecase_Expecter{mock: &_m.Mock}
 }
 
+// DeleteSetting provides a mock function for the type MockSettingUsecase
+func (_mock *MockSettingUsecase) DeleteSetting(ctx context.Context, key string) error {
+	ret := _mock.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSetting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, key)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSettingUsecase_DeleteSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSetting'
+type MockSettingUsecase_DeleteSetting_Call struct {
+	*mock.Call
+}
+
+// DeleteSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - key string
+func (_e *MockSettingUsecase_Expecter) DeleteSetting(ctx any, key any) *MockSettingUsecase_DeleteSetting_Call {
+	return &MockSettingUsecase_DeleteSetting_Call{Call: _e.mock.On("DeleteSetting", ctx, key)}
+}
+
+func (_c *MockSettingUsecase_DeleteSetting_Call) Run(run func(ctx context.Context, key string)) *MockSettingUsecase_DeleteSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSettingUsecase_DeleteSetting_Call) Return(err error) *MockSettingUsecase_DeleteSetting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSettingUsecase_DeleteSetting_Call) RunAndReturn(run func(ctx context.Context, key string) error) *MockSettingUsecase_DeleteSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllSettings provides a mock function for the type MockSettingUsecase
 func (_mock *MockSettingUsecase) GetAllSettings(ctx context.Context) (map[string]string, error) {
 	ret := _mock.Called(ctx)

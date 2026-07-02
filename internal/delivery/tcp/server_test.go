@@ -11,6 +11,7 @@ import (
 	usecaseSettingMocks "gotunnel/internal/usecase/setting/mocks"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestServer_ServeHTTP_RateLimiting(t *testing.T) {
@@ -94,3 +95,68 @@ func TestServer_ServeHTTP_RateLimiting(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_UserRateLimitIsolation(t *testing.T) {
+	t.Parallel()
+
+	mockSetting := usecaseSettingMocks.NewMockSettingUsecase(t)
+	mockSetting.On("GetRateLimitConfig", mock.Anything).Return(domainSetting.RateLimitConfig{
+		Enabled:      false, // global disabled
+		Rate:         1,
+		Burst:        1,
+		AdminAllowed: false,
+	})
+	mockSetting.On("GetSetting", mock.Anything, "rate_limit_enabled:usera").Return("true", nil)
+	mockSetting.On("GetSetting", mock.Anything, "rate_limit_enabled:userb").Return("false", nil)
+
+	server := &Server{
+		hostToSes:      map[string]*TunnelSession{},
+		settingUsecase: mockSetting,
+		limiter:        ratelimit.NewLimiter(),
+	}
+
+	server.hostToSes["usera.example.com"] = &TunnelSession{
+		Role:     0,
+		Username: "usera",
+	}
+	server.hostToSes["userb.example.com"] = &TunnelSession{
+		Role:     0,
+		Username: "userb",
+	}
+	server.hostToSes["admin.example.com"] = &TunnelSession{
+		Role:     1,
+		Username: "admin",
+	}
+
+	// 1. User A exhausts their rate limit burst
+	reqA1 := httptest.NewRequest(http.MethodGet, "http://usera.example.com/", nil)
+	reqA1.Host = "usera.example.com"
+	wA1 := httptest.NewRecorder()
+	server.ServeHTTP(wA1, reqA1)
+	assert.Equal(t, http.StatusBadGateway, wA1.Code) // first request allowed by limiter (hits open stream failure)
+
+	reqA2 := httptest.NewRequest(http.MethodGet, "http://usera.example.com/", nil)
+	reqA2.Host = "usera.example.com"
+	wA2 := httptest.NewRecorder()
+	server.ServeHTTP(wA2, reqA2)
+	assert.Equal(t, http.StatusTooManyRequests, wA2.Code) // second request rate limited 429 for usera
+
+	// 2. User B makes requests and is NOT impacted by User A's rate limit or toggle
+	for i := 0; i < 3; i++ {
+		reqB := httptest.NewRequest(http.MethodGet, "http://userb.example.com/", nil)
+		reqB.Host = "userb.example.com"
+		wB := httptest.NewRecorder()
+		server.ServeHTTP(wB, reqB)
+		assert.Equal(t, http.StatusBadGateway, wB.Code) // not 429
+	}
+
+	// 3. Admin makes requests and is NOT impacted by User A's rate limit
+	for i := 0; i < 3; i++ {
+		reqAdmin := httptest.NewRequest(http.MethodGet, "http://admin.example.com/", nil)
+		reqAdmin.Host = "admin.example.com"
+		wAdmin := httptest.NewRecorder()
+		server.ServeHTTP(wAdmin, reqAdmin)
+		assert.Equal(t, http.StatusBadGateway, wAdmin.Code) // not 429
+	}
+}
+

@@ -157,6 +157,21 @@ func (s *TunnelRedisStore) RemoveActiveDomain(ctx context.Context, domain string
 	return s.client.Del(ctx, key).Err()
 }
 
+func (s *TunnelRedisStore) SetRateLimitSetting(ctx context.Context, username, value string) error {
+	key := "rate_limit_enabled:" + username
+	return s.client.Set(ctx, key, value, 24*time.Hour).Err()
+}
+
+func (s *TunnelRedisStore) GetRateLimitSetting(ctx context.Context, username string) (string, error) {
+	key := "rate_limit_enabled:" + username
+	return s.client.Get(ctx, key).Result()
+}
+
+func (s *TunnelRedisStore) DeleteRateLimitSetting(ctx context.Context, username string) error {
+	key := "rate_limit_enabled:" + username
+	return s.client.Del(ctx, key).Err()
+}
+
 func (s *TunnelRedisStore) PublishTunnelEvent(ctx context.Context, eventType string) error {
 	return s.client.Publish(ctx, "tunnel_events", eventType).Err()
 }

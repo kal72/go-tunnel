@@ -104,7 +104,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg := s.getRateLimitConfig(r.Context())
-	if cfg.Enabled && s.limiter != nil {
+	enabled := cfg.Enabled
+	if ses.Role != 1 && ses.Username != "" {
+		enabled = false
+		if s.tunnelUsecase != nil {
+			if val, err := s.tunnelUsecase.GetRateLimitSetting(r.Context(), ses.Username); err == nil && val != "" {
+				enabled = val == "true"
+			} else if s.settingUsecase != nil {
+				if val, err := s.settingUsecase.GetSetting(r.Context(), "rate_limit_enabled:"+ses.Username); err == nil && val != "" {
+					enabled = val == "true"
+				}
+			}
+		} else if s.settingUsecase != nil {
+			if val, err := s.settingUsecase.GetSetting(r.Context(), "rate_limit_enabled:"+ses.Username); err == nil && val != "" {
+				enabled = val == "true"
+			}
+		}
+	}
+	if enabled && s.limiter != nil {
 		if ses.Role != 1 || cfg.AdminAllowed {
 			if !s.limiter.Allow(host, cfg.Rate, cfg.Burst) {
 				w.Header().Set("Retry-After", "1")
@@ -417,6 +434,12 @@ RouteLoop:
 	}
 	s.mu.Unlock()
 
+	if user.Role != 1 && user.Username != "" && s.settingUsecase != nil && s.tunnelUsecase != nil {
+		if val, err := s.settingUsecase.GetSetting(context.Background(), "rate_limit_enabled:"+user.Username); err == nil && val != "" {
+			_ = s.tunnelUsecase.SetRateLimitSetting(context.Background(), user.Username, val)
+		}
+	}
+
 	s.updateState(ts)
 
 	_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: true})
@@ -481,6 +504,18 @@ func (s *Server) cleanup(ts *TunnelSession) {
 	}
 	if s.tunnelUsecase != nil {
 		_ = s.tunnelUsecase.UnregisterTunnel(context.Background(), fmt.Sprintf("%p", ts))
+	}
+	if ts.Role != 1 && ts.Username != "" && s.tunnelUsecase != nil {
+		hasRemaining := false
+		for _, cur := range s.hostToSes {
+			if cur != nil && cur.Username == ts.Username {
+				hasRemaining = true
+				break
+			}
+		}
+		if !hasRemaining {
+			_ = s.tunnelUsecase.DeleteRateLimitSetting(context.Background(), ts.Username)
+		}
 	}
 }
 

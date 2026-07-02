@@ -25,6 +25,7 @@ type Handler struct {
 	settingUsecase      usecaseSetting.SettingUsecase
 	configUsecase       usecaseConfig.ConfigUsecase
 	settingTmpl         *template.Template
+	ratelimitTmpl       *template.Template
 	downTmpl            *template.Template
 	docsTmpl            *template.Template
 	domainTmpl          *template.Template
@@ -76,6 +77,11 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		"templates/settings.html",
 	))
 
+	ratelimitTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/ratelimit.html",
+	))
+
 	return &Handler{
 		dashTmpl:            dashTmpl,
 		confTmpl:            confTmpl,
@@ -83,6 +89,7 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		docsTmpl:            docsTmpl,
 		downTmpl:            downTmpl,
 		settingTmpl:         settingTmpl,
+		ratelimitTmpl:       ratelimitTmpl,
 		tunnelUsecase:       tunnelUsecase,
 		configUsecase:       configUsecase,
 		settingUsecase:      settingUsecase,

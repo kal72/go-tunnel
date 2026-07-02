@@ -102,6 +102,129 @@ func (_c *MockTunnelUsecase_AddDomain_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// DeleteRateLimitSetting provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) DeleteRateLimitSetting(ctx context.Context, username string) error {
+	ret := _mock.Called(ctx, username)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteRateLimitSetting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, username)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelUsecase_DeleteRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteRateLimitSetting'
+type MockTunnelUsecase_DeleteRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// DeleteRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+func (_e *MockTunnelUsecase_Expecter) DeleteRateLimitSetting(ctx any, username any) *MockTunnelUsecase_DeleteRateLimitSetting_Call {
+	return &MockTunnelUsecase_DeleteRateLimitSetting_Call{Call: _e.mock.On("DeleteRateLimitSetting", ctx, username)}
+}
+
+func (_c *MockTunnelUsecase_DeleteRateLimitSetting_Call) Run(run func(ctx context.Context, username string)) *MockTunnelUsecase_DeleteRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_DeleteRateLimitSetting_Call) Return(err error) *MockTunnelUsecase_DeleteRateLimitSetting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_DeleteRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string) error) *MockTunnelUsecase_DeleteRateLimitSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRateLimitSetting provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) GetRateLimitSetting(ctx context.Context, username string) (string, error) {
+	ret := _mock.Called(ctx, username)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRateLimitSetting")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return returnFunc(ctx, username)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, username)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, username)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnelUsecase_GetRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRateLimitSetting'
+type MockTunnelUsecase_GetRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// GetRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+func (_e *MockTunnelUsecase_Expecter) GetRateLimitSetting(ctx any, username any) *MockTunnelUsecase_GetRateLimitSetting_Call {
+	return &MockTunnelUsecase_GetRateLimitSetting_Call{Call: _e.mock.On("GetRateLimitSetting", ctx, username)}
+}
+
+func (_c *MockTunnelUsecase_GetRateLimitSetting_Call) Run(run func(ctx context.Context, username string)) *MockTunnelUsecase_GetRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_GetRateLimitSetting_Call) Return(s string, err error) *MockTunnelUsecase_GetRateLimitSetting_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_GetRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string) (string, error)) *MockTunnelUsecase_GetRateLimitSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsDomainAllowed provides a mock function for the type MockTunnelUsecase
 func (_mock *MockTunnelUsecase) IsDomainAllowed(ctx context.Context, domain string, userID uuid.UUID, role int16) (bool, error) {
 	ret := _mock.Called(ctx, domain, userID, role)
@@ -684,6 +807,69 @@ func (_c *MockTunnelUsecase_SetActiveDomain_Call) Return(err error) *MockTunnelU
 }
 
 func (_c *MockTunnelUsecase_SetActiveDomain_Call) RunAndReturn(run func(ctx context.Context, domain string, sessionID string) error) *MockTunnelUsecase_SetActiveDomain_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetRateLimitSetting provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) SetRateLimitSetting(ctx context.Context, username string, value string) error {
+	ret := _mock.Called(ctx, username, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRateLimitSetting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, username, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelUsecase_SetRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRateLimitSetting'
+type MockTunnelUsecase_SetRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// SetRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+//   - value string
+func (_e *MockTunnelUsecase_Expecter) SetRateLimitSetting(ctx any, username any, value any) *MockTunnelUsecase_SetRateLimitSetting_Call {
+	return &MockTunnelUsecase_SetRateLimitSetting_Call{Call: _e.mock.On("SetRateLimitSetting", ctx, username, value)}
+}
+
+func (_c *MockTunnelUsecase_SetRateLimitSetting_Call) Run(run func(ctx context.Context, username string, value string)) *MockTunnelUsecase_SetRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_SetRateLimitSetting_Call) Return(err error) *MockTunnelUsecase_SetRateLimitSetting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_SetRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string, value string) error) *MockTunnelUsecase_SetRateLimitSetting_Call {
 	_c.Call.Return(run)
 	return _c
 }
