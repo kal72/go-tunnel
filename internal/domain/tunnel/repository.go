@@ -24,6 +24,11 @@ type TunnelStore interface {
 	SetActiveDomain(ctx context.Context, domain string, sessionID string) error
 	RemoveActiveDomain(ctx context.Context, domain string) error
 
+	// Rate limit cache
+	SetRateLimitSetting(ctx context.Context, username, value string) error
+	GetRateLimitSetting(ctx context.Context, username string) (string, error)
+	DeleteRateLimitSetting(ctx context.Context, username string) error
+
 	// Realtime pub/sub events
 	PublishTunnelEvent(ctx context.Context, eventType string) error
 	SubscribeTunnelEvents(ctx context.Context) (<-chan string, error)

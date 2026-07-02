@@ -57,6 +57,12 @@ func (r *settingRepository) SetSetting(ctx context.Context, key, value string) e
 	return err
 }
 
+func (r *settingRepository) DeleteSetting(ctx context.Context, key string) error {
+	query := `DELETE FROM system_settings WHERE key = $1`
+	_, err := r.db.ExecContext(ctx, query, key)
+	return err
+}
+
 func (r *settingRepository) GetAllSettings(ctx context.Context) (map[string]string, error) {
 	query := `SELECT key, value FROM system_settings`
 	rows, err := r.db.QueryContext(ctx, query)

@@ -177,6 +177,21 @@
         </a>
         {{end}}
 
+        <!-- Rate Limiting -->
+        <a href="/ratelimit"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 font-medium hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors group relative"
+          :class="path.startsWith('/ratelimit') ? 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-slate-800 font-semibold' : 'font-medium text-gray-600 dark:text-gray-400 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800'"
+          title="Rate Limiting">
+          <svg
+            class="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors"
+            :class="path.startsWith('/ratelimit') ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-rose-600 dark:group-hover:text-rose-400'"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span x-show="$store.app.sidebarOpen" x-transition class="whitespace-nowrap">Rate Limiting</span>
+        </a>
+
         <!-- Download Client -->
         <a href="/downloads"
           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 font-medium hover:text-orange-700 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors group relative"

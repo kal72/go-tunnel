@@ -25,6 +25,10 @@ func (u *settingUsecase) SetSetting(ctx context.Context, key, value string) erro
 	return u.store.SetSetting(ctx, key, value)
 }
 
+func (u *settingUsecase) DeleteSetting(ctx context.Context, key string) error {
+	return u.store.DeleteSetting(ctx, key)
+}
+
 func (u *settingUsecase) GetAllSettings(ctx context.Context) (map[string]string, error) {
 	return u.store.GetAllSettings(ctx)
 }
