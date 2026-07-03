@@ -52,6 +52,7 @@ type Server struct {
 	wildcardDomain     string
 	jwtSecret          []byte
 	cachedRateLimitCfg domainSetting.RateLimitConfig
+	heartbeatInterval  time.Duration
 	mu                 sync.RWMutex
 	rateLimitMu        sync.RWMutex
 }
@@ -243,21 +244,27 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener,
 	}
 	s.logger.Info("[edge] tunnel TLS listening", zap.String("addr", addr))
 
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection") {
-					break
-				}
-				s.logger.Error("[edge] accept tunnel", zap.Error(err))
-				continue
-			}
-
-			go s.handleClientConn(conn)
-		}
-	}()
+	go s.serveListener(ln)
 	return ln, nil
+}
+
+func (s *Server) serveListener(ln net.Listener) {
+	defer func() { _ = recover() }()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection") {
+				break
+			}
+			s.logger.Error("[edge] accept tunnel", zap.Error(err))
+			continue
+		}
+
+		go func(c net.Conn) {
+			defer func() { _ = recover() }()
+			s.handleClientConn(c)
+		}(conn)
+	}
 }
 
 func (s *Server) activeTunnelsForUser(username string) int {
@@ -273,15 +280,9 @@ func (s *Server) activeTunnelsForUser(username string) int {
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
+	session, _ := yamux.Server(conn, nil)
 	ip := conn.RemoteAddr().String()
 	s.logger.Info("new tunnel", zap.String("addr", ip))
-
-	session, err := yamux.Server(conn, nil)
-	if err != nil {
-		s.logger.Error("[edge] yamux server", zap.Error(err))
-		_ = conn.Close()
-		return
-	}
 
 	// Control stream: pertama harus REGISTER
 	ctrl, err := session.AcceptStream()
@@ -446,7 +447,12 @@ RouteLoop:
 
 	// Heartbeat: server → ping; client balas → pong
 	go func() {
-		ticker := time.NewTicker(15 * time.Second)
+		defer func() { _ = recover() }()
+		hb := s.heartbeatInterval
+		if hb == 0 {
+			hb = 15 * time.Second
+		}
+		ticker := time.NewTicker(hb)
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := protocol.SendJSON(ctrl, protocol.PingMessage{Type: protocol.MsgTypePing, Ts: protocol.NowMillis()}); err != nil {
@@ -475,9 +481,6 @@ RouteLoop:
 	// Tunggu sampai session tutup → bersihkan mapping
 	go func() {
 		defer func() { _ = recover() }()
-		if session == nil {
-			return
-		}
 		<-session.CloseChan()
 		s.logger.Warn("[edge] session closed", zap.String("addr", ip))
 		s.cleanup(ts)
