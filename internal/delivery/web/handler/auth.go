@@ -100,7 +100,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow login page and assets
-		if r.URL.Path == "/login" || r.URL.Path == "/static" {
+		if r.URL.Path == "/login" || strings.HasPrefix(r.URL.Path, "/static") {
 			next.ServeHTTP(w, r)
 			return
 		}
