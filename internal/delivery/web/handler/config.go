@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/shared/stats"
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
@@ -26,11 +27,13 @@ type Handler struct {
 	configUsecase       usecaseConfig.ConfigUsecase
 	settingTmpl         *template.Template
 	ratelimitTmpl       *template.Template
+	statsTmpl           *template.Template
 	downTmpl            *template.Template
 	docsTmpl            *template.Template
 	domainTmpl          *template.Template
 	confTmpl            *template.Template
 	dashTmpl            *template.Template
+	statsCollector      *stats.StatsCollector
 	masterSecret        string
 	tunnelAddr          string
 	wildcardDomain      string
@@ -42,7 +45,7 @@ type Handler struct {
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string, inspectDefaultLimit int) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string, inspectDefaultLimit int, statsCollector *stats.StatsCollector) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -82,6 +85,11 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		"templates/ratelimit.html",
 	))
 
+	statsTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/stats.html",
+	))
+
 	return &Handler{
 		dashTmpl:            dashTmpl,
 		confTmpl:            confTmpl,
@@ -90,6 +98,8 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		downTmpl:            downTmpl,
 		settingTmpl:         settingTmpl,
 		ratelimitTmpl:       ratelimitTmpl,
+		statsTmpl:           statsTmpl,
+		statsCollector:      statsCollector,
 		tunnelUsecase:       tunnelUsecase,
 		configUsecase:       configUsecase,
 		settingUsecase:      settingUsecase,

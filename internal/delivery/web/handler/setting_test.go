@@ -19,7 +19,7 @@ import (
 
 func TestHandler_SettingsPage(t *testing.T) {
 	mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100)
+	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/settings", http.NoBody)
 	ctx := context.WithValue(req.Context(), handler.UserRoleKey, int16(1))
@@ -60,7 +60,7 @@ func TestHandler_GetSettings(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-			h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100)
+			h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 			mockSettingUsecase.On("GetAllSettings", mock.Anything).Return(tt.mockReturn, tt.mockErr)
 
@@ -121,7 +121,7 @@ func TestHandler_UpdateSettings(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockSettingUsecase)
 			}
-			h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100)
+			h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 			req := httptest.NewRequest(http.MethodPut, "/api/settings", bytes.NewBufferString(tt.body))
 			rec := httptest.NewRecorder()
