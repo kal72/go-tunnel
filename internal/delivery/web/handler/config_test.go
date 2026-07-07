@@ -39,7 +39,7 @@ func TestHandler_Index_RoleFiltering(t *testing.T) {
 	}
 	mockUC.On("ListTunnels", mock.Anything).Return(tunnels, nil)
 
-	h := handler.New(assets.EmbeddedFS, mockUC, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100)
+	h := handler.New(assets.EmbeddedFS, mockUC, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
 
 	tests := []struct {
 		name         string
@@ -107,7 +107,7 @@ func TestHandler_HandleTunnelStream_RoleFiltering(t *testing.T) {
 	close(ch)
 	mockUC.On("SubscribeTunnelEvents", mock.Anything).Return((<-chan string)(ch), nil)
 
-	h := handler.New(assets.EmbeddedFS, mockUC, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100)
+	h := handler.New(assets.EmbeddedFS, mockUC, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/tunnels/stream", nil)
 	ctx, cancel := context.WithTimeout(req.Context(), 50*time.Millisecond)

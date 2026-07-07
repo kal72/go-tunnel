@@ -80,6 +80,10 @@ func SetupRouter(
 				r.Get("/api/settings", h.GetSettings)
 				r.Put("/api/settings", h.UpdateSettings)
 
+				// System Stats Admin
+				r.Get("/stats", h.StatsPage)
+				r.Get("/api/stats/stream", h.StreamStats)
+
 				r.Get("/users", userH.UsersPage)
 				r.Get("/api/users", userH.ListUsers)
 				r.Post("/api/users", userH.CreateUser)

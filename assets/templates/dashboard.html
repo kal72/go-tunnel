@@ -296,6 +296,7 @@
       inspectHost: '',
       inspectRequests: [],
       inspectEventSource: null,
+      es: null,
       init() {
         try {
           const el = document.getElementById('initial-tunnels');
@@ -305,8 +306,8 @@
         } catch (e) {
           console.error('Failed to load initial tunnels', e);
         }
-        const es = new EventSource('/api/tunnels/stream');
-        es.onmessage = (event) => {
+        this.es = new EventSource('/api/tunnels/stream');
+        this.es.onmessage = (event) => {
           try {
             this.tunnels = JSON.parse(event.data);
           } catch (e) {
@@ -323,6 +324,15 @@
         } catch (e) {}
         this.defaultLimit = defLim;
         this.maxLimit = defLim;
+        window.addEventListener('beforeunload', () => this.destroy());
+        window.addEventListener('pagehide', () => this.destroy());
+      },
+      destroy() {
+        if (this.es) {
+          this.es.close();
+          this.es = null;
+        }
+        this.stopStream();
       },
       inspectHosts: [],
       selectedHost: 'ALL',
