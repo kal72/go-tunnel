@@ -10,22 +10,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseUser "gotunnel/internal/usecase/user"
 )
 
 type UserHandler struct {
-	tmpl        *template.Template
-	authUsecase usecaseUser.AuthUsecase
+	tmpl           *template.Template
+	authUsecase    usecaseUser.AuthUsecase
+	settingUsecase usecaseSetting.SettingUsecase
 }
 
-func NewUserHandler(fs embed.FS, authUsecase usecaseUser.AuthUsecase) *UserHandler {
+func NewUserHandler(fs embed.FS, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) *UserHandler {
 	tmpl := template.Must(template.ParseFS(fs,
 		"templates/base.html",
 		"templates/users.html",
 	))
 	return &UserHandler{
-		tmpl:        tmpl,
-		authUsecase: authUsecase,
+		tmpl:           tmpl,
+		authUsecase:    authUsecase,
+		settingUsecase: settingUsecase,
 	}
 }
 
@@ -89,6 +92,10 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if err := h.authUsecase.CreateUser(r.Context(), req.Username, req.Password, req.Role); err != nil {
 		http.Error(w, fmt.Sprintf("failed to create user: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	if req.Role != 1 && h.settingUsecase != nil {
+		_ = h.settingUsecase.SetSetting(r.Context(), "rate_limit_enabled:"+req.Username, "false")
 	}
 
 	w.WriteHeader(http.StatusCreated)

@@ -1,0 +1,195 @@
+{{define "content"}}
+<div class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900 overflow-y-auto">
+  
+  <!-- Header -->
+  <header class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 shrink-0">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Rate Limiting & Traffic Protection</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Protect your active tunnel hostnames against excessive HTTP traffic and DDoS surges.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="p-6 max-w-4xl mx-auto w-full" x-data="rateLimitPage()" x-init="fetchConfig()">
+    
+    <!-- Notification Banners -->
+    <div x-show="saved" x-transition.opacity
+      class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center text-emerald-800 dark:text-emerald-300 text-sm">
+      <svg class="w-5 h-5 mr-3 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      Rate limiting configuration saved successfully!
+    </div>
+
+    <div x-show="errorMsg" x-transition.opacity
+      class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center text-red-800 dark:text-red-300 text-sm">
+      <svg class="w-5 h-5 mr-3 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <span x-text="errorMsg"></span>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200/80 dark:border-slate-700/80 overflow-hidden">
+      <div class="p-6 space-y-6">
+
+        <!-- ON / OFF Toggle for All Users -->
+        <div class="bg-gray-50 dark:bg-slate-900/50 p-5 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+          <div class="mr-4">
+            <label class="block text-base font-semibold text-gray-900 dark:text-white">Enable Rate Limiting</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              When ACTIVE, incoming HTTP requests exceeding threshold will be restricted with HTTP 429 Too Many Requests.
+            </p>
+          </div>
+          <button type="button" 
+            @click="config.enabled = !config.enabled"
+            :class="config.enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'"
+            class="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800" 
+            role="switch">
+            <span class="sr-only">Toggle Rate Limiting</span>
+            <span 
+              :class="config.enabled ? 'translate-x-5' : 'translate-x-0'"
+              class="pointer-events-none relative inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out">
+            </span>
+          </button>
+        </div>
+
+        <!-- Admin Only Settings -->
+        {{if eq .UserRole 1}}
+        <div class="pt-4 border-t border-gray-100 dark:border-slate-700 space-y-6">
+          <div class="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            Administrator Threshold Settings (Global Defaults)
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Rate (req/s) -->
+            <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+              <label for="rate_limit_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Request Rate Limit (req/s)</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-3">Maximum sustained requests per second allowed per domain.</p>
+              <input type="number" id="rate_limit_rate" x-model="config.rate" min="1"
+                class="block w-full px-3 py-2.5 sm:text-sm border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors">
+            </div>
+
+            <!-- Burst Capacity -->
+            <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+              <label for="rate_limit_burst" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Burst Capacity</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-3">Maximum instantaneous burst requests permitted above sustained rate.</p>
+              <input type="number" id="rate_limit_burst" x-model="config.burst" min="1"
+                class="block w-full px-3 py-2.5 sm:text-sm border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors">
+            </div>
+          </div>
+
+          <!-- Enforce on Admin Tunnels -->
+          <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+            <div class="mr-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Enforce Limit on Admin Tunnels</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">When OFF, tunnels created by Administrators bypass rate limiting.</p>
+            </div>
+            <button type="button" 
+              @click="config.admin_allowed = !config.admin_allowed"
+              :class="config.admin_allowed ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'"
+              class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800" 
+              role="switch">
+              <span class="sr-only">Toggle Admin Rate Limiting</span>
+              <span 
+                :class="config.admin_allowed ? 'translate-x-5' : 'translate-x-0'"
+                class="pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out">
+              </span>
+            </button>
+          </div>
+        </div>
+        {{else}}
+        <div class="pt-4 border-t border-gray-100 dark:border-slate-700">
+          <div class="p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="text-xs text-blue-800 dark:text-blue-300">
+              <p class="font-semibold mb-0.5">Note for Users</p>
+              <p>Request rate thresholds and burst capacities are centrally managed by the system administrator to maintain optimal server performance.</p>
+            </div>
+          </div>
+        </div>
+        {{end}}
+
+        <!-- Save Button -->
+        <div class="pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+          <button type="button" @click="saveConfig()" :disabled="saving"
+            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50">
+            <svg x-show="saving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span x-text="saving ? 'Saving...' : 'Save Configuration'"></span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function rateLimitPage() {
+    return {
+      config: {
+        enabled: true,
+        rate: "100",
+        burst: "20",
+        admin_allowed: false
+      },
+      saving: false,
+      saved: false,
+      errorMsg: '',
+
+      async fetchConfig() {
+        try {
+          const res = await fetch('/api/ratelimit');
+          const data = await res.json();
+          if (res.ok && data.config) {
+            this.config.enabled = data.config.enabled !== false && data.config.enabled !== "false";
+            this.config.rate = data.config.rate || "100";
+            this.config.burst = data.config.burst || "20";
+            this.config.admin_allowed = data.config.admin_allowed === true || data.config.admin_allowed === "true";
+          }
+        } catch (e) {
+          console.error("Failed to load rate limit config:", e);
+        }
+      },
+
+      async saveConfig() {
+        this.saving = true;
+        this.saved = false;
+        this.errorMsg = '';
+        try {
+          const res = await fetch('/api/ratelimit', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: this.config })
+          });
+          
+          if (res.ok) {
+            await this.fetchConfig();
+            this.saved = true;
+            setTimeout(() => { this.saved = false; }, 3000);
+          } else {
+            const err = await res.text();
+            this.errorMsg = `Failed to save: ${err}`;
+            setTimeout(() => { this.errorMsg = ''; }, 5000);
+          }
+        } catch (e) {
+          this.errorMsg = `Error: ${e.message}`;
+          setTimeout(() => { this.errorMsg = ''; }, 5000);
+        } finally {
+          this.saving = false;
+        }
+      }
+    }
+  }
+</script>
+{{end}}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,6 +16,7 @@ import (
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	redisrepo "gotunnel/internal/infrastructure/cache/redis"
 	postgresrepo "gotunnel/internal/infrastructure/database/postgres"
+	"gotunnel/internal/shared/stats"
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
@@ -49,10 +51,14 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	settingUsecase := usecaseSetting.NewSettingUsecase(settingRepo)
 	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 
+	// Stats Collector (5s refresh)
+	statsCollector := stats.NewStatsCollector(5 * time.Second)
+	statsCollector.Start(context.Background())
+
 	// Handlers
-	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion)
+	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion, env.InspectDefaultLimit, statsCollector)
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
-	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase)
+	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase, settingUsecase)
 	cliH := webui.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
 
 	// Router
@@ -60,6 +66,7 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")
+		statsCollector.Stop()
 		_ = db.Close()
 	}
 

@@ -68,10 +68,30 @@ func (u *tunnelUsecase) RemoveActiveDomain(ctx context.Context, domain string) e
 	return u.tunnelStore.RemoveActiveDomain(ctx, domain)
 }
 
+func (u *tunnelUsecase) SetRateLimitSetting(ctx context.Context, username, value string) error {
+	return u.tunnelStore.SetRateLimitSetting(ctx, username, value)
+}
+
+func (u *tunnelUsecase) GetRateLimitSetting(ctx context.Context, username string) (string, error) {
+	return u.tunnelStore.GetRateLimitSetting(ctx, username)
+}
+
+func (u *tunnelUsecase) DeleteRateLimitSetting(ctx context.Context, username string) error {
+	return u.tunnelStore.DeleteRateLimitSetting(ctx, username)
+}
+
 func (u *tunnelUsecase) PublishTunnelEvent(ctx context.Context, eventType string) error {
 	return u.tunnelStore.PublishTunnelEvent(ctx, eventType)
 }
 
 func (u *tunnelUsecase) SubscribeTunnelEvents(ctx context.Context) (<-chan string, error) {
 	return u.tunnelStore.SubscribeTunnelEvents(ctx)
+}
+
+func (u *tunnelUsecase) PublishInspectEvent(ctx context.Context, host, payload string) error {
+	return u.tunnelStore.PublishInspectEvent(ctx, host, payload)
+}
+
+func (u *tunnelUsecase) SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error) {
+	return u.tunnelStore.SubscribeInspectEvents(ctx, hosts...)
 }

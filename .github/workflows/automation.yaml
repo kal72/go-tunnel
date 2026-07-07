@@ -9,27 +9,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ================= 1. CONVENTIONAL PR TITLE VALIDATOR =================
-  pr-title:
-    name: 🏷️ Validate PR Title Format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check Conventional Commits Adherence
-        run: |
-          TITLE="${{ github.event.pull_request.title }}"
-          REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?: .+"
-          shopt -s nocasematch
-          if [[ ! "$TITLE" =~ $REGEX ]]; then
-            echo "❌ ERROR: PR Title '$TITLE' does not follow Conventional Commits format!"
-            echo ""
-            echo "Allowed prefixes: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
-            echo "Example: 'feat: add CLI version check' or 'fix(install): remove sudo requirement'"
-            exit 1
-          else
-            echo "✅ SUCCESS: PR Title '$TITLE' adheres to Conventional Commits!"
-          fi
 
-  # ================= 2. AUTOMATED UNIT TESTING & COVERAGE COMMENTER =================
+  # ================= UNIT TESTING & COVERAGE COMMENTER =================
   unit-test:
     name: 🧪 Unit Testing (-race)
     runs-on: ubuntu-latest
@@ -50,7 +31,7 @@ jobs:
         run: |
           echo "::group::Running Unit Tests & Race Detector"
           set -o pipefail
-          go test -v -race -coverprofile=coverage.out \
+          go test -v -race -timeout 5m -coverprofile=coverage.out \
             $(go list ./internal/infrastructure... ./internal/usecase... ./internal/delivery... | grep -v "/mocks") \
             2>&1 | tee test_output.log
           echo "::endgroup::"
@@ -59,22 +40,47 @@ jobs:
         id: summary
         run: |
           TOTAL=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          TOTAL_NUM=$(echo "$TOTAL" | tr -d '%')
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+          # Determine coverage badge color
+          if awk "BEGIN { exit !($TOTAL_NUM >= 80) }"; then
+            BADGE="🟢 $TOTAL"
+          elif awk "BEGIN { exit !($TOTAL_NUM >= 60) }"; then
+            BADGE="🟡 $TOTAL"
+          else
+            BADGE="🔴 $TOTAL"
+          fi
 
           SUMMARY_FILE="coverage_report.md"
           echo "### 🧪 Unit Test Coverage Report" > $SUMMARY_FILE
-          echo "**Overall Project Coverage:** \`$TOTAL\`" >> $SUMMARY_FILE
           echo "" >> $SUMMARY_FILE
-          echo "| Package | Coverage |" >> $SUMMARY_FILE
-          echo "| :--- | :---: |" >> $SUMMARY_FILE
-          
-          # Extract package-level coverage figures
-          grep -E "coverage: [0-9.]+% of statements" test_output.log | while read -r line; do
-            PKG=$(echo "$line" | awk '{print $2}' | sed 's|gotunnel/||')
-            COV=$(echo "$line" | sed -n 's/.*coverage: \([0-9.]*%\).*/\1/p')
-            echo "| \`$PKG\` | $COV |" >> $SUMMARY_FILE
+          echo "**Overall Coverage:** $BADGE" >> $SUMMARY_FILE
+          echo "" >> $SUMMARY_FILE
+          echo "| Status | Package | Coverage |" >> $SUMMARY_FILE
+          echo "| :---: | :--- | :---: |" >> $SUMMARY_FILE
+
+          # Parse package results: lines matching "ok" or "FAIL" from go test -v output
+          # Format: "ok  <pkg>  <duration>  coverage: X% of statements"
+          # Format: "FAIL  <pkg>  <duration>"
+          grep -E "^(ok|FAIL)[[:space:]]" test_output.log | while read -r line; do
+            STATUS_RAW=$(echo "$line" | awk '{print $1}')
+            PKG=$(echo "$line" | awk '{print $2}' | sed 's|gotunnel/internal/||')
+            COV=$(echo "$line" | sed -n 's/.*coverage: \([0-9.]*%\) of statements.*/\1/p')
+            if [ "$STATUS_RAW" = "ok" ]; then
+              STATUS="✅"
+              COV_CELL="${COV:--}"
+            else
+              STATUS="❌"
+              COV_CELL="${COV:--}"
+            fi
+            echo "| $STATUS | \`$PKG\` | $COV_CELL |" >> $SUMMARY_FILE
           done
-          
+
+          echo "" >> $SUMMARY_FILE
+          echo "---" >> $SUMMARY_FILE
+          echo "_🟢 ≥80%  🟡 ≥60%  🔴 <60%_" >> $SUMMARY_FILE
+
           cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY
 
       - name: Comment Coverage on PR (Sticky Comment)
@@ -191,7 +197,7 @@ jobs:
             echo "⚠️ **Lint issues detected!** Please check the inline PR annotations in the *Files Changed* tab." >> $GITHUB_STEP_SUMMARY
           fi
 
-  # ================= 5. AUTOMATED BUILD CHECK =================
+  # ================= BUILD CHECK =================
   build-check:
     name: 🔨 Build Check (Binary Compile Verification)
     runs-on: ubuntu-latest
@@ -209,4 +215,43 @@ jobs:
         run: |
           echo "::group::Compiling All Go Binaries (Server, Proxy, WebUI, Client)"
           make build
+          echo "::endgroup::"
+
+  # ================= CROSS-COMPILE CLIENT BINARIES =================
+  cross-compile:
+    name: 🌐 Cross-Compile Client (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v7
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Compile Client Binary (${{ matrix.goos }}/${{ matrix.goarch }})
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          echo "::group::Cross-compiling client for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          go build -o /dev/null ./cmd/client/main.go
+          echo "✅ Build succeeded: ${{ matrix.goos }}/${{ matrix.goarch }}"
           echo "::endgroup::"

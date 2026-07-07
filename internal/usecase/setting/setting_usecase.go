@@ -25,6 +25,10 @@ func (u *settingUsecase) SetSetting(ctx context.Context, key, value string) erro
 	return u.store.SetSetting(ctx, key, value)
 }
 
+func (u *settingUsecase) DeleteSetting(ctx context.Context, key string) error {
+	return u.store.DeleteSetting(ctx, key)
+}
+
 func (u *settingUsecase) GetAllSettings(ctx context.Context) (map[string]string, error) {
 	return u.store.GetAllSettings(ctx)
 }
@@ -63,4 +67,34 @@ func (u *settingUsecase) GetAllowRegistration(ctx context.Context, fallback bool
 		return fallback
 	}
 	return parsed
+}
+
+func (u *settingUsecase) GetRateLimitConfig(ctx context.Context) domainSetting.RateLimitConfig {
+	cfg := domainSetting.RateLimitConfig{
+		Enabled:      true,
+		Rate:         100,
+		Burst:        20,
+		AdminAllowed: false,
+	}
+	if val, err := u.GetSetting(ctx, "rate_limit_enabled"); err == nil && val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			cfg.Enabled = b
+		}
+	}
+	if val, err := u.GetSetting(ctx, "rate_limit_rate"); err == nil && val != "" {
+		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+			cfg.Rate = n
+		}
+	}
+	if val, err := u.GetSetting(ctx, "rate_limit_burst"); err == nil && val != "" {
+		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+			cfg.Burst = n
+		}
+	}
+	if val, err := u.GetSetting(ctx, "rate_limit_admin_allowed"); err == nil && val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			cfg.AdminAllowed = b
+		}
+	}
+	return cfg
 }

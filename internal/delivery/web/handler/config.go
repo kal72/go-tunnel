@@ -15,32 +15,37 @@ import (
 	"github.com/google/uuid"
 
 	domainConfig "gotunnel/internal/domain/config"
+	"gotunnel/internal/shared/stats"
 	usecaseConfig "gotunnel/internal/usecase/config"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 )
 
 type Handler struct {
-	tunnelUsecase    usecaseTunnel.TunnelUsecase
-	settingUsecase   usecaseSetting.SettingUsecase
-	configUsecase    usecaseConfig.ConfigUsecase
-	settingTmpl      *template.Template
-	downTmpl         *template.Template
-	docsTmpl         *template.Template
-	domainTmpl       *template.Template
-	confTmpl         *template.Template
-	dashTmpl         *template.Template
-	masterSecret     string
-	tunnelAddr       string
-	wildcardDomain   string
-	gatewayDomain    string
-	cliLatestVersion string
-	maxFreeDomains   int
-	acmeEnable       bool
+	tunnelUsecase       usecaseTunnel.TunnelUsecase
+	settingUsecase      usecaseSetting.SettingUsecase
+	configUsecase       usecaseConfig.ConfigUsecase
+	settingTmpl         *template.Template
+	ratelimitTmpl       *template.Template
+	statsTmpl           *template.Template
+	downTmpl            *template.Template
+	docsTmpl            *template.Template
+	domainTmpl          *template.Template
+	confTmpl            *template.Template
+	dashTmpl            *template.Template
+	statsCollector      *stats.StatsCollector
+	masterSecret        string
+	tunnelAddr          string
+	wildcardDomain      string
+	gatewayDomain       string
+	cliLatestVersion    string
+	maxFreeDomains      int
+	inspectDefaultLimit int
+	acmeEnable          bool
 }
 
 // New creates a Handler and parses embedded HTML templates.
-func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string) *Handler {
+func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase usecaseConfig.ConfigUsecase, settingUsecase usecaseSetting.SettingUsecase, masterSecret, tunnelAddr, wildcardDomain, gatewayDomain string, acmeEnable bool, maxFreeDomains int, cliLatestVersion string, inspectDefaultLimit int, statsCollector *stats.StatsCollector) *Handler {
 	funcMap := template.FuncMap{
 		"split": strings.Split,
 	}
@@ -75,34 +80,55 @@ func New(fs embed.FS, tunnelUsecase usecaseTunnel.TunnelUsecase, configUsecase u
 		"templates/settings.html",
 	))
 
+	ratelimitTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/ratelimit.html",
+	))
+
+	statsTmpl := template.Must(template.New("base").Funcs(funcMap).ParseFS(fs,
+		"templates/base.html",
+		"templates/stats.html",
+	))
+
 	return &Handler{
-		dashTmpl:         dashTmpl,
-		confTmpl:         confTmpl,
-		domainTmpl:       domainTmpl,
-		docsTmpl:         docsTmpl,
-		downTmpl:         downTmpl,
-		settingTmpl:      settingTmpl,
-		tunnelUsecase:    tunnelUsecase,
-		configUsecase:    configUsecase,
-		settingUsecase:   settingUsecase,
-		masterSecret:     masterSecret,
-		tunnelAddr:       tunnelAddr,
-		wildcardDomain:   wildcardDomain,
-		gatewayDomain:    gatewayDomain,
-		acmeEnable:       acmeEnable,
-		maxFreeDomains:   maxFreeDomains,
-		cliLatestVersion: cliLatestVersion,
+		dashTmpl:            dashTmpl,
+		confTmpl:            confTmpl,
+		domainTmpl:          domainTmpl,
+		docsTmpl:            docsTmpl,
+		downTmpl:            downTmpl,
+		settingTmpl:         settingTmpl,
+		ratelimitTmpl:       ratelimitTmpl,
+		statsTmpl:           statsTmpl,
+		statsCollector:      statsCollector,
+		tunnelUsecase:       tunnelUsecase,
+		configUsecase:       configUsecase,
+		settingUsecase:      settingUsecase,
+		masterSecret:        masterSecret,
+		tunnelAddr:          tunnelAddr,
+		wildcardDomain:      wildcardDomain,
+		gatewayDomain:       gatewayDomain,
+		acmeEnable:          acmeEnable,
+		maxFreeDomains:      maxFreeDomains,
+		inspectDefaultLimit: inspectDefaultLimit,
+		cliLatestVersion:    cliLatestVersion,
 	}
 }
 
 // Index renders the dashboard page.
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
+
 	var tunnels []map[string]any
 
 	if h.tunnelUsecase != nil {
 		infos, err := h.tunnelUsecase.ListTunnels(r.Context())
 		if err == nil {
 			for _, info := range infos {
+				if role != 1 && !strings.EqualFold(info.ClientName, username) {
+					continue
+				}
 				tunnels = append(tunnels, map[string]any{
 					"TunnelName":  info.Name,
 					"ClientName":  info.ClientName,
@@ -119,19 +145,16 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	tunnelsJSON, _ := json.Marshal(tunnels)
 
-	role, _ := r.Context().Value(UserRoleKey).(int16)
-	username, _ := r.Context().Value(UserNameKey).(string)
-	csrf, _ := r.Context().Value(CSRFTokenKey).(string)
-
 	data := map[string]any{
-		"Tunnels":        tunnels,
-		"TunnelsJSON":    string(tunnelsJSON),
-		"DomainEnabled":  true,
-		"TunnelAddr":     h.tunnelAddr,
-		"WildcardDomain": h.wildcardDomain,
-		"UserRole":       role,
-		"UserName":       username,
-		"CSRFToken":      csrf,
+		"Tunnels":             tunnels,
+		"TunnelsJSON":         string(tunnelsJSON),
+		"DomainEnabled":       true,
+		"TunnelAddr":          h.tunnelAddr,
+		"WildcardDomain":      h.wildcardDomain,
+		"UserRole":            role,
+		"UserName":            username,
+		"CSRFToken":           csrf,
+		"InspectDefaultLimit": h.inspectDefaultLimit,
 	}
 
 	if err := h.dashTmpl.ExecuteTemplate(w, "base", data); err != nil {
@@ -152,12 +175,18 @@ func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+
 	getFormattedTunnels := func() []map[string]any {
 		var tunnels []map[string]any
 		if h.tunnelUsecase != nil {
 			infos, err := h.tunnelUsecase.ListTunnels(r.Context())
 			if err == nil {
 				for _, info := range infos {
+					if role != 1 && !strings.EqualFold(info.ClientName, username) {
+						continue
+					}
 					tunnels = append(tunnels, map[string]any{
 						"TunnelName":  info.Name,
 						"ClientName":  info.ClientName,
@@ -214,6 +243,97 @@ func (h *Handler) HandleTunnelStream(w http.ResponseWriter, r *http.Request) {
 			if !sendTunnels() {
 				return
 			}
+		}
+	}
+}
+
+// StreamInspectEvents pushes live HTTP request logs for a tunnel host via Server-Sent Events (SSE).
+func (h *Handler) StreamInspectEvents(w http.ResponseWriter, r *http.Request) {
+	hostsParam := r.URL.Query().Get("hosts")
+	if hostsParam == "" {
+		hostsParam = r.URL.Query().Get("host")
+	}
+	if hostsParam == "" {
+		http.Error(w, "hosts parameter required", http.StatusBadRequest)
+		return
+	}
+
+	hostsList := strings.Split(hostsParam, ",")
+	var validHosts []string
+	for _, hst := range hostsList {
+		hst = strings.TrimSpace(hst)
+		if hst != "" {
+			validHosts = append(validHosts, hst)
+		}
+	}
+	if len(validHosts) == 0 {
+		http.Error(w, "valid hosts required", http.StatusBadRequest)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+
+	role, _ := r.Context().Value(UserRoleKey).(int16)
+	username, _ := r.Context().Value(UserNameKey).(string)
+	if role != 1 && h.tunnelUsecase != nil {
+		infos, _ := h.tunnelUsecase.ListTunnels(r.Context())
+		allowedHosts := make(map[string]bool)
+		for _, info := range infos {
+			if strings.EqualFold(info.ClientName, username) {
+				allowedHosts[info.Name] = true
+				for _, hst := range info.Hosts {
+					allowedHosts[hst] = true
+				}
+			}
+		}
+		var authorizedHosts []string
+		for _, hst := range validHosts {
+			if allowedHosts[hst] {
+				authorizedHosts = append(authorizedHosts, hst)
+			}
+		}
+		validHosts = authorizedHosts
+		if len(validHosts) == 0 {
+			http.Error(w, "forbidden: no valid tunnels found for user", http.StatusForbidden)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	var ch <-chan string
+	if h.tunnelUsecase != nil {
+		ch, _ = h.tunnelUsecase.SubscribeInspectEvents(r.Context(), validHosts...)
+	}
+
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case data, ok := <-ch:
+			if !ok {
+				return
+			}
+			_, err := fmt.Fprintf(w, "data: %s\n\n", data)
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-ticker.C:
+			_, err := fmt.Fprintf(w, ": ping\n\n")
+			if err != nil {
+				return
+			}
+			flusher.Flush()
 		}
 	}
 }

@@ -402,16 +402,20 @@
             alert(`Validation Error (Tunnel #${i+1}): Hostname cannot be empty.`);
             return;
           }
-          if (!t.target || !t.target.trim()) {
-            alert(`Validation Error (Tunnel #${i+1}): Target cannot be empty.`);
-            return;
-          }
           if (t.hostname.includes(' ') || t.hostname.includes('://')) {
             alert(`Validation Error (Tunnel #${i+1}): Hostname '${t.hostname}' is invalid. Do not include protocols (http://) or spaces.`);
             return;
           }
-          if (!t.target.includes(':') || t.target.includes(' ')) {
-            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format without spaces.`);
+          if (!t.target || !t.target.trim()) {
+            alert(`Validation Error (Tunnel #${i+1}): Target cannot be empty.`);
+            return;
+          }
+          if (t.target.includes(' ')) {
+            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Cannot contain spaces.`);
+            return;
+          }
+          if (t.mode !== 'https' && !t.target.includes(':')) {
+            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format.`);
             return;
           }
         }

@@ -53,10 +53,14 @@ func SetupRouter(
 			r.Get("/", h.Index)
 			r.Get("/configs", h.Configs)
 			r.Get("/domains", h.Domains)
+			r.Get("/ratelimit", h.RateLimitPage)
 			r.Get("/downloads", h.Downloads)
 
 			// API
 			r.Get("/api/tunnels/stream", h.HandleTunnelStream)
+			r.Get("/api/tunnels/inspect/stream", h.StreamInspectEvents)
+			r.Get("/api/ratelimit", h.GetRateLimit)
+			r.Put("/api/ratelimit", h.UpdateRateLimit)
 			r.Get("/api/configs", h.ListConfigs)
 			r.Post("/api/configs", h.CreateConfig)
 			r.Get("/api/configs/{id}", h.GetConfig)
@@ -75,6 +79,10 @@ func SetupRouter(
 				r.Get("/settings", h.SettingsPage)
 				r.Get("/api/settings", h.GetSettings)
 				r.Put("/api/settings", h.UpdateSettings)
+
+				// System Stats Admin
+				r.Get("/stats", h.StatsPage)
+				r.Get("/api/stats/stream", h.StreamStats)
 
 				r.Get("/users", userH.UsersPage)
 				r.Get("/api/users", userH.ListUsers)

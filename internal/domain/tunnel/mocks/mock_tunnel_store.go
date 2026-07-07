@@ -39,6 +39,63 @@ func (_m *MockTunnelStore) EXPECT() *MockTunnelStore_Expecter {
 	return &MockTunnelStore_Expecter{mock: &_m.Mock}
 }
 
+// DeleteRateLimitSetting provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) DeleteRateLimitSetting(ctx context.Context, username string) error {
+	ret := _mock.Called(ctx, username)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteRateLimitSetting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, username)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelStore_DeleteRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteRateLimitSetting'
+type MockTunnelStore_DeleteRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// DeleteRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+func (_e *MockTunnelStore_Expecter) DeleteRateLimitSetting(ctx any, username any) *MockTunnelStore_DeleteRateLimitSetting_Call {
+	return &MockTunnelStore_DeleteRateLimitSetting_Call{Call: _e.mock.On("DeleteRateLimitSetting", ctx, username)}
+}
+
+func (_c *MockTunnelStore_DeleteRateLimitSetting_Call) Run(run func(ctx context.Context, username string)) *MockTunnelStore_DeleteRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_DeleteRateLimitSetting_Call) Return(err error) *MockTunnelStore_DeleteRateLimitSetting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelStore_DeleteRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string) error) *MockTunnelStore_DeleteRateLimitSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteTunnel provides a mock function for the type MockTunnelStore
 func (_mock *MockTunnelStore) DeleteTunnel(ctx context.Context, sessionID string) error {
 	ret := _mock.Called(ctx, sessionID)
@@ -92,6 +149,72 @@ func (_c *MockTunnelStore_DeleteTunnel_Call) Return(err error) *MockTunnelStore_
 }
 
 func (_c *MockTunnelStore_DeleteTunnel_Call) RunAndReturn(run func(ctx context.Context, sessionID string) error) *MockTunnelStore_DeleteTunnel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRateLimitSetting provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) GetRateLimitSetting(ctx context.Context, username string) (string, error) {
+	ret := _mock.Called(ctx, username)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRateLimitSetting")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return returnFunc(ctx, username)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, username)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, username)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnelStore_GetRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRateLimitSetting'
+type MockTunnelStore_GetRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// GetRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+func (_e *MockTunnelStore_Expecter) GetRateLimitSetting(ctx any, username any) *MockTunnelStore_GetRateLimitSetting_Call {
+	return &MockTunnelStore_GetRateLimitSetting_Call{Call: _e.mock.On("GetRateLimitSetting", ctx, username)}
+}
+
+func (_c *MockTunnelStore_GetRateLimitSetting_Call) Run(run func(ctx context.Context, username string)) *MockTunnelStore_GetRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_GetRateLimitSetting_Call) Return(s string, err error) *MockTunnelStore_GetRateLimitSetting_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockTunnelStore_GetRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string) (string, error)) *MockTunnelStore_GetRateLimitSetting_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -261,6 +384,69 @@ func (_c *MockTunnelStore_Ping_Call) Return() *MockTunnelStore_Ping_Call {
 
 func (_c *MockTunnelStore_Ping_Call) RunAndReturn(run func(ctx context.Context)) *MockTunnelStore_Ping_Call {
 	_c.Run(run)
+	return _c
+}
+
+// PublishInspectEvent provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) PublishInspectEvent(ctx context.Context, host string, payload string) error {
+	ret := _mock.Called(ctx, host, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PublishInspectEvent")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, host, payload)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelStore_PublishInspectEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishInspectEvent'
+type MockTunnelStore_PublishInspectEvent_Call struct {
+	*mock.Call
+}
+
+// PublishInspectEvent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - host string
+//   - payload string
+func (_e *MockTunnelStore_Expecter) PublishInspectEvent(ctx any, host any, payload any) *MockTunnelStore_PublishInspectEvent_Call {
+	return &MockTunnelStore_PublishInspectEvent_Call{Call: _e.mock.On("PublishInspectEvent", ctx, host, payload)}
+}
+
+func (_c *MockTunnelStore_PublishInspectEvent_Call) Run(run func(ctx context.Context, host string, payload string)) *MockTunnelStore_PublishInspectEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_PublishInspectEvent_Call) Return(err error) *MockTunnelStore_PublishInspectEvent_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelStore_PublishInspectEvent_Call) RunAndReturn(run func(ctx context.Context, host string, payload string) error) *MockTunnelStore_PublishInspectEvent_Call {
+	_c.Call.Return(run)
 	return _c
 }
 
@@ -555,6 +741,69 @@ func (_c *MockTunnelStore_SetActiveDomain_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// SetRateLimitSetting provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) SetRateLimitSetting(ctx context.Context, username string, value string) error {
+	ret := _mock.Called(ctx, username, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRateLimitSetting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, username, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelStore_SetRateLimitSetting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRateLimitSetting'
+type MockTunnelStore_SetRateLimitSetting_Call struct {
+	*mock.Call
+}
+
+// SetRateLimitSetting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - username string
+//   - value string
+func (_e *MockTunnelStore_Expecter) SetRateLimitSetting(ctx any, username any, value any) *MockTunnelStore_SetRateLimitSetting_Call {
+	return &MockTunnelStore_SetRateLimitSetting_Call{Call: _e.mock.On("SetRateLimitSetting", ctx, username, value)}
+}
+
+func (_c *MockTunnelStore_SetRateLimitSetting_Call) Run(run func(ctx context.Context, username string, value string)) *MockTunnelStore_SetRateLimitSetting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_SetRateLimitSetting_Call) Return(err error) *MockTunnelStore_SetRateLimitSetting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelStore_SetRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string, value string) error) *MockTunnelStore_SetRateLimitSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetToken provides a mock function for the type MockTunnelStore
 func (_mock *MockTunnelStore) SetToken(ctx context.Context, userID string, token string, expiration time.Duration) error {
 	ret := _mock.Called(ctx, userID, token, expiration)
@@ -683,6 +932,83 @@ func (_c *MockTunnelStore_SetTunnel_Call) Return(err error) *MockTunnelStore_Set
 }
 
 func (_c *MockTunnelStore_SetTunnel_Call) RunAndReturn(run func(ctx context.Context, sessionID string, info tunnel.TunnelInfo) error) *MockTunnelStore_SetTunnel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SubscribeInspectEvents provides a mock function for the type MockTunnelStore
+func (_mock *MockTunnelStore) SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error) {
+	var tmpRet mock.Arguments
+	if len(hosts) > 0 {
+		tmpRet = _mock.Called(ctx, hosts)
+	} else {
+		tmpRet = _mock.Called(ctx)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for SubscribeInspectEvents")
+	}
+
+	var r0 <-chan string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...string) (<-chan string, error)); ok {
+		return returnFunc(ctx, hosts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...string) <-chan string); ok {
+		r0 = returnFunc(ctx, hosts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, ...string) error); ok {
+		r1 = returnFunc(ctx, hosts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTunnelStore_SubscribeInspectEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SubscribeInspectEvents'
+type MockTunnelStore_SubscribeInspectEvents_Call struct {
+	*mock.Call
+}
+
+// SubscribeInspectEvents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hosts ...string
+func (_e *MockTunnelStore_Expecter) SubscribeInspectEvents(ctx any, hosts ...any) *MockTunnelStore_SubscribeInspectEvents_Call {
+	return &MockTunnelStore_SubscribeInspectEvents_Call{Call: _e.mock.On("SubscribeInspectEvents",
+		append([]any{ctx}, hosts...)...)}
+}
+
+func (_c *MockTunnelStore_SubscribeInspectEvents_Call) Run(run func(ctx context.Context, hosts ...string)) *MockTunnelStore_SubscribeInspectEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		var variadicArgs []string
+		if len(args) > 1 {
+			variadicArgs = args[1].([]string)
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelStore_SubscribeInspectEvents_Call) Return(stringCh <-chan string, err error) *MockTunnelStore_SubscribeInspectEvents_Call {
+	_c.Call.Return(stringCh, err)
+	return _c
+}
+
+func (_c *MockTunnelStore_SubscribeInspectEvents_Call) RunAndReturn(run func(ctx context.Context, hosts ...string) (<-chan string, error)) *MockTunnelStore_SubscribeInspectEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

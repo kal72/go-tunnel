@@ -157,6 +157,21 @@ func (s *TunnelRedisStore) RemoveActiveDomain(ctx context.Context, domain string
 	return s.client.Del(ctx, key).Err()
 }
 
+func (s *TunnelRedisStore) SetRateLimitSetting(ctx context.Context, username, value string) error {
+	key := "rate_limit_enabled:" + username
+	return s.client.Set(ctx, key, value, 24*time.Hour).Err()
+}
+
+func (s *TunnelRedisStore) GetRateLimitSetting(ctx context.Context, username string) (string, error) {
+	key := "rate_limit_enabled:" + username
+	return s.client.Get(ctx, key).Result()
+}
+
+func (s *TunnelRedisStore) DeleteRateLimitSetting(ctx context.Context, username string) error {
+	key := "rate_limit_enabled:" + username
+	return s.client.Del(ctx, key).Err()
+}
+
 func (s *TunnelRedisStore) PublishTunnelEvent(ctx context.Context, eventType string) error {
 	return s.client.Publish(ctx, "tunnel_events", eventType).Err()
 }
@@ -170,6 +185,47 @@ func (s *TunnelRedisStore) SubscribeTunnelEvents(ctx context.Context) (<-chan st
 	ch := make(chan string, 16)
 	go func() {
 		defer pubsub.Close()
+		for {
+			msg, err := pubsub.ReceiveMessage(ctx)
+			if err != nil {
+				close(ch)
+				return
+			}
+			select {
+			case ch <- msg.Payload:
+			case <-ctx.Done():
+				close(ch)
+				return
+			}
+		}
+	}()
+	return ch, nil
+}
+
+func (s *TunnelRedisStore) PublishInspectEvent(ctx context.Context, host, payload string) error {
+	channel := "tunnel_inspect:" + host
+	return s.client.Publish(ctx, channel, payload).Err()
+}
+
+func (s *TunnelRedisStore) SubscribeInspectEvents(ctx context.Context, hosts ...string) (<-chan string, error) {
+	if len(hosts) == 0 {
+		return nil, errors.New("no hosts provided")
+	}
+	channels := make([]string, len(hosts))
+	for i, h := range hosts {
+		channels[i] = "tunnel_inspect:" + h
+	}
+	pubsub := s.client.Subscribe(ctx, channels...)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		_ = pubsub.Close()
+		return nil, err
+	}
+	ch := make(chan string, 16)
+	go func() {
+		defer func() {
+			_ = recover()
+			_ = pubsub.Close()
+		}()
 		for {
 			msg, err := pubsub.ReceiveMessage(ctx)
 			if err != nil {

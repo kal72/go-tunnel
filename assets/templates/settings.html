@@ -59,8 +59,6 @@
             </div>
           </div>
 
-          <hr class="border-gray-100 dark:border-slate-700">
-
           <!-- Access & Security Section -->
           <div style="display: none;">
             <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
@@ -105,7 +103,11 @@
       settings: {
         max_free_domains: "5",
         max_tunnels_per_user: "3",
-        allow_registration: true
+        allow_registration: true,
+        rate_limit_enabled: true,
+        rate_limit_rate: "100",
+        rate_limit_burst: "20",
+        rate_limit_admin_allowed: false
       },
       saving: false,
       saved: false,
@@ -119,6 +121,10 @@
             this.settings.max_free_domains = data.settings.max_free_domains || "5";
             this.settings.max_tunnels_per_user = data.settings.max_tunnels_per_user || "3";
             this.settings.allow_registration = data.settings.allow_registration === "true";
+            this.settings.rate_limit_enabled = data.settings.rate_limit_enabled !== "false";
+            this.settings.rate_limit_rate = data.settings.rate_limit_rate || "100";
+            this.settings.rate_limit_burst = data.settings.rate_limit_burst || "20";
+            this.settings.rate_limit_admin_allowed = data.settings.rate_limit_admin_allowed === "true";
           }
         } catch (e) {
           console.error("Failed to load settings:", e);
@@ -135,7 +141,11 @@
             settings: {
               max_free_domains: String(this.settings.max_free_domains),
               max_tunnels_per_user: String(this.settings.max_tunnels_per_user),
-              allow_registration: String(this.settings.allow_registration)
+              allow_registration: String(this.settings.allow_registration),
+              rate_limit_enabled: String(this.settings.rate_limit_enabled),
+              rate_limit_rate: String(this.settings.rate_limit_rate),
+              rate_limit_burst: String(this.settings.rate_limit_burst),
+              rate_limit_admin_allowed: String(this.settings.rate_limit_admin_allowed)
             }
           };
 

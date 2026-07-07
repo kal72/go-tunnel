@@ -45,6 +45,18 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	if _, ok := settings["max_tunnels_per_user"]; !ok {
 		settings["max_tunnels_per_user"] = "3"
 	}
+	if _, ok := settings["rate_limit_enabled"]; !ok {
+		settings["rate_limit_enabled"] = "true"
+	}
+	if _, ok := settings["rate_limit_rate"]; !ok {
+		settings["rate_limit_rate"] = "100"
+	}
+	if _, ok := settings["rate_limit_burst"]; !ok {
+		settings["rate_limit_burst"] = "20"
+	}
+	if _, ok := settings["rate_limit_admin_allowed"]; !ok {
+		settings["rate_limit_admin_allowed"] = "false"
+	}
 
 	writeJSON(w, map[string]interface{}{
 		"status":   "ok",

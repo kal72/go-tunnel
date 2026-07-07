@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,9 +14,11 @@ import (
 	"sync"
 	"time"
 
+	domainSetting "gotunnel/internal/domain/setting"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	domainUser "gotunnel/internal/domain/user"
 	"gotunnel/internal/shared/protocol"
+	"gotunnel/internal/shared/ratelimit"
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	usecaseUser "gotunnel/internal/usecase/user"
@@ -27,25 +30,31 @@ import (
 type TunnelSession struct {
 	Connected  time.Time
 	Session    *yamux.Session
+	Ctrl       *yamux.Stream
 	Hostnames  map[string]struct{}
 	Modes      map[string]string
-	Ctrl       *yamux.Stream
 	ClientName string
 	Username   string
 	ClientIP   string
+	Role       int16
 }
 
 type Server struct {
-	hostRegistry    domainTunnel.HostRegistry
-	tunnelUsecase   usecaseTunnel.TunnelUsecase
-	authUsecase     usecaseUser.AuthUsecase
-	settingUsecase  usecaseSetting.SettingUsecase
-	logger          *zap.Logger
-	hostToSes       map[string]*TunnelSession
-	dashboardDomain string
-	wildcardDomain  string
-	jwtSecret       []byte
-	mu              sync.RWMutex
+	lastRateLimitFetch time.Time
+	hostRegistry       domainTunnel.HostRegistry
+	tunnelUsecase      usecaseTunnel.TunnelUsecase
+	authUsecase        usecaseUser.AuthUsecase
+	settingUsecase     usecaseSetting.SettingUsecase
+	logger             *zap.Logger
+	hostToSes          map[string]*TunnelSession
+	limiter            *ratelimit.Limiter
+	dashboardDomain    string
+	wildcardDomain     string
+	jwtSecret          []byte
+	cachedRateLimitCfg domainSetting.RateLimitConfig
+	heartbeatInterval  time.Duration
+	mu                 sync.RWMutex
+	rateLimitMu        sync.RWMutex
 }
 
 func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serverDomain, wildcardDomain string, tunnelUsecase usecaseTunnel.TunnelUsecase, authUsecase usecaseUser.AuthUsecase, settingUsecase usecaseSetting.SettingUsecase) (*Server, error) {
@@ -60,7 +69,31 @@ func NewServerJWT(jwtSecret string, hostRegistry domainTunnel.HostRegistry, serv
 		tunnelUsecase:   tunnelUsecase,
 		authUsecase:     authUsecase,
 		settingUsecase:  settingUsecase,
+		limiter:         ratelimit.NewLimiter(),
 	}, nil
+}
+
+func (s *Server) getRateLimitConfig(ctx context.Context) domainSetting.RateLimitConfig {
+	s.rateLimitMu.RLock()
+	if !s.lastRateLimitFetch.IsZero() && time.Since(s.lastRateLimitFetch) < 3*time.Second {
+		cfg := s.cachedRateLimitCfg
+		s.rateLimitMu.RUnlock()
+		return cfg
+	}
+	s.rateLimitMu.RUnlock()
+
+	s.rateLimitMu.Lock()
+	defer s.rateLimitMu.Unlock()
+	if !s.lastRateLimitFetch.IsZero() && time.Since(s.lastRateLimitFetch) < 3*time.Second {
+		return s.cachedRateLimitCfg
+	}
+	if s.settingUsecase != nil {
+		s.cachedRateLimitCfg = s.settingUsecase.GetRateLimitConfig(ctx)
+	} else {
+		s.cachedRateLimitCfg = domainSetting.RateLimitConfig{Enabled: true, Rate: 100, Burst: 20, AdminAllowed: false}
+	}
+	s.lastRateLimitFetch = time.Now()
+	return s.cachedRateLimitCfg
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -70,8 +103,40 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no tunnel for host", http.StatusBadGateway)
 		return
 	}
+
+	cfg := s.getRateLimitConfig(r.Context())
+	enabled := cfg.Enabled
+	if ses.Role != 1 && ses.Username != "" {
+		enabled = false
+		if s.tunnelUsecase != nil {
+			if val, err := s.tunnelUsecase.GetRateLimitSetting(r.Context(), ses.Username); err == nil && val != "" {
+				enabled = val == "true"
+			} else if s.settingUsecase != nil {
+				if val, err := s.settingUsecase.GetSetting(r.Context(), "rate_limit_enabled:"+ses.Username); err == nil && val != "" {
+					enabled = val == "true"
+				}
+			}
+		} else if s.settingUsecase != nil {
+			if val, err := s.settingUsecase.GetSetting(r.Context(), "rate_limit_enabled:"+ses.Username); err == nil && val != "" {
+				enabled = val == "true"
+			}
+		}
+	}
+	if enabled && s.limiter != nil {
+		if ses.Role != 1 || cfg.AdminAllowed {
+			if !s.limiter.Allow(host, cfg.Rate, cfg.Burst) {
+				w.Header().Set("Retry-After", "1")
+				http.Error(w, "429 Too Many Requests", http.StatusTooManyRequests)
+				return
+			}
+		}
+	}
 	mode := ses.modeForHost(host)
 
+	if ses.Session == nil {
+		http.Error(w, "session unavailable", http.StatusBadGateway)
+		return
+	}
 	stream, err := ses.Session.OpenStream()
 	if err != nil {
 		http.Error(w, "open stream failed", http.StatusBadGateway)
@@ -87,6 +152,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// --- jika HTTP (default): kirim HTTP request ---
 	if mode != "tcp" {
+		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
@@ -100,6 +166,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		copyHeader(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
+
+		duration := time.Since(start).Milliseconds()
+		clientIP := r.RemoteAddr
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			clientIP = strings.Split(xff, ",")[0]
+		}
+		eventData := map[string]any{
+			"host":        host,
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status_code": resp.StatusCode,
+			"duration_ms": duration,
+			"client_ip":   clientIP,
+			"timestamp":   time.Now().Format("15:04:05"),
+		}
+		if b, err := json.Marshal(eventData); err == nil && s.tunnelUsecase != nil {
+			go func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						s.logger.Error("panic in publish inspect event", zap.Any("recover", rec))
+					}
+				}()
+				ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
+				defer cancel()
+				_ = s.tunnelUsecase.PublishInspectEvent(ctx, host, string(b))
+			}()
+		}
 		return
 	}
 
@@ -151,21 +244,27 @@ func (s *Server) ListenTunnelTLS(addr string, tlsCfg *tls.Config) (net.Listener,
 	}
 	s.logger.Info("[edge] tunnel TLS listening", zap.String("addr", addr))
 
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection") {
-					break
-				}
-				s.logger.Error("[edge] accept tunnel", zap.Error(err))
-				continue
-			}
-
-			go s.handleClientConn(conn)
-		}
-	}()
+	go s.serveListener(ln)
 	return ln, nil
+}
+
+func (s *Server) serveListener(ln net.Listener) {
+	defer func() { _ = recover() }()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection") {
+				break
+			}
+			s.logger.Error("[edge] accept tunnel", zap.Error(err))
+			continue
+		}
+
+		go func(c net.Conn) {
+			defer func() { _ = recover() }()
+			s.handleClientConn(c)
+		}(conn)
+	}
 }
 
 func (s *Server) activeTunnelsForUser(username string) int {
@@ -181,15 +280,9 @@ func (s *Server) activeTunnelsForUser(username string) int {
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
+	session, _ := yamux.Server(conn, nil)
 	ip := conn.RemoteAddr().String()
 	s.logger.Info("new tunnel", zap.String("addr", ip))
-
-	session, err := yamux.Server(conn, nil)
-	if err != nil {
-		s.logger.Error("[edge] yamux server", zap.Error(err))
-		_ = conn.Close()
-		return
-	}
 
 	// Control stream: pertama harus REGISTER
 	ctrl, err := session.AcceptStream()
@@ -246,6 +339,7 @@ func (s *Server) handleClientConn(conn net.Conn) {
 		Session:    session,
 		ClientName: clientName,
 		Username:   user.Username,
+		Role:       user.Role,
 		Hostnames:  map[string]struct{}{},
 		Modes:      map[string]string{},
 		Ctrl:       ctrl,
@@ -341,13 +435,24 @@ RouteLoop:
 	}
 	s.mu.Unlock()
 
+	if user.Role != 1 && user.Username != "" && s.settingUsecase != nil && s.tunnelUsecase != nil {
+		if val, err := s.settingUsecase.GetSetting(context.Background(), "rate_limit_enabled:"+user.Username); err == nil && val != "" {
+			_ = s.tunnelUsecase.SetRateLimitSetting(context.Background(), user.Username, val)
+		}
+	}
+
 	s.updateState(ts)
 
 	_ = protocol.SendJSON(ctrl, protocol.AckMessage{Type: protocol.MsgTypeAck, OK: true})
 
 	// Heartbeat: server → ping; client balas → pong
 	go func() {
-		ticker := time.NewTicker(15 * time.Second)
+		defer func() { _ = recover() }()
+		hb := s.heartbeatInterval
+		if hb == 0 {
+			hb = 15 * time.Second
+		}
+		ticker := time.NewTicker(hb)
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := protocol.SendJSON(ctrl, protocol.PingMessage{Type: protocol.MsgTypePing, Ts: protocol.NowMillis()}); err != nil {
@@ -376,9 +481,6 @@ RouteLoop:
 	// Tunggu sampai session tutup → bersihkan mapping
 	go func() {
 		defer func() { _ = recover() }()
-		if session == nil {
-			return
-		}
 		<-session.CloseChan()
 		s.logger.Warn("[edge] session closed", zap.String("addr", ip))
 		s.cleanup(ts)
@@ -405,6 +507,18 @@ func (s *Server) cleanup(ts *TunnelSession) {
 	}
 	if s.tunnelUsecase != nil {
 		_ = s.tunnelUsecase.UnregisterTunnel(context.Background(), fmt.Sprintf("%p", ts))
+	}
+	if ts.Role != 1 && ts.Username != "" && s.tunnelUsecase != nil {
+		hasRemaining := false
+		for _, cur := range s.hostToSes {
+			if cur != nil && cur.Username == ts.Username {
+				hasRemaining = true
+				break
+			}
+		}
+		if !hasRemaining {
+			_ = s.tunnelUsecase.DeleteRateLimitSetting(context.Background(), ts.Username)
+		}
 	}
 }
 

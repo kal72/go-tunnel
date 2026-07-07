@@ -39,10 +39,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - run: |
+      
+      - name: Build & Push DEV Image
+        run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/gotunnel:dev
           docker build -t $IMAGE .
           docker push $IMAGE
+
+      - name: Prune Untagged Images
+        uses: vlaurin/action-ghcr-prune@v0.6.0
+        with:
+          token: ${{ secrets.GHCR_TOKEN }}
+          user: ${{ github.repository_owner }}
+          container: gotunnel
+          prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
+          keep-younger-than: 0 # Safety buffer: Keep the 3 newest untagged images just in case
 
   deploy-dev:
     if: ${{ github.event.inputs.target == 'dev' }}
@@ -133,9 +144,7 @@ jobs:
     outputs:
       version: ${{ steps.setver.outputs.version }}
     steps:
-
       - uses: actions/checkout@v7
-
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -164,6 +173,15 @@ jobs:
           docker tag $IMAGE ghcr.io/${{ github.repository_owner }}/gotunnel:latest
           docker push $IMAGE
           docker push ghcr.io/${{ github.repository_owner }}/gotunnel:latest
+      
+      - name: Prune Untagged Images
+        uses: vlaurin/action-ghcr-prune@v0.6.0
+        with:
+          token: ${{ secrets.GHCR_TOKEN }}
+          user: ${{ github.repository_owner }}
+          container: gotunnel
+          prune-untagged: true  # Keep only untagged (SHA-only) images for deletion
+          keep-younger-than: 0 # Safety buffer: Keep the 3 newest untagged images just in case
 
 
   deploy-release:
