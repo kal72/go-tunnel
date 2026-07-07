@@ -86,3 +86,11 @@ git log -1 --pretty=format:"%B" | grep -E "^(feat|fix|docs|style|refactor|perf|t
 
 ## Release Documentation Policy
 - **Concise & Categorized Release Notes**: When generating release documents or GitHub release notes, keep the output **as concise as possible** using concise 1-line bullet points. Exactly categorize changes under clear sections: `## 🚀 New Features`, `## ⚡ Enhancements & Changes`, and `## 🐛 Bug Fixes & Security`. Avoid lengthy multi-paragraph explanations.
+- **Upgrading Section**: Always append an Upgrading section at the very end of any release document or GitHub release note using the exact format:
+  ```markdown
+  ## 📦 Upgrading
+  - **Server Image**: `docker pull ghcr.io/kal72/gotunnel:<version>`
+  - **CLI Binary**: Run `gotunnel update` or download binaries directly from the Web UI (`/downloads`).
+  
+  For full commit history, view the Full Changelog.
+  ```
