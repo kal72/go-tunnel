@@ -92,5 +92,5 @@ git log -1 --pretty=format:"%B" | grep -E "^(feat|fix|docs|style|refactor|perf|t
   - **Server Image**: `docker pull ghcr.io/kal72/gotunnel:<version>`
   - **CLI Binary**: Run `gotunnel update` or download binaries directly from the Web UI (`/downloads`).
   
-  For full commit history, view the Full Changelog.
+  For full commit history, view the [Full Changelog](https://github.com/kal72/go-tunnel/compare/<prev_version>...<version>).
   ```
