@@ -183,6 +183,9 @@
                         <option value="http">http</option>
                         <option value="https">https</option>
                         <option value="tcp">tcp</option>
+                        <option value="tcp-proxy">tcp-proxy</option>
+                        <option value="minecraft">minecraft</option>
+                        <option value="minecraft-proxy">minecraft-proxy</option>
                       </select>
                     </div>
 
@@ -414,8 +417,9 @@
             alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Cannot contain spaces.`);
             return;
           }
-          if (t.mode !== 'https' && !t.target.includes(':')) {
-            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format.`);
+          const isOnlyPort = /^\d+$/.test(t.target);
+          if (t.mode !== 'https' && !isOnlyPort && !t.target.includes(':')) {
+            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format or port number.`);
             return;
           }
         }

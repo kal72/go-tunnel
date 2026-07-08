@@ -284,7 +284,15 @@ func hostOnly(addr string) string {
 	return addr
 }
 
+func formatTarget(target string) string {
+	if !strings.Contains(target, ":") && target != "" {
+		return "127.0.0.1:" + target
+	}
+	return target
+}
+
 func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
+	target = formatTarget(target)
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
@@ -304,6 +312,7 @@ func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
 }
 
 func (c *Client) handleHTTPStream(stream *yamux.Stream, target string) {
+	target = formatTarget(target)
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
