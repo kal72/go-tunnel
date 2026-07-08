@@ -216,20 +216,55 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if mode == "tcp-proxy" || mode == "minecraft-proxy" {
 		clientIP := r.RemoteAddr
+		clientPort := 0
 		if xff := r.Header.Get("X-Real-IP"); xff != "" {
 			clientIP = xff
+			if portStr := r.Header.Get("X-Real-Port"); portStr != "" {
+				if p, err := strconv.Atoi(portStr); err == nil {
+					clientPort = p
+				}
+			}
 		} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			clientIP = strings.Split(xff, ",")[0]
 		}
+
 		clientHost, clientPortStr, _ := net.SplitHostPort(clientIP)
 		if clientHost == "" {
 			clientHost = clientIP
+		} else if clientPort == 0 {
+			if p, err := strconv.Atoi(clientPortStr); err == nil {
+				clientPort = p
+			}
 		}
-		clientPort := 0
-		if p, err := strconv.Atoi(clientPortStr); err == nil {
-			clientPort = p
+
+		if clientPort <= 0 || clientPort > 65535 {
+			if _, remPortStr, remErr := net.SplitHostPort(r.RemoteAddr); remErr == nil {
+				if rp, err := strconv.Atoi(remPortStr); err == nil && rp > 0 && rp <= 65535 {
+					clientPort = rp
+				}
+			}
+			if clientPort <= 0 || clientPort > 65535 {
+				clientPort = 54321
+			}
 		}
-		proxyLine := fmt.Sprintf("PROXY TCP4 %s 127.0.0.1 %d 25565\r\n", clientHost, clientPort)
+
+		proto := "TCP4"
+		dstIP := "127.0.0.1"
+		if ip := net.ParseIP(clientHost); ip != nil {
+			if ip.To4() != nil {
+				proto = "TCP4"
+				dstIP = "127.0.0.1"
+				clientHost = ip.To4().String()
+			} else if ip.To16() != nil {
+				proto = "TCP6"
+				dstIP = "::1"
+				clientHost = ip.To16().String()
+			}
+		} else {
+			clientHost = "127.0.0.1"
+		}
+
+		proxyLine := fmt.Sprintf("PROXY %s %s %s %d 25565\r\n", proto, clientHost, dstIP, clientPort)
 		_, _ = io.WriteString(stream, proxyLine)
 	}
 

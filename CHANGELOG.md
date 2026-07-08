@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD**: Enhanced unit testing workflow with a 5-minute timeout flag (`-timeout 5m`) to prevent hung runners.
 
 ### Fixed
+- **Minecraft Tunneling (`minecraft-proxy`)**: Fixed connection rejections (`Failed to connect to server`) when using PaperMC / BungeeCord with `proxy-protocol=true` due to HAProxy PROXY Protocol v1 sending source port `0` (`PROXY TCP4 ... 0 25565`). Updated `internal/gateway/proxy.go` to forward the client's actual TCP source port via `X-Real-Port` header when upgrading HTTP `CONNECT` streams, and updated `internal/delivery/tcp/handler.go` to always guarantee a valid non-zero source port (`> 0 and <= 65535`, defaulting to `54321` if unavailable) and proper IPv4/IPv6 family prefix (`TCP4`/`TCP6`), fully satisfying Netty's strict HAProxy message decoder requirements.
 - **Web UI**: Allowed HTTPS tunnel targets to be configured without a port (e.g., just a domain/hostname) in the configuration form, matching the client agent's automatic fallback behavior.
 - **Web UI**: Fixed sidebar navigation menu flicker by adding default text/SVG color classes in the static HTML and executing a tiny inline script to apply active states immediately on page load before first paint.
 - **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.

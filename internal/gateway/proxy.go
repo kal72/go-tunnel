@@ -202,11 +202,13 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 				_ = mcConn.Close()
 				return
 			}
-			clientIP := mcConn.RemoteAddr().String()
-			if h, _, errSplit := net.SplitHostPort(clientIP); errSplit == nil {
-				clientIP = h
+			clientAddr := mcConn.RemoteAddr().String()
+			clientIP, clientPortStr, errSplit := net.SplitHostPort(clientAddr)
+			if errSplit != nil {
+				clientIP = clientAddr
+				clientPortStr = "54321"
 			}
-			reqStr := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nX-Real-IP: %s\r\nX-Forwarded-For: %s\r\n\r\n", mcHost, mcHost, clientIP, clientIP)
+			reqStr := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nX-Real-IP: %s\r\nX-Real-Port: %s\r\nX-Forwarded-For: %s\r\n\r\n", mcHost, mcHost, clientIP, clientPortStr, clientIP)
 			if _, wErr := gwConn.Write([]byte(reqStr)); wErr != nil {
 				log.Printf("[proxy] failed to send upgrade to gateway for %s: %v", mcHost, wErr)
 				_ = gwConn.Close()
