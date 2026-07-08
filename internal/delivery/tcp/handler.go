@@ -152,7 +152,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if mode != "tcp" && mode != "tcp-proxy" && mode != "minecraft" && mode != "minecraft-proxy" {
+	if mode != "tcp" && mode != "tcp-proxy" && mode != "minecraft-proxy" {
 		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)

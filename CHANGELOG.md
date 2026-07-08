@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD**: Fixed parsing of Go unit test coverage reports in GitHub Actions to correctly extract package names and display total coverage badges with status icons.
 - **CI/CD**: Fixed `vlaurin/action-ghcr-prune` inputs and authorization in the manual deployment pipeline by replacing `organization` with `user`, using the correct `prune-untagged` key, setting the target container name to `gotunnel`, and replacing `GITHUB_TOKEN` with `GHCR_TOKEN` to resolve permission and `Error: Not Found` issues.
 
+### Removed
+- **Minecraft Tunneling**: Removed redundant `minecraft` stream mode option from the Web UI dropdown selector, Quick Guide, and backend (`client.go`, `handler.go`). Since standard `tcp` mode natively bridges raw TCP streams (including Vanilla Minecraft and PaperMC without proxy protocol), `tcp` is the unified option for non-proxy Minecraft connections while `minecraft-proxy` remains exclusively for PaperMC/BungeeCord configurations with `proxy-protocol: true`.
+
 ## [1.1.0] - 2026-06-28
 
 ### Added
