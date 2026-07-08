@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -151,7 +152,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if mode != "tcp" {
+	if mode != "tcp" && mode != "tcp-proxy" && mode != "minecraft" && mode != "minecraft-proxy" {
 		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
@@ -196,8 +197,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- jika TCP: relay langsung ---
-	s.logger.Info("new raw TCP tunnel", zap.String("host", host))
+	// --- jika TCP / Minecraft: relay langsung ---
+	s.logger.Info("new raw TCP/Minecraft tunnel", zap.String("host", host), zap.String("mode", mode))
 	hij, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "hijacking not supported", http.StatusInternalServerError)
@@ -208,6 +209,30 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "hijack failed", http.StatusInternalServerError)
 		return
 	}
+
+	if r.Method == "CONNECT" || strings.ToLower(r.Header.Get("Upgrade")) == "tcp" {
+		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
+	}
+
+	if mode == "tcp-proxy" || mode == "minecraft-proxy" {
+		clientIP := r.RemoteAddr
+		if xff := r.Header.Get("X-Real-IP"); xff != "" {
+			clientIP = xff
+		} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			clientIP = strings.Split(xff, ",")[0]
+		}
+		clientHost, clientPortStr, _ := net.SplitHostPort(clientIP)
+		if clientHost == "" {
+			clientHost = clientIP
+		}
+		clientPort := 0
+		if p, err := strconv.Atoi(clientPortStr); err == nil {
+			clientPort = p
+		}
+		proxyLine := fmt.Sprintf("PROXY TCP4 %s 127.0.0.1 %d 25565\r\n", clientHost, clientPort)
+		_, _ = io.WriteString(stream, proxyLine)
+	}
+
 	go func() {
 		_, _ = io.Copy(stream, conn)
 		_ = stream.Close()

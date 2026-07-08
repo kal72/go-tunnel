@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -187,8 +188,58 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 	_ = bConn.SetReadDeadline(time.Time{}) // reset deadline
 
 	if err != nil {
-		// Could not read SNI, maybe plain HTTP or malformed. We let HTTPS server handle it to throw error.
-		// Or if plain HTTP was sent to 443, it will fail TLS handshake.
+		// Could not read SNI, check if it is a Minecraft Handshake packet
+		_ = bConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		mcHost, mcConn, mcErr := peekMinecraft(bConn)
+		_ = mcConn.SetReadDeadline(time.Time{}) // reset deadline
+
+		if mcErr == nil && mcHost != "" {
+			log.Printf("[proxy] Minecraft Handshake detected for host %s, routing to gateway :%d", mcHost, p.cfg.GatewayPort)
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			gwConn, dialErr := dialer.DialContext(context.Background(), "tcp", fmt.Sprintf("127.0.0.1:%d", p.cfg.GatewayPort))
+			if dialErr != nil {
+				log.Printf("[proxy] gateway dial error for Minecraft host %s: %v", mcHost, dialErr)
+				_ = mcConn.Close()
+				return
+			}
+			clientIP := mcConn.RemoteAddr().String()
+			if h, _, errSplit := net.SplitHostPort(clientIP); errSplit == nil {
+				clientIP = h
+			}
+			reqStr := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nX-Real-IP: %s\r\nX-Forwarded-For: %s\r\n\r\n", mcHost, mcHost, clientIP, clientIP)
+			if _, wErr := gwConn.Write([]byte(reqStr)); wErr != nil {
+				log.Printf("[proxy] failed to send upgrade to gateway for %s: %v", mcHost, wErr)
+				_ = gwConn.Close()
+				_ = mcConn.Close()
+				return
+			}
+			br := bufio.NewReader(gwConn)
+			resp, rErr := http.ReadResponse(br, &http.Request{Method: "CONNECT"})
+			if resp != nil && resp.Body != nil {
+				_ = resp.Body.Close()
+			}
+			if rErr != nil || (resp.StatusCode != http.StatusSwitchingProtocols && resp.StatusCode != http.StatusOK) {
+				if resp != nil {
+					log.Printf("[proxy] gateway rejected Minecraft host %s with status %d", mcHost, resp.StatusCode)
+				} else {
+					log.Printf("[proxy] failed to read upgrade response for %s: %v", mcHost, rErr)
+				}
+				_ = gwConn.Close()
+				_ = mcConn.Close()
+				return
+			}
+			targetConn := gwConn
+			if br.Buffered() > 0 {
+				bufferedData, _ := br.Peek(br.Buffered())
+				bufCopy := make([]byte, len(bufferedData))
+				copy(bufCopy, bufferedData)
+				targetConn = &bufferedConn{Conn: gwConn, buf: bufCopy}
+			}
+			go proxyConn(mcConn, targetConn)
+			return
+		}
+
+		// Not TLS and not Minecraft, let HTTPS server handle it to throw error.
 		tlsConn := tls.Server(bConn, p.httpSrv.TLSConfig)
 		p.chanLn.SendConn(tlsConn)
 		return
