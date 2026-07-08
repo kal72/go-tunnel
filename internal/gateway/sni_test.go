@@ -100,3 +100,28 @@ func TestPeekMinecraft(t *testing.T) {
 		})
 	}
 }
+
+func TestPeekMinecraft_AfterPeekSNI(t *testing.T) {
+	pkt := buildMinecraftHandshake(0x00, 763, "mc.example.com", 25565, 2)
+	conn := &dummyConn{Reader: bytes.NewReader(pkt), Writer: &bytes.Buffer{}}
+
+	// First simulate what peekSNI does (reads 5 bytes and fails)
+	_, bConnAfterSNI, errSNI := peekSNI(conn)
+	if errSNI == nil {
+		t.Fatalf("expected peekSNI to fail on Minecraft packet, but got nil error")
+	}
+
+	// Now peekMinecraft must correctly loop and read the rest of the Minecraft handshake packet from bConnAfterSNI
+	gotHost, bConnMC, errMC := peekMinecraft(bConnAfterSNI)
+	if errMC != nil {
+		t.Fatalf("peekMinecraft after peekSNI failed: %v", errMC)
+	}
+	if gotHost != "mc.example.com" {
+		t.Errorf("gotHost = %q, want %q", gotHost, "mc.example.com")
+	}
+
+	readBack, _ := io.ReadAll(bConnMC)
+	if !bytes.Equal(readBack, pkt) {
+		t.Errorf("bufferedConn didn't replay exact bytes after double peek: got %v, want %v", readBack, pkt)
+	}
+}

@@ -121,11 +121,8 @@ func peekMinecraft(conn net.Conn) (string, net.Conn, error) {
 	const maxHeaderLen = 512
 	buf := make([]byte, maxHeaderLen)
 	n, err := conn.Read(buf)
-	if err != nil {
+	if err != nil && n == 0 {
 		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, err
-	}
-	if n < 3 {
-		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("packet too short for Minecraft handshake")
 	}
 
 	// Helper to decode VarInt from buffer
@@ -145,9 +142,36 @@ func peekMinecraft(conn net.Conn) (string, net.Conn, error) {
 		return 0, 0, errors.New("incomplete varint")
 	}
 
+	for n < 5 && err == nil {
+		var more int
+		more, err = conn.Read(buf[n:])
+		if more > 0 {
+			n += more
+		}
+		if err != nil && n < 3 {
+			return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("packet too short for Minecraft handshake")
+		}
+	}
+
 	pktLen, posLen, err := readVarInt(buf[:n])
 	if err != nil || pktLen < 3 || pktLen > maxHeaderLen*2 {
 		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("not a valid Minecraft packet length")
+	}
+
+	totalNeeded := posLen + pktLen
+	if totalNeeded > maxHeaderLen {
+		totalNeeded = maxHeaderLen
+	}
+
+	for n < totalNeeded && err == nil {
+		var more int
+		more, err = conn.Read(buf[n:totalNeeded])
+		if more > 0 {
+			n += more
+		}
+	}
+	if n < totalNeeded {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("truncated Minecraft packet buffer")
 	}
 
 	// Read Packet ID (must be 0x00 for Handshake)
