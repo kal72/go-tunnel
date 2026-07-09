@@ -152,7 +152,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if mode != "tcp" && mode != "tcp-proxy" && mode != "minecraft-proxy" {
+	if mode != "tcp" && mode != "minecraft-proxy" {
 		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
@@ -214,7 +214,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
 	}
 
-	if mode == "tcp-proxy" || mode == "minecraft-proxy" {
+	if mode == "minecraft-proxy" {
 		clientIP := r.RemoteAddr
 		clientPort := 0
 		if xff := r.Header.Get("X-Real-IP"); xff != "" {

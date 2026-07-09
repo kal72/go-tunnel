@@ -183,7 +183,6 @@
                         <option value="http">http</option>
                         <option value="https">https</option>
                         <option value="tcp">tcp</option>
-                        <option value="tcp-proxy">tcp-proxy</option>
                         <option value="minecraft-proxy">minecraft-proxy</option>
                       </select>
                     </div>
@@ -217,7 +216,7 @@
       <div
         class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide & Tunnel Modes</p>
         </div>
         <div class="flex-1 overflow-auto p-5 text-sm text-gray-600 dark:text-gray-400 space-y-5 leading-relaxed">
           
@@ -229,21 +228,39 @@
           <div>
             <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">2. Configure Fields</h4>
             <ul class="text-xs space-y-2 list-disc ml-4">
-              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> The public domain you registered in Manage Domains (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">mc.example.com</code>).</li>
-              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Local address and port (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:25565</code>) or just port number (<code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">25565</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> Public domain registered in Manage Domains (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">app.example.com</code> or <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">mc.example.com</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Local address and port (<code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:25565</code>) or just port (<code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">25565</code> or <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">22</code>).</li>
               <li><strong class="text-gray-700 dark:text-gray-300">mode:</strong>
-                <ul class="mt-1 space-y-1 list-none -ml-2">
-                  <li>• <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-blue-600 dark:text-blue-400">http / https</code> for web apps & REST APIs</li>
-                  <li>• <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-emerald-600 dark:text-emerald-400">minecraft-proxy</code> for PaperMC/Bungee with <code class="text-[9px]">proxy-protocol: true</code></li>
-                  <li>• <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-amber-600 dark:text-amber-400">tcp / tcp-proxy</code> for raw TCP services (SSH, DB, Game servers)</li>
+                <ul class="mt-1.5 space-y-2 list-none -ml-2">
+                  <li class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span class="font-mono text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded font-semibold">http / https</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For web apps, REST APIs & web dashboards. Supports Cloudflare Proxied (Orange Cloud) when using <code class="text-[10px]">Full (strict)</code> SSL.</p>
+                  </li>
+                  <li class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span class="font-mono text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 px-1.5 py-0.5 rounded font-semibold">tcp</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For raw TCP services: SSH, Database, custom TCP apps, Vanilla Minecraft & PaperMC without proxy protocol. <span class="text-amber-600 dark:text-amber-400 font-medium">Requires DNS-Only (Gray Cloud).</span></p>
+                  </li>
+                  <li class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span class="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded font-semibold">minecraft-proxy</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For PaperMC/BungeeCord with <code class="text-[10px] bg-gray-100 dark:bg-slate-700 px-1 rounded">proxy-protocol: true</code>. Injects HAProxy PROXY v1 headers for real player IP logging. <span class="text-emerald-600 dark:text-emerald-400 font-medium">Requires DNS-Only (Gray Cloud).</span></p>
+                  </li>
                 </ul>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Save & Run</h4>
-            <p class="text-xs">After saving the configuration, open your terminal and start the tunnel using the <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-green-600 dark:text-green-400">gotunnel run</code> command shown above.</p>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Cloudflare & DNS Rules</h4>
+            <ul class="text-xs space-y-1.5 list-disc ml-4 text-gray-600 dark:text-gray-400">
+              <li><strong class="text-gray-700 dark:text-gray-300">Web Tunnels (<code class="font-mono text-[10px]">http/https</code>):</strong> Can use 🟧 <strong>Proxied (Orange Cloud)</strong> with valid SSL/Origin certs.</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">Raw TCP & Minecraft:</strong> Must use ⚪ <strong>DNS-Only (Gray Cloud)</strong> because Cloudflare L7 proxy rejects non-HTTP handshakes.</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">Tunnel Gateway:</strong> The domain used by CLI (<code class="font-mono text-[10px]">gotunnel connect</code>) must also be ⚪ <strong>DNS-Only (Gray Cloud)</strong>.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">4. Save & Launch</h4>
+            <p class="text-xs">After saving, open terminal and run <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-green-600 dark:text-green-400 font-medium">gotunnel run &lt;config_id&gt;</code> to start all active tunnels in this profile.</p>
           </div>
 
         </div>

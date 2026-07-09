@@ -187,7 +187,7 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 	}
 
 	mode := c.modes[hostname]
-	if mode == "tcp" || mode == "tcp-proxy" || mode == "minecraft-proxy" {
+	if mode == "tcp" || mode == "minecraft-proxy" {
 		c.handleTCPStream(stream, target)
 		return
 	}
