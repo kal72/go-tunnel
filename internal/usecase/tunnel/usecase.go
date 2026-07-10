@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+	"time"
 
 	domainTunnel "gotunnel/internal/domain/tunnel"
 
@@ -20,7 +21,9 @@ type TunnelUsecase interface {
 
 	// Active Domain Tracking
 	SetActiveDomain(ctx context.Context, domain, sessionID string) error
+	RefreshActiveDomains(ctx context.Context, domains []string, sessionID string, ttl time.Duration) error
 	RemoveActiveDomain(ctx context.Context, domain string) error
+	FlushAllTunnelsAndDomains(ctx context.Context) error
 
 	// Rate limit cache
 	SetRateLimitSetting(ctx context.Context, username, value string) error

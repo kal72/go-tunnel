@@ -291,8 +291,14 @@ func (s *Server) updateState(ts *TunnelSession) {
 		ConnectedAt: ts.Connected,
 		LastPing:    time.Now(),
 	}
-	if err := s.tunnelUsecase.RegisterTunnel(context.Background(), fmt.Sprintf("%p", ts), info); err != nil {
+	sessionID := fmt.Sprintf("%p", ts)
+	if err := s.tunnelUsecase.RegisterTunnel(context.Background(), sessionID, info); err != nil {
 		s.logger.Error("failed to update tunnel state in store", zap.Error(err))
+	}
+	if len(hosts) > 0 {
+		if err := s.tunnelUsecase.RefreshActiveDomains(context.Background(), hosts, sessionID, 3*time.Minute); err != nil {
+			s.logger.Warn("failed to refresh active domains ttl", zap.Error(err))
+		}
 	}
 }
 
@@ -579,6 +585,39 @@ func (s *Server) cleanup(ts *TunnelSession) {
 		if !hasRemaining {
 			_ = s.tunnelUsecase.DeleteRateLimitSetting(context.Background(), ts.Username)
 		}
+	}
+}
+
+// StartupCleanup purges any stale tunnel sessions and active domain locks from previous server runs.
+func (s *Server) StartupCleanup(ctx context.Context) {
+	if s.tunnelUsecase != nil {
+		s.logger.Info("[edge] performing startup cleanup of stale tunnels and domains")
+		if err := s.tunnelUsecase.FlushAllTunnelsAndDomains(ctx); err != nil {
+			s.logger.Warn("[edge] startup cleanup failed", zap.Error(err))
+		}
+	}
+}
+
+// Shutdown gracefully closes all active tunnel sessions and unregisters them from storage.
+func (s *Server) Shutdown(ctx context.Context) {
+	s.mu.Lock()
+	sessions := make([]*TunnelSession, 0, len(s.hostToSes))
+	for _, ts := range s.hostToSes {
+		if ts != nil {
+			sessions = append(sessions, ts)
+		}
+	}
+	s.mu.Unlock()
+
+	for _, ts := range sessions {
+		if ts.Session != nil {
+			_ = ts.Session.Close()
+		}
+		s.cleanup(ts)
+	}
+
+	if s.tunnelUsecase != nil {
+		_ = s.tunnelUsecase.FlushAllTunnelsAndDomains(ctx)
 	}
 }
 

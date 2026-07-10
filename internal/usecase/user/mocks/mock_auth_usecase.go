@@ -727,7 +727,7 @@ func (_c *MockAuthUsecase_Logout_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // RevokeAPIKey provides a mock function for the type MockAuthUsecase
-func (_mock *MockAuthUsecase) RevokeAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error {
+func (_mock *MockAuthUsecase) RevokeAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error {
 	ret := _mock.Called(ctx, keyID, requesterID, requesterRole)
 
 	if len(ret) == 0 {
@@ -757,7 +757,7 @@ func (_e *MockAuthUsecase_Expecter) RevokeAPIKey(ctx any, keyID any, requesterID
 	return &MockAuthUsecase_RevokeAPIKey_Call{Call: _e.mock.On("RevokeAPIKey", ctx, keyID, requesterID, requesterRole)}
 }
 
-func (_c *MockAuthUsecase_RevokeAPIKey_Call) Run(run func(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16)) *MockAuthUsecase_RevokeAPIKey_Call {
+func (_c *MockAuthUsecase_RevokeAPIKey_Call) Run(run func(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16)) *MockAuthUsecase_RevokeAPIKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {

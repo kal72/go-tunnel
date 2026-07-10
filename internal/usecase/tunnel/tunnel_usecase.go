@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+	"time"
 
 	domainTunnel "gotunnel/internal/domain/tunnel"
 
@@ -64,8 +65,16 @@ func (u *tunnelUsecase) SetActiveDomain(ctx context.Context, domain, sessionID s
 	return u.tunnelStore.SetActiveDomain(ctx, domain, sessionID)
 }
 
+func (u *tunnelUsecase) RefreshActiveDomains(ctx context.Context, domains []string, sessionID string, ttl time.Duration) error {
+	return u.tunnelStore.RefreshActiveDomains(ctx, domains, sessionID, ttl)
+}
+
 func (u *tunnelUsecase) RemoveActiveDomain(ctx context.Context, domain string) error {
 	return u.tunnelStore.RemoveActiveDomain(ctx, domain)
+}
+
+func (u *tunnelUsecase) FlushAllTunnelsAndDomains(ctx context.Context) error {
+	return u.tunnelStore.FlushAllTunnelsAndDomains(ctx)
 }
 
 func (u *tunnelUsecase) SetRateLimitSetting(ctx context.Context, username, value string) error {

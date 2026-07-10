@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -480,6 +481,96 @@ func TestTunnelUsecase_RemoveActiveDomain(t *testing.T) {
 
 			uc := NewTunnelUsecase(tunnelStore, domainStore)
 			err := uc.RemoveActiveDomain(context.Background(), domain)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTunnelUsecase_RefreshActiveDomains(t *testing.T) {
+	t.Parallel()
+
+	domains := []string{"app.com", "api.com"}
+	sessionID := "sess-1"
+	ttl := 3 * time.Minute
+
+	tests := []struct {
+		name      string
+		mockSetup func(tunnelStore *tunnelMocks.MockTunnelStore)
+		wantErr   bool
+	}{
+		{
+			name: "success refresh",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("RefreshActiveDomains", mock.Anything, domains, sessionID, ttl).Return(nil).Once()
+			},
+			wantErr: false,
+		},
+		{
+			name: "store error",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("RefreshActiveDomains", mock.Anything, domains, sessionID, ttl).Return(errors.New("store err")).Once()
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
+			domainStore := tunnelMocks.NewMockDomainStore(t)
+			tt.mockSetup(tunnelStore)
+
+			uc := NewTunnelUsecase(tunnelStore, domainStore)
+			err := uc.RefreshActiveDomains(context.Background(), domains, sessionID, ttl)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTunnelUsecase_FlushAllTunnelsAndDomains(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		mockSetup func(tunnelStore *tunnelMocks.MockTunnelStore)
+		wantErr   bool
+	}{
+		{
+			name: "success flush",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("FlushAllTunnelsAndDomains", mock.Anything).Return(nil).Once()
+			},
+			wantErr: false,
+		},
+		{
+			name: "store error",
+			mockSetup: func(tunnelStore *tunnelMocks.MockTunnelStore) {
+				tunnelStore.On("FlushAllTunnelsAndDomains", mock.Anything).Return(errors.New("store err")).Once()
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
+			domainStore := tunnelMocks.NewMockDomainStore(t)
+			tt.mockSetup(tunnelStore)
+
+			uc := NewTunnelUsecase(tunnelStore, domainStore)
+			err := uc.FlushAllTunnelsAndDomains(context.Background())
 
 			if tt.wantErr {
 				assert.Error(t, err)
