@@ -110,7 +110,21 @@ func main() {
 		}
 
 	case "list":
-		if err := client.ListConfigs(ServerURL); err != nil {
+		listCmd := flag.NewFlagSet("list", flag.ExitOnError)
+		tokenFlag := listCmd.String("token", "", "API key for authentication (gtk_...)")
+		listCmd.StringVar(tokenFlag, "t", "", "API key for authentication (shorthand)")
+		_ = listCmd.Parse(flag.Args()[1:])
+
+		token := *tokenFlag
+		if token == "" {
+			token = os.Getenv("GOTUNNEL_TOKEN")
+		}
+		if token != "" && !strings.HasPrefix(token, "gtk_") {
+			fmt.Fprintln(os.Stderr, "Error: token must start with 'gtk_' prefix")
+			os.Exit(1)
+		}
+
+		if err := client.ListConfigs(ServerURL, token); err != nil {
 			log.Fatalf("Failed to list configs: %v", err)
 		}
 
@@ -141,7 +155,7 @@ func main() {
 		}
 
 		log.Printf("Fetching configuration: %s\n", configName)
-		cfg, err := client.FetchConfig(ServerURL, configName)
+		cfg, err := client.FetchConfig(ServerURL, configName, token)
 		if err != nil {
 			log.Fatalf("Failed to fetch config %s: %v", configName, err)
 		}

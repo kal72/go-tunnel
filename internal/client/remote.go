@@ -14,10 +14,13 @@ type ListConfigsResponse []struct {
 	Name string `json:"name"`
 }
 
-func ListConfigs(serverURL string) error {
-	creds, err := ReadCredentials()
-	if err != nil {
-		return err
+func ListConfigs(serverURL, token string) error {
+	if token == "" {
+		creds, err := ReadCredentials()
+		if err != nil {
+			return err
+		}
+		token = creds.Token
 	}
 
 	endpoint := serverURL + "/api/cli/configs"
@@ -25,7 +28,7 @@ func ListConfigs(serverURL string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+creds.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -54,10 +57,13 @@ func ListConfigs(serverURL string) error {
 	return nil
 }
 
-func FetchConfig(serverURL, configName string) (*clientconfig.TunnelClientConfig, error) {
-	creds, err := ReadCredentials()
-	if err != nil {
-		return nil, err
+func FetchConfig(serverURL, configName, token string) (*clientconfig.TunnelClientConfig, error) {
+	if token == "" {
+		creds, err := ReadCredentials()
+		if err != nil {
+			return nil, err
+		}
+		token = creds.Token
 	}
 
 	endpoint := fmt.Sprintf("%s/api/cli/config/%s", serverURL, configName)
@@ -65,7 +71,7 @@ func FetchConfig(serverURL, configName string) (*clientconfig.TunnelClientConfig
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+creds.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -85,8 +91,9 @@ func FetchConfig(serverURL, configName string) (*clientconfig.TunnelClientConfig
 		return nil, fmt.Errorf("failed to decode config %s: %w", configName, err)
 	}
 
-	// Use the CLI credentials token as the tunnel authentication token
-	cfg.AuthToken = creds.Token
+	// Use the token as the tunnel authentication token
+	cfg.AuthToken = token
 
 	return &cfg, nil
 }
+
