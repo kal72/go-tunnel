@@ -17,6 +17,7 @@ func SetupRouter(
 	authH *handler.AuthHandler,
 	userH *handler.UserHandler,
 	cliH *handler.CLIHandler,
+	tokenH *handler.TokenHandler,
 	corsAllowedOrigins []string,
 	staticFS http.FileSystem,
 ) *chi.Mux {
@@ -55,6 +56,7 @@ func SetupRouter(
 			r.Get("/domains", h.Domains)
 			r.Get("/ratelimit", h.RateLimitPage)
 			r.Get("/downloads", h.Downloads)
+			r.Get("/tokens", tokenH.TokensPage)
 
 			// API
 			r.Get("/api/tunnels/stream", h.HandleTunnelStream)
@@ -70,6 +72,11 @@ func SetupRouter(
 			r.Get("/api/domains", h.ListDomains)
 			r.Post("/api/domains", h.AddDomain)
 			r.Delete("/api/domains/{domain}", h.RemoveDomain)
+
+			// Token management routes
+			r.Get("/api/tokens", tokenH.ListTokens)
+			r.Post("/api/tokens", tokenH.CreateToken)
+			r.Delete("/api/tokens/{id}", tokenH.RevokeToken)
 
 			// Admin only routes
 			r.Group(func(r chi.Router) {

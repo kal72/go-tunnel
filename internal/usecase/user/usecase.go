@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domainAPIKey "gotunnel/internal/domain/apikey"
 	domainUser "gotunnel/internal/domain/user"
 
 	"github.com/google/uuid"
@@ -22,4 +23,19 @@ type AuthUsecase interface {
 	UpdateUserPassword(ctx context.Context, id uuid.UUID, password string) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	RevokeUserTokens(ctx context.Context, targetUserID uuid.UUID) error
+
+	// CreateAPIKey creates a new API key for a user.
+	// Returns the plaintext key (shown once), the key metadata, and any error.
+	CreateAPIKey(ctx context.Context, userID uuid.UUID, name string, expiresAt *time.Time) (plaintext string, key *domainAPIKey.APIKey, err error)
+
+	// ListAPIKeys lists API keys. For regular users, lists own keys.
+	// For admin (role=1), lists all keys with optional username filter.
+	ListAPIKeys(ctx context.Context, userID uuid.UUID, role int16, limit, offset int, usernameFilter string) ([]domainAPIKey.APIKeyWithOwner, int, error)
+
+	// RevokeAPIKey revokes an API key by ID.
+	// Requires ownership or admin role.
+	RevokeAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error
+
+	// GetAPIKeyByID retrieves an API key by ID.
+	GetAPIKeyByID(ctx context.Context, keyID uuid.UUID) (*domainAPIKey.APIKey, error)
 }

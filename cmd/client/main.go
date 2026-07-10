@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"gotunnel/internal/client"
 )
@@ -34,7 +35,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\033[1mAvailable Commands:\033[0m\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mlogin\033[0m                      Login to the WebUI server\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mlist\033[0m                       List available remote configurations\n")
-		fmt.Fprintf(os.Stderr, "  \033[32mrun\033[0m <config_name>          Run a remote configuration\n")
+		fmt.Fprintf(os.Stderr, "  \033[32mrun\033[0m [-token gtk_xxx] <config_name>  Run a remote configuration\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mupdate\033[0m                     Update gotunnel to the latest version\n")
 		fmt.Fprintf(os.Stderr, "  \033[32mlogout\033[0m                     Logout and clear credentials\n")
 		fmt.Fprintf(os.Stderr, "  \033[32muninstall\033[0m                  Uninstall gotunnel and clear local data\n\n")
@@ -95,16 +96,46 @@ func main() {
 		}
 
 	case "run":
-		if len(flag.Args()) < 2 {
-			fmt.Println("Error: config_name is required. Usage: gotunnel run <config_name>")
+		runCmd := flag.NewFlagSet("run", flag.ExitOnError)
+		tokenFlag := runCmd.String("token", "", "API key for authentication (gtk_...)")
+		runCmd.StringVar(tokenFlag, "t", "", "API key for authentication (shorthand)")
+		_ = runCmd.Parse(flag.Args()[1:])
+
+		if runCmd.NArg() < 1 {
+			fmt.Println("Error: config_name is required. Usage: gotunnel run [-token gtk_xxx] <config_name>")
 			os.Exit(1)
 		}
-		configName := flag.Args()[1]
+		configName := runCmd.Arg(0)
+
+		// Check for token: flag > env > stored
+		token := *tokenFlag
+		if token == "" {
+			token = os.Getenv("GOTUNNEL_TOKEN")
+		}
+
+		// Validate token format if provided
+		if token != "" {
+			if !strings.HasPrefix(token, "gtk_") {
+				fmt.Fprintln(os.Stderr, "Error: token must start with 'gtk_' prefix")
+				os.Exit(1)
+			}
+		}
 
 		log.Printf("Fetching configuration: %s\n", configName)
 		cfg, err := client.FetchConfig(ServerURL, configName)
 		if err != nil {
 			log.Fatalf("Failed to fetch config %s: %v", configName, err)
+		}
+
+		// Override auth token if direct token provided
+		if token != "" {
+			cfg.AuthToken = token
+		}
+
+		// Check that we have some form of authentication
+		if cfg.AuthToken == "" {
+			fmt.Fprintln(os.Stderr, "Error: authentication required. Use --token flag, GOTUNNEL_TOKEN env, or run 'gotunnel login'")
+			os.Exit(1)
 		}
 
 		c := client.NewClient(cfg)

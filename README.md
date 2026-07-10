@@ -15,6 +15,7 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 - **Interactive CLI & Seamless Downloads**: The client CLI supports interactive login (`gotunnel login`), configuration listing (`gotunnel list`), and execution (`gotunnel run <name>`).
 - **One-liner Installations**: The Web UI serves pre-compiled binaries for MacOS, Linux, and Windows with dynamic `curl` install scripts.
 - **Redis-backed Auth & Revocation**: Web UI sessions and Client tokens are stored in Redis with **instant revocation** support.
+- **API Key Authentication**: Generate long-lived API keys (`gtk_` prefixed) from the Web UI for headless/automated deployments. Supports `--token` CLI flag and `GOTUNNEL_TOKEN` environment variable. Keys are SHA-256 hashed at rest with per-user limits (max 10 active keys, 365-day max expiry).
 - **Domain Management**: Centrally manage authorized subdomains under a base wildcard domain (e.g., `*.apps.com`) via Web UI.
 - **Supports HTTP, HTTPS, TCP & Minecraft**: Flexible tunneling for web applications and raw TCP protocols (SSH, DB, Minecraft, etc.).
 
@@ -38,6 +39,7 @@ This application includes a Web UI Manager running on port `8080` (default) for 
 - **Config Editor**: Manage client configurations per user, saved securely to PostgreSQL.
 - **Client Downloads**: Download pre-compiled, auto-configured agent binaries for MacOS, Linux, and Windows straight from the dashboard.
 - **Token Management**: Generate new tokens for clients or instantly **revoke** existing tokens to disconnect specific agents.
+- **API Key Management**: Create, list, and revoke API keys for CLI authentication. Keys are shown only once upon creation and stored as SHA-256 hashes. Supports name, expiration date, and ownership-based access control.
 
 ## Example DNS Records
 | Type | Hostname | Value | Notes |
@@ -111,13 +113,30 @@ gotunnel list
 
 # 3. Run a specific configuration by name
 gotunnel run my-web-app
+
+# Or use API keys for automated/headless deployments (no interactive login needed)
+gotunnel run --token gtk_your_api_key_here my-web-app
+
+# Or via environment variable
+export GOTUNNEL_TOKEN=gtk_your_api_key_here
+gotunnel run my-web-app
 ```
 
-## Token Revocation Flow
+## Authentication & Token Management
+
+### JWT Token Flow
 1. Admin generates a token for a specific Client ID in the Web UI.
 2. The token is stored in Redis.
 3. When a Client connects, the Server verifies the token status in Redis.
 4. If the Admin clicks **Revoke** in the Web UI, the token is removed from Redis, and subsequent authentication attempts (or heartbeats) from that agent will be rejected.
+
+### API Key Flow
+1. User creates an API key from **API Keys** page in Web UI (name + optional expiration).
+2. The plaintext key (e.g., `gtk_...`) is displayed **once** — user must copy immediately.
+3. Only the SHA-256 hash is stored in PostgreSQL (plaintext is never persisted).
+4. CLI client uses the key via `--token` flag or `GOTUNNEL_TOKEN` environment variable.
+5. Server verifies by hashing the provided key and looking up the hash in the database.
+6. Keys can be revoked instantly from the Web UI; revoked keys are rejected on next use.
 
 ## Domain Management Flow
 1. Admin configures `WILDCARD_DOMAIN=*.example.com` in `.env`.

@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"gotunnel/internal/domain/apikey"
 	"gotunnel/internal/domain/user"
 	"time"
 
@@ -38,6 +39,92 @@ type MockAuthUsecase_Expecter struct {
 
 func (_m *MockAuthUsecase) EXPECT() *MockAuthUsecase_Expecter {
 	return &MockAuthUsecase_Expecter{mock: &_m.Mock}
+}
+
+// CreateAPIKey provides a mock function for the type MockAuthUsecase
+func (_mock *MockAuthUsecase) CreateAPIKey(ctx context.Context, userID uuid.UUID, name string, expiresAt *time.Time) (string, *apikey.APIKey, error) {
+	ret := _mock.Called(ctx, userID, name, expiresAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateAPIKey")
+	}
+
+	var r0 string
+	var r1 *apikey.APIKey
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, *time.Time) (string, *apikey.APIKey, error)); ok {
+		return returnFunc(ctx, userID, name, expiresAt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, *time.Time) string); ok {
+		r0 = returnFunc(ctx, userID, name, expiresAt)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, *time.Time) *apikey.APIKey); ok {
+		r1 = returnFunc(ctx, userID, name, expiresAt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*apikey.APIKey)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uuid.UUID, string, *time.Time) error); ok {
+		r2 = returnFunc(ctx, userID, name, expiresAt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockAuthUsecase_CreateAPIKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateAPIKey'
+type MockAuthUsecase_CreateAPIKey_Call struct {
+	*mock.Call
+}
+
+// CreateAPIKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uuid.UUID
+//   - name string
+//   - expiresAt *time.Time
+func (_e *MockAuthUsecase_Expecter) CreateAPIKey(ctx any, userID any, name any, expiresAt any) *MockAuthUsecase_CreateAPIKey_Call {
+	return &MockAuthUsecase_CreateAPIKey_Call{Call: _e.mock.On("CreateAPIKey", ctx, userID, name, expiresAt)}
+}
+
+func (_c *MockAuthUsecase_CreateAPIKey_Call) Run(run func(ctx context.Context, userID uuid.UUID, name string, expiresAt *time.Time)) *MockAuthUsecase_CreateAPIKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *time.Time
+		if args[3] != nil {
+			arg3 = args[3].(*time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthUsecase_CreateAPIKey_Call) Return(plaintext string, key *apikey.APIKey, err error) *MockAuthUsecase_CreateAPIKey_Call {
+	_c.Call.Return(plaintext, key, err)
+	return _c
+}
+
+func (_c *MockAuthUsecase_CreateAPIKey_Call) RunAndReturn(run func(ctx context.Context, userID uuid.UUID, name string, expiresAt *time.Time) (string, *apikey.APIKey, error)) *MockAuthUsecase_CreateAPIKey_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // CreateUser provides a mock function for the type MockAuthUsecase
@@ -166,6 +253,74 @@ func (_c *MockAuthUsecase_DeleteUser_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// GetAPIKeyByID provides a mock function for the type MockAuthUsecase
+func (_mock *MockAuthUsecase) GetAPIKeyByID(ctx context.Context, keyID uuid.UUID) (*apikey.APIKey, error) {
+	ret := _mock.Called(ctx, keyID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAPIKeyByID")
+	}
+
+	var r0 *apikey.APIKey
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*apikey.APIKey, error)); ok {
+		return returnFunc(ctx, keyID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) *apikey.APIKey); ok {
+		r0 = returnFunc(ctx, keyID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*apikey.APIKey)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, keyID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockAuthUsecase_GetAPIKeyByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAPIKeyByID'
+type MockAuthUsecase_GetAPIKeyByID_Call struct {
+	*mock.Call
+}
+
+// GetAPIKeyByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - keyID uuid.UUID
+func (_e *MockAuthUsecase_Expecter) GetAPIKeyByID(ctx any, keyID any) *MockAuthUsecase_GetAPIKeyByID_Call {
+	return &MockAuthUsecase_GetAPIKeyByID_Call{Call: _e.mock.On("GetAPIKeyByID", ctx, keyID)}
+}
+
+func (_c *MockAuthUsecase_GetAPIKeyByID_Call) Run(run func(ctx context.Context, keyID uuid.UUID)) *MockAuthUsecase_GetAPIKeyByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthUsecase_GetAPIKeyByID_Call) Return(aPIKey *apikey.APIKey, err error) *MockAuthUsecase_GetAPIKeyByID_Call {
+	_c.Call.Return(aPIKey, err)
+	return _c
+}
+
+func (_c *MockAuthUsecase_GetAPIKeyByID_Call) RunAndReturn(run func(ctx context.Context, keyID uuid.UUID) (*apikey.APIKey, error)) *MockAuthUsecase_GetAPIKeyByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetWebExpireDuration provides a mock function for the type MockAuthUsecase
 func (_mock *MockAuthUsecase) GetWebExpireDuration() time.Duration {
 	ret := _mock.Called()
@@ -206,6 +361,104 @@ func (_c *MockAuthUsecase_GetWebExpireDuration_Call) Return(duration time.Durati
 }
 
 func (_c *MockAuthUsecase_GetWebExpireDuration_Call) RunAndReturn(run func() time.Duration) *MockAuthUsecase_GetWebExpireDuration_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListAPIKeys provides a mock function for the type MockAuthUsecase
+func (_mock *MockAuthUsecase) ListAPIKeys(ctx context.Context, userID uuid.UUID, role int16, limit int, offset int, usernameFilter string) ([]apikey.APIKeyWithOwner, int, error) {
+	ret := _mock.Called(ctx, userID, role, limit, offset, usernameFilter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAPIKeys")
+	}
+
+	var r0 []apikey.APIKeyWithOwner
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int16, int, int, string) ([]apikey.APIKeyWithOwner, int, error)); ok {
+		return returnFunc(ctx, userID, role, limit, offset, usernameFilter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int16, int, int, string) []apikey.APIKeyWithOwner); ok {
+		r0 = returnFunc(ctx, userID, role, limit, offset, usernameFilter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]apikey.APIKeyWithOwner)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, int16, int, int, string) int); ok {
+		r1 = returnFunc(ctx, userID, role, limit, offset, usernameFilter)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uuid.UUID, int16, int, int, string) error); ok {
+		r2 = returnFunc(ctx, userID, role, limit, offset, usernameFilter)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockAuthUsecase_ListAPIKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAPIKeys'
+type MockAuthUsecase_ListAPIKeys_Call struct {
+	*mock.Call
+}
+
+// ListAPIKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uuid.UUID
+//   - role int16
+//   - limit int
+//   - offset int
+//   - usernameFilter string
+func (_e *MockAuthUsecase_Expecter) ListAPIKeys(ctx any, userID any, role any, limit any, offset any, usernameFilter any) *MockAuthUsecase_ListAPIKeys_Call {
+	return &MockAuthUsecase_ListAPIKeys_Call{Call: _e.mock.On("ListAPIKeys", ctx, userID, role, limit, offset, usernameFilter)}
+}
+
+func (_c *MockAuthUsecase_ListAPIKeys_Call) Run(run func(ctx context.Context, userID uuid.UUID, role int16, limit int, offset int, usernameFilter string)) *MockAuthUsecase_ListAPIKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 int16
+		if args[2] != nil {
+			arg2 = args[2].(int16)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthUsecase_ListAPIKeys_Call) Return(aPIKeyWithOwners []apikey.APIKeyWithOwner, n int, err error) *MockAuthUsecase_ListAPIKeys_Call {
+	_c.Call.Return(aPIKeyWithOwners, n, err)
+	return _c
+}
+
+func (_c *MockAuthUsecase_ListAPIKeys_Call) RunAndReturn(run func(ctx context.Context, userID uuid.UUID, role int16, limit int, offset int, usernameFilter string) ([]apikey.APIKeyWithOwner, int, error)) *MockAuthUsecase_ListAPIKeys_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -469,6 +722,75 @@ func (_c *MockAuthUsecase_Logout_Call) Return(err error) *MockAuthUsecase_Logout
 }
 
 func (_c *MockAuthUsecase_Logout_Call) RunAndReturn(run func(ctx context.Context, token string) error) *MockAuthUsecase_Logout_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeAPIKey provides a mock function for the type MockAuthUsecase
+func (_mock *MockAuthUsecase) RevokeAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error {
+	ret := _mock.Called(ctx, keyID, requesterID, requesterRole)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAPIKey")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, int16) error); ok {
+		r0 = returnFunc(ctx, keyID, requesterID, requesterRole)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAuthUsecase_RevokeAPIKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAPIKey'
+type MockAuthUsecase_RevokeAPIKey_Call struct {
+	*mock.Call
+}
+
+// RevokeAPIKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - keyID uuid.UUID
+//   - requesterID uuid.UUID
+//   - requesterRole int16
+func (_e *MockAuthUsecase_Expecter) RevokeAPIKey(ctx any, keyID any, requesterID any, requesterRole any) *MockAuthUsecase_RevokeAPIKey_Call {
+	return &MockAuthUsecase_RevokeAPIKey_Call{Call: _e.mock.On("RevokeAPIKey", ctx, keyID, requesterID, requesterRole)}
+}
+
+func (_c *MockAuthUsecase_RevokeAPIKey_Call) Run(run func(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16)) *MockAuthUsecase_RevokeAPIKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int16
+		if args[3] != nil {
+			arg3 = args[3].(int16)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthUsecase_RevokeAPIKey_Call) Return(err error) *MockAuthUsecase_RevokeAPIKey_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockAuthUsecase_RevokeAPIKey_Call) RunAndReturn(run func(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error) *MockAuthUsecase_RevokeAPIKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

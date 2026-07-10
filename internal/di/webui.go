@@ -44,12 +44,13 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	userRepo := postgresrepo.NewUserRepository(db)
 	configRepo := postgresrepo.NewConfigRepository(db)
 	settingRepo := postgresrepo.NewSettingRepository(db)
+	apiKeyRepo := postgresrepo.NewAPIKeyRepository(db)
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
 	configUsecase := usecaseConfig.NewConfigUsecase(configRepo)
 	settingUsecase := usecaseSetting.NewSettingUsecase(settingRepo)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, apiKeyRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 
 	// Stats Collector (5s refresh)
 	statsCollector := stats.NewStatsCollector(5 * time.Second)
@@ -60,9 +61,10 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
 	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase, settingUsecase)
 	cliH := webui.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
+	tokenH := webui.NewToken(assets.EmbeddedFS, authUsecase)
 
 	// Router
-	router := web.SetupRouter(h, authH, userH, cliH, env.CORSAllowedOrigins, http.FS(assets.EmbeddedFS))
+	router := web.SetupRouter(h, authH, userH, cliH, tokenH, env.CORSAllowedOrigins, http.FS(assets.EmbeddedFS))
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")
