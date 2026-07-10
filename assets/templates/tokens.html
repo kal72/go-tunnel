@@ -84,14 +84,23 @@
                 <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400"
                   x-text="token.last_used_at ? formatDate(token.last_used_at) : 'Never'"></td>
                 <td class="px-6 py-4 text-right">
-                  <button @click="confirmRevoke(token)" title="Revoke Token" :disabled="getStatus(token) === 'revoked'"
-                    :class="getStatus(token) === 'revoked' ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'"
-                    class="transition-colors p-1 rounded-md focus:outline-none">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                  </button>
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click="confirmRevoke(token)" title="Revoke Token" :disabled="getStatus(token) === 'revoked'"
+                      :class="getStatus(token) === 'revoked' ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'"
+                      class="transition-colors p-1 rounded-md focus:outline-none">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </button>
+                    <button @click="confirmDelete(token)" title="Delete Token Data Permanently"
+                      class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors p-1 rounded-md focus:outline-none">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </template>
@@ -262,6 +271,38 @@
       </div>
     </div>
   </div>
+
+  <!-- Delete Token Modal -->
+  <div x-show="showDeleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    x-transition>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden transition-colors"
+      @click.away="showDeleteModal = false">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="font-bold text-gray-900 dark:text-white">Delete API Key</h3>
+        <button @click="showDeleteModal = false"
+          class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          Are you sure you want to permanently delete the API key <strong class="text-gray-900 dark:text-white font-mono"
+            x-text="tokenToDelete?.name"></strong>?
+        </p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          This action will permanently erase this token record from the database. Any applications using this key will immediately lose access.
+        </p>
+      </div>
+      <div
+        class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3 transition-colors">
+        <button @click="showDeleteModal = false"
+          class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+        <button @click="deleteToken()" :disabled="deleting" :class="deleting ? 'opacity-50 cursor-not-allowed' : ''"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors">
+          <span x-show="!deleting">Delete Permanently</span>
+          <span x-show="deleting">Deleting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -275,15 +316,18 @@
       showCreateModal: false,
       showTokenModal: false,
       showRevokeModal: false,
+      showDeleteModal: false,
       newTokenKey: '',
       newToken: {
         name: '',
         expires_at: ''
       },
       tokenToRevoke: null,
+      tokenToDelete: null,
       createError: '',
       creating: false,
       revoking: false,
+      deleting: false,
       copied: false,
 
       get minDate() {
@@ -398,8 +442,8 @@
         this.revoking = true;
 
         try {
-          const res = await fetch(`/api/tokens/${this.tokenToRevoke.id}`, {
-            method: 'DELETE'
+          const res = await fetch(`/api/tokens/${this.tokenToRevoke.id}/revoke`, {
+            method: 'POST'
           });
 
           if (res.ok) {
@@ -414,6 +458,36 @@
           alert(e.message || 'Failed to revoke token');
         } finally {
           this.revoking = false;
+        }
+      },
+
+      confirmDelete(token) {
+        this.tokenToDelete = token;
+        this.showDeleteModal = true;
+      },
+
+      async deleteToken() {
+        if (!this.tokenToDelete) return;
+
+        this.deleting = true;
+
+        try {
+          const res = await fetch(`/api/tokens/${this.tokenToDelete.id}`, {
+            method: 'DELETE'
+          });
+
+          if (res.ok) {
+            this.showDeleteModal = false;
+            this.tokenToDelete = null;
+            await this.fetchTokens();
+          } else {
+            const err = await res.json();
+            alert(err.error || 'Failed to delete token');
+          }
+        } catch (e) {
+          alert(e.message || 'Failed to delete token');
+        } finally {
+          this.deleting = false;
         }
       },
 

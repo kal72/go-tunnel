@@ -195,3 +195,12 @@ func (r *sqlxAPIKeyRepository) RevokeAllByUserID(ctx context.Context, userID uui
 	}
 	return nil
 }
+
+func (r *sqlxAPIKeyRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM api_keys WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("Delete error: %w", err)
+	}
+	return nil
+}

@@ -172,3 +172,38 @@ func (h *TokenHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 		"message": "API key revoked successfully",
 	})
 }
+
+// DeleteToken permanently deletes an API key by ID from the database.
+func (h *TokenHandler) DeleteToken(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value(UserIDKey).(string)
+	userID, _ := uuid.Parse(userIDStr)
+	userRole := r.Context().Value(UserRoleKey).(int16)
+
+	// Parse key ID from URL path
+	keyIDStr := chi.URLParam(r, "id")
+	keyID, err := uuid.Parse(keyIDStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid key ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	err = h.authUsecase.DeleteAPIKey(r.Context(), keyID, userID, userRole)
+	if err != nil {
+		if errors.Is(err, domainErrors.ErrNotFound) {
+			http.Error(w, `{"error":"API key not found"}`, http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, domainErrors.ErrForbidden) {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			return
+		}
+		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": "API key deleted successfully",
+	})
+}

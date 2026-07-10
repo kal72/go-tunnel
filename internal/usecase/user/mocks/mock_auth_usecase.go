@@ -196,6 +196,75 @@ func (_c *MockAuthUsecase_CreateUser_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// DeleteAPIKey provides a mock function for the type MockAuthUsecase
+func (_mock *MockAuthUsecase) DeleteAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error {
+	ret := _mock.Called(ctx, keyID, requesterID, requesterRole)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAPIKey")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, int16) error); ok {
+		r0 = returnFunc(ctx, keyID, requesterID, requesterRole)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAuthUsecase_DeleteAPIKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAPIKey'
+type MockAuthUsecase_DeleteAPIKey_Call struct {
+	*mock.Call
+}
+
+// DeleteAPIKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - keyID uuid.UUID
+//   - requesterID uuid.UUID
+//   - requesterRole int16
+func (_e *MockAuthUsecase_Expecter) DeleteAPIKey(ctx any, keyID any, requesterID any, requesterRole any) *MockAuthUsecase_DeleteAPIKey_Call {
+	return &MockAuthUsecase_DeleteAPIKey_Call{Call: _e.mock.On("DeleteAPIKey", ctx, keyID, requesterID, requesterRole)}
+}
+
+func (_c *MockAuthUsecase_DeleteAPIKey_Call) Run(run func(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16)) *MockAuthUsecase_DeleteAPIKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int16
+		if args[3] != nil {
+			arg3 = args[3].(int16)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthUsecase_DeleteAPIKey_Call) Return(err error) *MockAuthUsecase_DeleteAPIKey_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockAuthUsecase_DeleteAPIKey_Call) RunAndReturn(run func(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error) *MockAuthUsecase_DeleteAPIKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteUser provides a mock function for the type MockAuthUsecase
 func (_mock *MockAuthUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	ret := _mock.Called(ctx, id)

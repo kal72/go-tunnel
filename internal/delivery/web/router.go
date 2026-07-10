@@ -76,7 +76,9 @@ func SetupRouter(
 			// Token management routes
 			r.Get("/api/tokens", tokenH.ListTokens)
 			r.Post("/api/tokens", tokenH.CreateToken)
-			r.Delete("/api/tokens/{id}", tokenH.RevokeToken)
+			r.Delete("/api/tokens/{id}", tokenH.DeleteToken)
+			r.Post("/api/tokens/{id}/revoke", tokenH.RevokeToken)
+			r.Put("/api/tokens/{id}/revoke", tokenH.RevokeToken)
 
 			// Admin only routes
 			r.Group(func(r chi.Router) {

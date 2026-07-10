@@ -42,4 +42,7 @@ type APIKeyRepository interface {
 
 	// RevokeAllByUserID revokes all keys belonging to a user.
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
+
+	// Delete permanently removes an API key record from the database.
+	Delete(ctx context.Context, id uuid.UUID) error
 }

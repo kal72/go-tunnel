@@ -447,3 +447,109 @@ func TestTokenHandler_RevokeToken(t *testing.T) {
 		})
 	}
 }
+
+func TestTokenHandler_DeleteToken(t *testing.T) {
+	testUserID := uuid.New()
+	testKeyID := uuid.New()
+
+	tests := []struct {
+		name      string
+		userID    string
+		role      int16
+		keyID     string
+		mockSetup func(*mockUser.MockAuthUsecase)
+		wantCode  int
+	}{
+		{
+			name:   "success delete own token",
+			userID: testUserID.String(),
+			role:   0,
+			keyID:  testKeyID.String(),
+			mockSetup: func(m *mockUser.MockAuthUsecase) {
+				m.On("DeleteAPIKey", mock.Anything, testKeyID, testUserID, int16(0)).
+					Return(nil)
+			},
+			wantCode: http.StatusOK,
+		},
+		{
+			name:   "admin success delete any token",
+			userID: testUserID.String(),
+			role:   1,
+			keyID:  testKeyID.String(),
+			mockSetup: func(m *mockUser.MockAuthUsecase) {
+				m.On("DeleteAPIKey", mock.Anything, testKeyID, testUserID, int16(1)).
+					Return(nil)
+			},
+			wantCode: http.StatusOK,
+		},
+		{
+			name:      "invalid key ID format",
+			userID:    testUserID.String(),
+			role:      0,
+			keyID:     "not-a-uuid",
+			mockSetup: func(m *mockUser.MockAuthUsecase) {},
+			wantCode:  http.StatusBadRequest,
+		},
+		{
+			name:   "key not found returns 404",
+			userID: testUserID.String(),
+			role:   0,
+			keyID:  testKeyID.String(),
+			mockSetup: func(m *mockUser.MockAuthUsecase) {
+				m.On("DeleteAPIKey", mock.Anything, testKeyID, testUserID, int16(0)).
+					Return(domainErrors.ErrNotFound)
+			},
+			wantCode: http.StatusNotFound,
+		},
+		{
+			name:   "forbidden returns 403",
+			userID: testUserID.String(),
+			role:   0,
+			keyID:  testKeyID.String(),
+			mockSetup: func(m *mockUser.MockAuthUsecase) {
+				m.On("DeleteAPIKey", mock.Anything, testKeyID, testUserID, int16(0)).
+					Return(domainErrors.ErrForbidden)
+			},
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:   "internal error returns 500",
+			userID: testUserID.String(),
+			role:   0,
+			keyID:  testKeyID.String(),
+			mockSetup: func(m *mockUser.MockAuthUsecase) {
+				m.On("DeleteAPIKey", mock.Anything, testKeyID, testUserID, int16(0)).
+					Return(errors.New("db error"))
+			},
+			wantCode: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockUC := new(mockUser.MockAuthUsecase)
+			tt.mockSetup(mockUC)
+			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+
+			req := httptest.NewRequest(http.MethodDelete, "/api/tokens/"+tt.keyID, http.NoBody)
+			ctx := context.WithValue(req.Context(), handler.UserIDKey, tt.userID)
+			ctx = context.WithValue(ctx, handler.UserRoleKey, tt.role)
+			req = req.WithContext(ctx)
+			req = setTokenURLParam(req, "id", tt.keyID)
+
+			rec := httptest.NewRecorder()
+			h.DeleteToken(rec, req)
+
+			assert.Equal(t, tt.wantCode, rec.Code)
+
+			if tt.wantCode == http.StatusOK {
+				var resp map[string]string
+				err := json.Unmarshal(rec.Body.Bytes(), &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp["message"], "deleted")
+			}
+
+			mockUC.AssertExpectations(t)
+		})
+	}
+}

@@ -421,6 +421,57 @@ func TestSqlxAPIKeyRepository_RevokeAllByUserID(t *testing.T) {
 	}
 }
 
+func TestSqlxAPIKeyRepository_Delete(t *testing.T) {
+	t.Parallel()
+
+	keyID := uuid.New()
+	query := regexp.QuoteMeta("DELETE FROM api_keys WHERE id = $1")
+
+	tests := []struct {
+		name      string
+		mockSetup func(mock sqlmock.Sqlmock)
+		wantErr   bool
+	}{
+		{
+			name: "success delete key",
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(query).
+					WithArgs(keyID).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+			wantErr: false,
+		},
+		{
+			name: "exec error returns error",
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(query).
+					WithArgs(keyID).
+					WillReturnError(errors.New("delete failed"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			db, mock := setupMockDB(t)
+			repo := NewAPIKeyRepository(db)
+
+			tt.mockSetup(mock)
+
+			err := repo.Delete(context.Background(), keyID)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
 func TestSqlxAPIKeyRepository_UpdateLastUsedAt(t *testing.T) {
 	t.Parallel()
 

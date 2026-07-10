@@ -405,6 +405,36 @@ func (u *authUsecase) RevokeAPIKey(ctx context.Context, keyID, requesterID uuid.
 	return nil
 }
 
+// DeleteAPIKey permanently deletes an API key by ID from the database.
+// Requires ownership or admin role.
+func (u *authUsecase) DeleteAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error {
+	// 1. Get key by ID
+	key, err := u.apiKeyRepo.GetByID(ctx, keyID)
+	if err != nil {
+		return fmt.Errorf("get API key: %w", err)
+	}
+	if key == nil {
+		return domainErrors.ErrNotFound
+	}
+
+	// 2. Verify ownership or admin role
+	isOwner := key.UserID == requesterID
+	isAdmin := requesterRole == 1
+	if !isOwner && !isAdmin {
+		return domainErrors.ErrForbidden
+	}
+
+	// 3. Delete session from Redis store (best effort)
+	_ = u.store.RevokeToken(ctx, key.KeyHash)
+
+	// 4. Permanently delete from database
+	if err := u.apiKeyRepo.Delete(ctx, keyID); err != nil {
+		return fmt.Errorf("delete API key: %w", err)
+	}
+
+	return nil
+}
+
 // GetAPIKeyByID retrieves an API key by ID.
 // Returns ErrNotFound if the key doesn't exist.
 func (u *authUsecase) GetAPIKeyByID(ctx context.Context, keyID uuid.UUID) (*domainAPIKey.APIKey, error) {
@@ -464,13 +494,6 @@ func (u *authUsecase) verifyAPIKey(ctx context.Context, tokenStr string) (*domai
 		defer cancel()
 		_ = u.apiKeyRepo.UpdateLastUsedAt(ctx, key.ID)
 	}()
-
-	// 8. Register session in Redis for consistency with JWT flow
-	expiration := 24 * time.Hour
-	if key.ExpiresAt != nil {
-		expiration = time.Until(*key.ExpiresAt)
-	}
-	_ = u.store.SetToken(ctx, user.ID.String(), tokenStr, expiration)
 
 	return user, nil
 }

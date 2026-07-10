@@ -36,6 +36,10 @@ type AuthUsecase interface {
 	// Requires ownership or admin role.
 	RevokeAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error
 
+	// DeleteAPIKey permanently deletes an API key by ID from the database.
+	// Requires ownership or admin role.
+	DeleteAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error
+
 	// GetAPIKeyByID retrieves an API key by ID.
 	GetAPIKeyByID(ctx context.Context, keyID uuid.UUID) (*domainAPIKey.APIKey, error)
 }

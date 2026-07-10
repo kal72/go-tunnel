@@ -1373,6 +1373,105 @@ func TestAuthUsecase_RevokeAPIKey(t *testing.T) {
 	}
 }
 
+func TestAuthUsecase_DeleteAPIKey(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	adminID := uuid.New()
+	otherID := uuid.New()
+	keyID := uuid.New()
+	keyHash := "testhash"
+
+	validAPIKey := &domainAPIKey.APIKey{
+		ID:      keyID,
+		UserID:  userID,
+		Name:    "test-key",
+		KeyHash: keyHash,
+		Status:  domainAPIKey.StatusActive,
+	}
+
+	tests := []struct {
+		name          string
+		keyID         uuid.UUID
+		requesterID   uuid.UUID
+		requesterRole int16
+		mockSetup     func(*apikeyMocks.MockAPIKeyRepository, *tunnelMocks.MockTunnelStore)
+		wantErr       error
+	}{
+		{
+			name:          "success owner deletes key",
+			keyID:         keyID,
+			requesterID:   userID,
+			requesterRole: 0,
+			mockSetup: func(apiKeyRepo *apikeyMocks.MockAPIKeyRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
+				apiKeyRepo.On("GetByID", mock.Anything, keyID).Return(validAPIKey, nil).Once()
+				apiKeyRepo.On("Delete", mock.Anything, keyID).Return(nil).Once()
+				tunnelStore.On("RevokeToken", mock.Anything, keyHash).Return(nil).Once()
+			},
+			wantErr: nil,
+		},
+		{
+			name:          "success admin deletes key",
+			keyID:         keyID,
+			requesterID:   adminID,
+			requesterRole: 1,
+			mockSetup: func(apiKeyRepo *apikeyMocks.MockAPIKeyRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
+				apiKeyRepo.On("GetByID", mock.Anything, keyID).Return(validAPIKey, nil).Once()
+				apiKeyRepo.On("Delete", mock.Anything, keyID).Return(nil).Once()
+				tunnelStore.On("RevokeToken", mock.Anything, keyHash).Return(nil).Once()
+			},
+			wantErr: nil,
+		},
+		{
+			name:          "not found",
+			keyID:         keyID,
+			requesterID:   userID,
+			requesterRole: 0,
+			mockSetup: func(apiKeyRepo *apikeyMocks.MockAPIKeyRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
+				apiKeyRepo.On("GetByID", mock.Anything, keyID).Return(nil, nil).Once()
+			},
+			wantErr: domainErrors.ErrNotFound,
+		},
+		{
+			name:          "forbidden non owner non admin",
+			keyID:         keyID,
+			requesterID:   otherID,
+			requesterRole: 0,
+			mockSetup: func(apiKeyRepo *apikeyMocks.MockAPIKeyRepository, tunnelStore *tunnelMocks.MockTunnelStore) {
+				apiKeyRepo.On("GetByID", mock.Anything, keyID).Return(validAPIKey, nil).Once()
+			},
+			wantErr: domainErrors.ErrForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			userRepo := userMocks.NewMockUserRepository(t)
+			apiKeyRepo := apikeyMocks.NewMockAPIKeyRepository(t)
+			tunnelStore := tunnelMocks.NewMockTunnelStore(t)
+			tt.mockSetup(apiKeyRepo, tunnelStore)
+
+			uc := NewAuthUsecase(userRepo, apiKeyRepo, tunnelStore, "secret", 24, 720)
+			err := uc.DeleteAPIKey(context.Background(), tt.keyID, tt.requesterID, tt.requesterRole)
+
+			if tt.wantErr != nil {
+				assert.Error(t, err)
+				if errors.Is(tt.wantErr, domainErrors.ErrForbidden) {
+					assert.ErrorIs(t, err, domainErrors.ErrForbidden)
+				} else if errors.Is(tt.wantErr, domainErrors.ErrNotFound) {
+					assert.ErrorIs(t, err, domainErrors.ErrNotFound)
+				} else {
+					assert.Equal(t, tt.wantErr.Error(), err.Error())
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+
 func TestAuthUsecase_GetAPIKeyByID(t *testing.T) {
 	t.Parallel()
 
@@ -1830,6 +1929,51 @@ func TestVerifyToken_RoutingToAPIKey(t *testing.T) {
 	userRepo.EXPECT().GetUserByID(mock.Anything, userID).Return(user, nil).Once()
 	apiKeyRepo.EXPECT().UpdateLastUsedAt(mock.Anything, keyID).Return(nil).Maybe()
 	store.EXPECT().SetToken(mock.Anything, userID.String(), plaintext, mock.AnythingOfType("time.Duration")).Return(nil).Maybe()
+
+	uc := NewAuthUsecase(userRepo, apiKeyRepo, store, "secret", 24, 720)
+
+	result, err := uc.VerifyToken(context.Background(), plaintext)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, userID, result.ID)
+}
+
+// TestVerifyToken_APIKeyNoRedisOverload verifies that verifying an API key never calls SetToken on Redis,
+// preventing Redis memory overload when many keys are verified or generated with long TTLs.
+func TestVerifyToken_APIKeyNoRedisOverload(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	keyID := uuid.New()
+
+	userRepo := userMocks.NewMockUserRepository(t)
+	apiKeyRepo := apikeyMocks.NewMockAPIKeyRepository(t)
+	store := tunnelMocks.NewMockTunnelStore(t)
+
+	plaintext := "gtk_noredisoverloadtoken123456789012345678"
+	hash := computeSHA256Hash(plaintext)
+
+	key := &domainAPIKey.APIKey{
+		ID:        keyID,
+		UserID:    userID,
+		Name:      "no-redis-key",
+		KeyHash:   hash,
+		Status:    domainAPIKey.StatusActive,
+		ExpiresAt: nil,
+	}
+
+	user := &domainUser.User{
+		ID:       userID,
+		Username: "noredisuser",
+		Role:     0,
+		Status:   1,
+	}
+
+	apiKeyRepo.EXPECT().GetByHash(mock.Anything, hash).Return(key, nil).Once()
+	userRepo.EXPECT().GetUserByID(mock.Anything, userID).Return(user, nil).Once()
+	apiKeyRepo.EXPECT().UpdateLastUsedAt(mock.Anything, keyID).Return(nil).Maybe()
+	// NOTE: store.SetToken must NOT be expected or called (`store` is strict mock, calling SetToken will fail the test)
 
 	uc := NewAuthUsecase(userRepo, apiKeyRepo, store, "secret", 24, 720)
 
