@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD**: Configured GitHub Actions PR labeler tool via `labeler.yml` for automated context tagging of pull requests based on changed paths.
 
 ### Changed
+- **Web UI & API Keys**: Standardized the Copy button inside the Add API Token modal (`assets/templates/tokens.html`) to be icon-only (`hanya icon`), matching the consistent SVG clipboard icon design across the Web UI.
 - **Traffic Control & Rate Limiting**: Set default Rate Limiting status to OFF (`false`) for new regular users (`role == 0`). When new user accounts are created or when rate limit settings have not been explicitly toggled, rate limiting defaults to disabled for their active tunnels.
 - **Web UI & Tunnel Dashboard**: Optimized Active Tunnels table column layout by fine-tuning the Tunnel column width (`min-w-[200px] w-1/5`) and constraining the Actions column width (`w-32 max-w-[130px]`) for clean responsiveness.
 - **Web UI & Tunnel Dashboard**: Upgraded Live Request Inspector SSE streaming architecture to Single Multiplexed Stream (`/api/tunnels/inspect/stream?hosts=...`). Replaced multi-stream per host connections with a unified single SSE stream per dashboard view, significantly reducing server goroutine allocations and Redis Pub/Sub subscriptions on tunnels with large host counts. Added host badge display on UI request logs for clean multiplexed visual differentiation.

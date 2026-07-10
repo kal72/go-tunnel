@@ -96,8 +96,8 @@ func (h *TokenHandler) CreateToken(w http.ResponseWriter, r *http.Request) {
 	userID, _ := uuid.Parse(userIDStr)
 
 	var req struct {
-		Name      string  `json:"name"`
 		ExpiresAt *string `json:"expires_at,omitempty"`
+		Name      string  `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)

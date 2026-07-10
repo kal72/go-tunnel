@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -36,13 +37,13 @@ const (
 // validateKeyName validates API key name according to constraints.
 // Name must be 1-64 characters, alphanumeric with hyphens and underscores only.
 func validateKeyName(name string) error {
-	if len(name) == 0 || len(name) > 64 {
-		return fmt.Errorf("name is required and must be 1-64 characters")
+	if name == "" || len(name) > 64 {
+		return errors.New("name is required and must be 1-64 characters")
 	}
 	// Check for valid characters: [a-zA-Z0-9_-]
 	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
-			return fmt.Errorf("name can only contain alphanumeric characters, hyphens, and underscores")
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' && c != '-' {
+			return errors.New("name can only contain alphanumeric characters, hyphens, and underscores")
 		}
 	}
 	return nil
@@ -298,7 +299,7 @@ func (u *authUsecase) CreateAPIKey(ctx context.Context, userID uuid.UUID, name s
 	// 4. Validate expiration date
 	if expiresAt != nil {
 		if expiresAt.Before(time.Now()) {
-			return "", nil, fmt.Errorf("expiration date must be in the future")
+			return "", nil, errors.New("expiration date must be in the future")
 		}
 		if expiresAt.After(time.Now().AddDate(0, 0, maxExpiryDays)) {
 			return "", nil, fmt.Errorf("expiration date cannot exceed %d days", maxExpiryDays)
@@ -375,7 +376,7 @@ func (u *authUsecase) ListAPIKeys(ctx context.Context, userID uuid.UUID, role in
 // - Admin (role=1) can revoke any key
 // - Non-owner non-admin returns forbidden error
 // After revocation, the key's session is deleted from Redis store (best effort).
-func (u *authUsecase) RevokeAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error {
+func (u *authUsecase) RevokeAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error {
 	// 1. Get key by ID
 	key, err := u.apiKeyRepo.GetByID(ctx, keyID)
 	if err != nil {
@@ -459,7 +460,7 @@ func (u *authUsecase) verifyAPIKey(ctx context.Context, tokenStr string) (*domai
 	// 7. Async update last_used_at (non-blocking)
 	go func() {
 		defer func() { _ = recover() }() // Panic recovery per convention
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		_ = u.apiKeyRepo.UpdateLastUsedAt(ctx, key.ID)
 	}()

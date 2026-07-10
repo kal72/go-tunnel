@@ -34,7 +34,7 @@ type AuthUsecase interface {
 
 	// RevokeAPIKey revokes an API key by ID.
 	// Requires ownership or admin role.
-	RevokeAPIKey(ctx context.Context, keyID uuid.UUID, requesterID uuid.UUID, requesterRole int16) error
+	RevokeAPIKey(ctx context.Context, keyID, requesterID uuid.UUID, requesterRole int16) error
 
 	// GetAPIKeyByID retrieves an API key by ID.
 	GetAPIKeyByID(ctx context.Context, keyID uuid.UUID) (*domainAPIKey.APIKey, error)

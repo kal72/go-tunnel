@@ -18,20 +18,20 @@ const (
 
 // APIKey represents a long-lived authentication token for CLI access.
 type APIKey struct {
-	ID         uuid.UUID    `db:"id" json:"id"`
-	UserID     uuid.UUID    `db:"user_id" json:"user_id"`
+	CreatedAt  time.Time    `db:"created_at" json:"created_at"`
+	ExpiresAt  *time.Time   `db:"expires_at" json:"expires_at"` // nil = no expiration
+	LastUsedAt *time.Time   `db:"last_used_at" json:"last_used_at"`
 	Name       string       `db:"name" json:"name"`
 	KeyHash    string       `db:"key_hash" json:"-"` // SHA-256 hash, never exposed
+	ID         uuid.UUID    `db:"id" json:"id"`
+	UserID     uuid.UUID    `db:"user_id" json:"user_id"`
 	Status     APIKeyStatus `db:"status" json:"status"`
-	CreatedAt  time.Time    `db:"created_at" json:"created_at"`
-	ExpiresAt  *time.Time   `db:"expires_at" json:"expires_at"`     // nil = no expiration
-	LastUsedAt *time.Time   `db:"last_used_at" json:"last_used_at"`
 }
 
 // APIKeyWithOwner includes owner username for admin listing.
 type APIKeyWithOwner struct {
-	APIKey
 	Username string `db:"username" json:"username"`
+	APIKey
 }
 
 // IsExpired checks if the key has passed its expiration date.
