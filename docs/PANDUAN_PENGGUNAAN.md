@@ -79,7 +79,38 @@ go run ./cmd/client/main.go
 
 ---
 
-## 4. Monitoring & Manajemen
+## 4. Local Port Forwarding (`gotunnel forward`)
+
+Untuk mengakses layanan raw TCP (seperti **Windows RDP**, **Database**, **VNC**, atau **SSH**) langsung dari komputer/laptop Anda tanpa perlu VPN ataupun software tambahan seperti `stunnel`, gunakan perintah `gotunnel forward`.
+
+Semua trafik akan dialirkan secara terenkripsi melalui port **443 (HTTPS)** menuju gateway go-tunnel dan dihubungkan ke tunnel Anda, sehingga kebal dari pemblokiran port oleh router atau ISP.
+
+### Persyaratan:
+1. Anda sudah login via CLI (`gotunnel login`) atau mengatur `GOTUNNEL_TOKEN`.
+2. Layanan target sudah berjalan dan terdaftar dengan `mode: tcp` pada konfigurasi agent/client di server (contoh: `rdp.vpskamu.com` -> `127.0.0.1:3389`).
+
+### Contoh Penggunaan:
+
+```bash
+# Forward Remote Desktop Windows (RDP) ke localhost:3389
+gotunnel forward rdp.vpskamu.com 3389
+# -> Buka aplikasi RDP Client dan hubungkan ke localhost:3389
+
+# Forward Database PostgreSQL ke localhost:5432
+gotunnel forward db.vpskamu.com 5432
+# -> Buka DBeaver atau TablePlus dan hubungkan ke localhost:5432
+
+# Forward Database MySQL ke localhost:3306
+gotunnel forward mysql.vpskamu.com 3306
+
+# Gunakan port lokal khusus (misal listen di localhost:13389 dan forward ke remote port 3389)
+gotunnel forward --local-port 13389 rdp.vpskamu.com 3389
+```
+
+---
+
+## 5. Monitoring & Manajemen
+
 
 - **Melihat Status**: Anda dapat memantau status perangkat yang sedang terhubung secara *real-time* di menu **Dashboard** pada Web UI. Anda akan melihat Client ID, IP sumber, hostname yang di-mapping, dan waktu koneksi.
 - **Memutuskan Koneksi**: Jika Anda perlu memutuskan akses client secara paksa, masuk ke menu Token Management dan klik **Revoke**. Koneksi client akan langsung terputus dan token tersebut tidak bisa digunakan lagi.

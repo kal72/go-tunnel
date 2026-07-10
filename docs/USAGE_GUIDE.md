@@ -79,7 +79,38 @@ go run ./cmd/client/main.go
 
 ---
 
-## 4. Monitoring & Management
+## 4. Local Port Forwarding (`gotunnel forward`)
+
+To access raw TCP services (such as **Windows RDP**, **Database**, **VNC**, or **SSH**) from your computer without needing VPN or extra tools like `stunnel`, use the `gotunnel forward` subcommand.
+
+All traffic flows securely encrypted over port **443 (HTTPS)** directly to the go-tunnel gateway and is relayed to your active tunnel.
+
+### Requirements:
+1. You must have logged in (`gotunnel login`) or configured `GOTUNNEL_TOKEN`.
+2. The target service must be already running and exposed via `mode: tcp` in the agent configuration (e.g., `rdp.yourvps.com` -> `127.0.0.1:3389`).
+
+### Usage Examples:
+
+```bash
+# Forward remote Windows RDP to localhost:3389
+gotunnel forward rdp.yourvps.com 3389
+# -> Open your RDP client and connect to localhost:3389
+
+# Forward remote PostgreSQL Database to localhost:5432
+gotunnel forward db.yourvps.com 5432
+# -> Open DBeaver or TablePlus and connect to localhost:5432
+
+# Forward remote MySQL Database to localhost:3306
+gotunnel forward mysql.yourvps.com 3306
+
+# Use a custom local port (e.g., listen on localhost:13389 forwarding to remote port 3389)
+gotunnel forward --local-port 13389 rdp.yourvps.com 3389
+```
+
+---
+
+## 5. Monitoring & Management
+
 
 - **View Status**: You can monitor the real-time status of connected devices in the **Dashboard** menu on the Web UI. You will see the Client ID, source IP, mapped hostnames, and connection time.
 - **Disconnecting**: If you need to forcibly disconnect a client, go to the Token Management menu and click **Revoke**. The client connection will be immediately terminated, and the token will no longer be valid.

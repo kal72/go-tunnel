@@ -17,7 +17,8 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 - **Redis-backed Auth & Revocation**: Web UI sessions and Client tokens are stored in Redis with **instant revocation** support.
 - **API Key Authentication**: Generate long-lived API keys (`gtk_` prefixed) from the Web UI for headless/automated deployments. Supports `--token` CLI flag and `GOTUNNEL_TOKEN` environment variable. Keys are SHA-256 hashed at rest with per-user limits (max 10 active keys, 365-day max expiry).
 - **Domain Management**: Centrally manage authorized subdomains under a base wildcard domain (e.g., `*.apps.com`) via Web UI.
-- **Supports HTTP, HTTPS, TCP & Minecraft**: Flexible tunneling for web applications and raw TCP protocols (SSH, DB, Minecraft, etc.).
+- **`gotunnel forward` — Local TCP Port Forwarding**: Forward a local port directly to any registered `mode=tcp` tunnel through the go-tunnel gateway (port 443). Supports any TCP protocol including RDP (3389), VNC (5900), MySQL (3306), PostgreSQL (5432), Redis (6379), MongoDB (27017), and MSSQL (1433). No SSH, stunnel, or VPN required. All traffic flows encrypted over HTTPS — immune to ISP and router port blocking. Usage: `gotunnel forward rdp.domain.com 3389` then connect to `localhost:3389`.
+- **Supports HTTP, HTTPS, TCP, Minecraft & Local Port Forwarding**: Flexible tunneling for web applications, raw TCP protocols (SSH, DB, Minecraft, etc.), and direct local port forwarding via `gotunnel forward`.
 
 ## Tech Stack
 - **Language**: Go 1.26
@@ -122,6 +123,44 @@ export GOTUNNEL_TOKEN=gtk_your_api_key_here
 gotunnel run my-web-app
 ```
 
+### 4. Local Port Forwarding (`gotunnel forward`)
+
+Forward a local port through go-tunnel to any remote TCP service — without SSH, stunnel, or VPN.
+All traffic flows over port 443 (HTTPS), bypassing router and ISP port blocking.
+
+> **Prerequisite**: The agent on the remote side must have a tunnel registered with `mode: tcp` targeting the service.
+
+```sh
+# RDP to Windows — connect RDP client to localhost:3389
+gotunnel forward rdp.domain.com 3389
+
+# PostgreSQL — open DBeaver/TablePlus to localhost:5432
+gotunnel forward db.domain.com 5432
+
+# MySQL
+gotunnel forward db.domain.com 3306
+
+# Redis
+gotunnel forward redis.domain.com 6379
+
+# VNC screen sharing
+gotunnel forward vnc.domain.com 5900
+
+# Custom local port (avoid conflicts with local services)
+gotunnel forward --local-port 13389 rdp.domain.com 3389
+
+# Skip TLS verification (development only)
+gotunnel forward --insecure rdp.domain.com 3389
+```
+
+```sh
+# Example output when running:
+# [forward] local port forwarder started  listen=localhost:3389  tunnel=rdp.domain.com
+# [forward] press Ctrl+C to stop
+# [forward] tunnel established  hostname=rdp.domain.com
+# [forward] session closed  duration=12m35s
+```
+
 ## Authentication & Token Management
 
 ### JWT Token Flow
@@ -155,6 +194,7 @@ gotunnel run my-web-app
 | **Web UI (`cmd/webui`)** | Provides the API and visual interface for configuration management, System Stats (`/stats`), Rate Limiting (`/ratelimit`), and Live Inspector. |
 | **Redis Store** | Maintains active tunnel states, live inspect pub/sub channels, and domain validation rules. |
 | **Agent / Client** | The local client that opens the outbound tunnel to the server and forwards traffic to local ports (`localhost:80`, `localhost:25565`). |
+| **`gotunnel forward`** | Local port forwarder on the end-user PC — connects to go-tunnel gateway via HTTPS CONNECT (port 443) to relay any TCP protocol (RDP, DB, VNC) to a registered `mode=tcp` tunnel. |
 
 ## Production Architecture
 
