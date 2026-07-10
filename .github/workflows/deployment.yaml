@@ -1,4 +1,4 @@
-name: Manual Deployment Pipeline
+name: Deployment Pipeline
 
 on:
   workflow_dispatch:
