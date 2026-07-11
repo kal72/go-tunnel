@@ -28,26 +28,26 @@ func YamuxConfig() *yamux.Config {
 	return cfg
 }
 
-// SetTCPNoDelay attempts to unwrap net.Conn and enable TCP_NODELAY as well as
+// SetTCPNoDelay attempts to recursively unwrap net.Conn and enable TCP_NODELAY as well as
 // enlarging socket read/write buffers. This eliminates Nagle's algorithm delay
 // for real-time interactive packets (mouse moves, keyboard input, game ticks).
 func SetTCPNoDelay(c net.Conn) {
 	if c == nil {
 		return
 	}
-	if tc, ok := c.(*net.TCPConn); ok {
-		_ = tc.SetNoDelay(true)
-		_ = tc.SetReadBuffer(128 * 1024)
-		_ = tc.SetWriteBuffer(128 * 1024)
-		return
-	}
-	// Check if wrapped (e.g. *tls.Conn or custom wrapper implementing NetConn())
-	if tc, ok := c.(interface{ NetConn() net.Conn }); ok {
-		if underlying, ok := tc.NetConn().(*net.TCPConn); ok {
-			_ = underlying.SetNoDelay(true)
-			_ = underlying.SetReadBuffer(128 * 1024)
-			_ = underlying.SetWriteBuffer(128 * 1024)
+	curr := c
+	for {
+		if tc, ok := curr.(*net.TCPConn); ok {
+			_ = tc.SetNoDelay(true)
+			_ = tc.SetReadBuffer(128 * 1024)
+			_ = tc.SetWriteBuffer(128 * 1024)
+			return
 		}
+		if wrapper, ok := curr.(interface{ NetConn() net.Conn }); ok && wrapper.NetConn() != nil && wrapper.NetConn() != curr {
+			curr = wrapper.NetConn()
+			continue
+		}
+		break
 	}
 }
 

@@ -203,6 +203,7 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 				_ = mcConn.Close()
 				return
 			}
+			netutil.SetTCPNoDelay(gwConn)
 			clientAddr := mcConn.RemoteAddr().String()
 			clientIP, clientPortStr, errSplit := net.SplitHostPort(clientAddr)
 			if errSplit != nil {
@@ -258,6 +259,7 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 			_ = bConn.Close()
 			return
 		}
+		netutil.SetTCPNoDelay(target)
 		go proxyConn(bConn, target)
 		return
 	}

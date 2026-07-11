@@ -229,6 +229,10 @@ func (b *bufferedConn) Read(p []byte) (n int, err error) {
 	return b.Conn.Read(p)
 }
 
+func (b *bufferedConn) NetConn() net.Conn {
+	return b.Conn
+}
+
 // ChanListener allows passing accepted connections via a channel.
 type ChanListener struct {
 	conns chan net.Conn

@@ -191,6 +191,16 @@ func (p *prefixedReader) Read(b []byte) (int, error) {
 	return p.ReadWriter.Read(b)
 }
 
+func (p *prefixedReader) NetConn() net.Conn {
+	if c, ok := p.ReadWriter.(net.Conn); ok {
+		return c
+	}
+	if w, ok := p.ReadWriter.(interface{ NetConn() net.Conn }); ok {
+		return w.NetConn()
+	}
+	return nil
+}
+
 // GatewayAddrFromServerURL derives the gateway address (host:443) from the
 // WebUI server URL, e.g. "https://app.domain.com" -> "app.domain.com:443".
 func GatewayAddrFromServerURL(serverURL string) string {
