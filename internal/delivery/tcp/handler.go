@@ -18,6 +18,7 @@ import (
 	domainSetting "gotunnel/internal/domain/setting"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	domainUser "gotunnel/internal/domain/user"
+	"gotunnel/internal/shared/netutil"
 	"gotunnel/internal/shared/protocol"
 	"gotunnel/internal/shared/ratelimit"
 	usecaseSetting "gotunnel/internal/usecase/setting"
@@ -209,6 +210,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "hijack failed", http.StatusInternalServerError)
 		return
 	}
+	netutil.SetTCPNoDelay(conn)
 
 	if r.Method == "CONNECT" || strings.ToLower(r.Header.Get("Upgrade")) == "tcp" {
 		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
@@ -269,10 +271,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		_, _ = io.Copy(stream, conn)
+		_, _ = netutil.CopyBuffer(stream, conn)
 		_ = stream.Close()
 	}()
-	_, _ = io.Copy(conn, stream)
+	_, _ = netutil.CopyBuffer(conn, stream)
 	_ = conn.Close()
 }
 
@@ -346,7 +348,8 @@ func (s *Server) activeTunnelsForUser(username string) int {
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
-	session, _ := yamux.Server(conn, nil)
+	netutil.SetTCPNoDelay(conn)
+	session, _ := yamux.Server(conn, netutil.YamuxConfig())
 	ip := conn.RemoteAddr().String()
 	s.logger.Info("new tunnel", zap.String("addr", ip))
 

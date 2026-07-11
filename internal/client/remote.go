@@ -96,4 +96,3 @@ func FetchConfig(serverURL, configName, token string) (*clientconfig.TunnelClien
 
 	return &cfg, nil
 }
-

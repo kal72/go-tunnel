@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cert"
+	"gotunnel/internal/shared/netutil"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/acme/autocert"
@@ -183,6 +183,7 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 }
 
 func (p *ProxyServer) handleConnection(conn net.Conn) {
+	netutil.SetTCPNoDelay(conn)
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	sni, bConn, err := peekSNI(conn)
 	_ = bConn.SetReadDeadline(time.Time{}) // reset deadline
@@ -267,15 +268,17 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 }
 
 func proxyConn(src, dst net.Conn) {
+	netutil.SetTCPNoDelay(src)
+	netutil.SetTCPNoDelay(dst)
 	defer func() { _ = src.Close() }()
 	defer func() { _ = dst.Close() }()
 	errc := make(chan error, 1)
 	go func() {
-		_, err := io.Copy(src, dst)
+		_, err := netutil.CopyBuffer(src, dst)
 		errc <- err
 	}()
 	go func() {
-		_, err := io.Copy(dst, src)
+		_, err := netutil.CopyBuffer(dst, src)
 		errc <- err
 	}()
 	<-errc

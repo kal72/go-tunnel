@@ -12,17 +12,19 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"gotunnel/internal/shared/netutil"
 )
 
 // LocalForwarder listens on a local TCP port and forwards each incoming connection
 // through the go-tunnel gateway's HTTPS CONNECT mechanism to a registered TCP tunnel.
-// This is equivalent to: ssh -L <localPort>:<target> ... -N
+// This is equivalent to: ssh -L <localPort>:<target> ... -N.
 type LocalForwarder struct {
+	logger        *zap.Logger
 	localAddr     string
 	hostname      string
 	serverAddr    string
 	tlsSkipVerify bool
-	logger        *zap.Logger
 }
 
 // NewLocalForwarder creates a new LocalForwarder.
@@ -50,7 +52,8 @@ func NewLocalForwarder(localAddr, hostname, serverAddr string, tlsSkipVerify boo
 
 // Run starts the local listener and blocks until ctx is cancelled.
 func (f *LocalForwarder) Run(ctx context.Context) error {
-	ln, err := net.Listen("tcp", f.localAddr)
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", f.localAddr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", f.localAddr, err)
 	}
@@ -91,6 +94,7 @@ func (f *LocalForwarder) Run(ctx context.Context) error {
 // tunnel to the go-tunnel gateway and relaying bytes bidirectionally.
 func (f *LocalForwarder) handleConn(ctx context.Context, local net.Conn) {
 	defer func() { _ = local.Close() }()
+	netutil.SetTCPNoDelay(local)
 
 	f.logger.Info("[forward] new connection", zap.String("from", local.RemoteAddr().String()))
 
@@ -107,6 +111,7 @@ func (f *LocalForwarder) handleConn(ctx context.Context, local net.Conn) {
 		f.logger.Error("[forward] dial server failed", zap.String("server", f.serverAddr), zap.Error(err))
 		return
 	}
+	netutil.SetTCPNoDelay(rawConn)
 
 	tlsConn := tls.Client(rawConn, tlsCfg)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
@@ -161,13 +166,11 @@ func (f *LocalForwarder) handleConn(ctx context.Context, local net.Conn) {
 	errc := make(chan error, 1)
 
 	go func() {
-		bufA := make([]byte, 32*1024)
-		_, err := io.CopyBuffer(remote, local, bufA)
+		_, err := netutil.CopyBuffer(remote, local)
 		errc <- err
 	}()
 
-	bufB := make([]byte, 32*1024)
-	_, _ = io.CopyBuffer(local, remote, bufB)
+	_, _ = netutil.CopyBuffer(local, remote)
 	<-errc
 
 	f.logger.Info("[forward] session closed", zap.Duration("duration", time.Since(start)))
@@ -175,8 +178,8 @@ func (f *LocalForwarder) handleConn(ctx context.Context, local net.Conn) {
 
 // prefixedReader replays buffered bytes before delegating to the underlying ReadWriter.
 type prefixedReader struct {
-	prefix []byte
 	io.ReadWriter
+	prefix []byte
 }
 
 func (p *prefixedReader) Read(b []byte) (int, error) {
