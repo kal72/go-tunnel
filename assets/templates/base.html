@@ -228,18 +228,18 @@
           <span x-show="$store.app.sidebarOpen" x-transition class="whitespace-nowrap">Rate Limiting</span>
         </a>
 
-        <!-- API Keys -->
+        <!-- Access Tokens -->
         <a href="/tokens"
           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 font-medium hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800 transition-colors group relative"
           :class="path.startsWith('/tokens') ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-slate-800 font-semibold' : 'font-medium text-gray-600 dark:text-gray-400 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800'"
-          title="API Keys">
+          title="Access Tokens">
           <svg
             class="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
             :class="path.startsWith('/tokens') ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
           </svg>
-          <span x-show="$store.app.sidebarOpen" x-transition class="whitespace-nowrap">API Keys</span>
+          <span x-show="$store.app.sidebarOpen" x-transition class="whitespace-nowrap">Access Tokens</span>
         </a>
 
         <!-- Group separator: Admin -->

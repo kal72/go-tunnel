@@ -15,7 +15,7 @@ Go-based reverse tunneling gateway that exposes private services over public TLS
 - **Interactive CLI & Seamless Downloads**: The client CLI supports interactive login (`gotunnel login`), configuration listing (`gotunnel list`), and execution (`gotunnel run <name>`).
 - **One-liner Installations**: The Web UI serves pre-compiled binaries for MacOS, Linux, and Windows with dynamic `curl` install scripts.
 - **Redis-backed Auth & Revocation**: Web UI sessions and Client tokens are stored in Redis with **instant revocation** support.
-- **API Key Authentication**: Generate long-lived API keys (`gtk_` prefixed) from the Web UI for headless/automated deployments. Supports `--token` CLI flag and `GOTUNNEL_TOKEN` environment variable. Keys are SHA-256 hashed at rest with per-user limits (max 10 active keys, 365-day max expiry).
+- **Access Token Authentication**: Generate long-lived Access Tokens (`gtk_` prefixed) from the Web UI for headless/automated deployments. Supports `--token` CLI flag and `GOTUNNEL_TOKEN` environment variable. Keys are SHA-256 hashed at rest with per-user limits (max 10 active keys, 365-day max expiry).
 - **Domain Management**: Centrally manage authorized subdomains under a base wildcard domain (e.g., `*.apps.com`) via Web UI.
 - **`gotunnel forward` — Local TCP Port Forwarding**: Forward a local port directly to any registered `mode=tcp` tunnel through the go-tunnel gateway (port 443). Supports any TCP protocol including RDP (3389), VNC (5900), MySQL (3306), PostgreSQL (5432), Redis (6379), MongoDB (27017), and MSSQL (1433). No SSH, stunnel, or VPN required. All traffic flows encrypted over HTTPS — immune to ISP and router port blocking. Usage: `gotunnel forward rdp.domain.com 3389` then connect to `localhost:3389`.
 - **Supports HTTP, HTTPS, TCP, Minecraft & Local Port Forwarding**: Flexible tunneling for web applications, raw TCP protocols (SSH, DB, Minecraft, etc.), and direct local port forwarding via `gotunnel forward`.
@@ -40,7 +40,7 @@ This application includes a Web UI Manager running on port `8080` (default) for 
 - **Config Editor**: Manage client configurations per user, saved securely to PostgreSQL.
 - **Client Downloads**: Download pre-compiled, auto-configured agent binaries for MacOS, Linux, and Windows straight from the dashboard.
 - **Token Management**: Generate new tokens for clients or instantly **revoke** existing tokens to disconnect specific agents.
-- **API Key Management**: Create, list, and revoke API keys for CLI authentication. Keys are shown only once upon creation and stored as SHA-256 hashes. Supports name, expiration date, and ownership-based access control.
+- **Access Token Management**: Create, list, and revoke Access Tokens (`gtk_` prefixed) for CLI authentication and headless tunnels under the Tunnel menu. Keys are shown only once upon creation and stored as SHA-256 hashes. Supports name, expiration date, and ownership-based access control.
 
 ## Example DNS Records
 | Type | Hostname | Value | Notes |
@@ -115,7 +115,7 @@ gotunnel list
 # 3. Run a specific configuration by name
 gotunnel run my-web-app
 
-# Or use API keys for automated/headless deployments (no interactive login needed)
+# Or use access tokens for automated/headless deployments (no interactive login needed)
 gotunnel run --token gtk_your_api_key_here my-web-app
 
 # Or via environment variable
@@ -169,8 +169,8 @@ gotunnel forward --insecure rdp.domain.com 3389
 3. When a Client connects, the Server verifies the token status in Redis.
 4. If the Admin clicks **Revoke** in the Web UI, the token is removed from Redis, and subsequent authentication attempts (or heartbeats) from that agent will be rejected.
 
-### API Key Flow
-1. User creates an API key from **API Keys** page in Web UI (name + optional expiration).
+### Access Token Flow
+1. User creates an access token (`gtk_` prefixed) from the **Access Tokens** page under the Tunnel menu in the Web UI (name + optional expiration).
 2. The plaintext key (e.g., `gtk_...`) is displayed **once** — user must copy immediately.
 3. Only the SHA-256 hash is stored in PostgreSQL (plaintext is never persisted).
 4. CLI client uses the key via `--token` flag or `GOTUNNEL_TOKEN` environment variable.

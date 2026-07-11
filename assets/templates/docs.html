@@ -43,7 +43,7 @@
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
               <span
                 class="w-6 h-6 rounded-md bg-amber-500/10 text-amber-400 flex items-center justify-center text-[10px] font-bold border border-amber-500/20">3</span>
-              API Key Authentication
+              Access Token Authentication
             </a>
             <a href="#section-4"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
@@ -205,9 +205,9 @@
               <h3 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-3">
                 <span
                   class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-black shadow-inner border border-amber-500/20 shrink-0">3</span>
-                API Key Authentication
+                Access Token Authentication
               </h3>
-              <p class="text-sm text-slate-400 mb-5">API Keys (prefixed with <code
+              <p class="text-sm text-slate-400 mb-5">Access Tokens (prefixed with <code
                   class="bg-white/5 border border-white/10 px-1 rounded text-amber-300 font-mono">gtk_</code>) provide
                 a way to authenticate the CLI client without interactive login. They are ideal for headless servers,
                 CI/CD pipelines, and automated deployments where you cannot run <code
@@ -215,16 +215,16 @@
                 interactively.</p>
 
               <div class="space-y-8">
-                <!-- Creating an API Key -->
+                <!-- Creating an Access Token -->
                 <div>
                   <div class="flex items-center gap-3 mb-4">
                     <div
                       class="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-[10px] font-bold">
                       1</div>
-                    <h4 class="text-sm font-bold text-white">Creating an API Key</h4>
+                    <h4 class="text-sm font-bold text-white">Creating an Access Token</h4>
                   </div>
                   <ul class="ml-9 space-y-2 text-xs text-slate-400 list-disc">
-                    <li>Navigate to <strong class="text-white">API Keys</strong> from the Web UI sidebar.</li>
+                    <li>Navigate to <strong class="text-white">Access Tokens</strong> from the Web UI sidebar.</li>
                     <li>Click <strong class="text-emerald-400">Create New Key</strong>.</li>
                     <li>Enter a descriptive <strong class="text-white">Name</strong> and optionally set an <strong
                         class="text-white">Expiration Date</strong>.</li>
@@ -233,13 +233,13 @@
                   </ul>
                 </div>
 
-                <!-- Using the API Key -->
+                <!-- Using the Access Token -->
                 <div>
                   <div class="flex items-center gap-3 mb-4">
                     <div
                       class="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-[10px] font-bold">
                       2</div>
-                    <h4 class="text-sm font-bold text-white">Using the API Key</h4>
+                    <h4 class="text-sm font-bold text-white">Using the Access Token</h4>
                   </div>
                   <p class="text-xs text-slate-400 mb-4 ml-9">Pass the key directly via the <code
                       class="text-amber-300 font-mono">--token</code> flag:</p>
@@ -274,10 +274,10 @@
                     <div
                       class="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-[10px] font-bold">
                       3</div>
-                    <h4 class="text-sm font-bold text-white">Revoking API Keys</h4>
+                    <h4 class="text-sm font-bold text-white">Revoking Access Tokens</h4>
                   </div>
-                  <p class="text-xs text-slate-400 ml-9">To revoke a key, go to <strong class="text-white">API
-                      Keys</strong> in the Web UI and click the <strong class="text-rose-400">Revoke</strong> button
+                  <p class="text-xs text-slate-400 ml-9">To revoke a key, go to <strong class="text-white">Access
+                      Tokens</strong> in the Web UI and click the <strong class="text-rose-400">Revoke</strong> button
                     next to the key you want to disable. Revoked keys are immediately rejected on the next connection
                     attempt.</p>
                 </div>
@@ -292,7 +292,7 @@
                 </svg>
                 <div class="space-y-2">
                   <p class="text-sm text-amber-200 font-bold">Important: Copy Your Key Immediately</p>
-                  <p class="text-xs text-amber-200/80 leading-relaxed text-justify">The API key plaintext is shown
+                  <p class="text-xs text-amber-200/80 leading-relaxed text-justify">The access token plaintext is shown
                     <strong>only once</strong> at creation time. It is stored as a SHA-256 hash and cannot be retrieved
                     later. If you lose the key, you must revoke it and create a new one.</p>
                 </div>
@@ -481,7 +481,7 @@
                     </tr>
                     <tr>
                       <td class="px-4 py-3 font-mono text-amber-400">gotunnel run -token &lt;key&gt; &lt;config&gt;</td>
-                      <td class="px-4 py-3">Run tunnel using API key (headless/automated mode).</td>
+                      <td class="px-4 py-3">Run tunnel using access token (headless/automated mode).</td>
                     </tr>
                     <tr>
                       <td class="px-4 py-3 font-mono text-amber-400">gotunnel logout</td>

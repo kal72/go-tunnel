@@ -66,7 +66,7 @@ func TestTokenHandler_TokensPage(t *testing.T) {
 			h.TokensPage(rec, req)
 
 			assert.Equal(t, http.StatusOK, rec.Code)
-			assert.Contains(t, rec.Body.String(), "API Keys")
+			assert.Contains(t, rec.Body.String(), "Access Tokens")
 		})
 	}
 }
