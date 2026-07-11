@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"gotunnel/assets"
 	"gotunnel/internal/delivery/web/handler"
 	"gotunnel/internal/domain/apikey"
 	domainErrors "gotunnel/internal/domain/errors"
 	mockUser "gotunnel/internal/usecase/user/mocks"
+	webassets "gotunnel/web"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -30,7 +30,7 @@ func setTokenURLParam(r *http.Request, key, val string) *http.Request {
 
 func TestNewToken(t *testing.T) {
 	mockUC := new(mockUser.MockAuthUsecase)
-	h := handler.NewToken(assets.EmbeddedFS, mockUC)
+	h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 	assert.NotNil(t, h)
 }
 
@@ -55,7 +55,7 @@ func TestTokenHandler_TokensPage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
-			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+			h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/tokens", http.NoBody)
 			ctx := context.WithValue(req.Context(), handler.UserRoleKey, tt.role)
@@ -190,7 +190,7 @@ func TestTokenHandler_ListTokens(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+			h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/tokens"+tt.query, http.NoBody)
 			ctx := context.WithValue(req.Context(), handler.UserIDKey, tt.userID)
@@ -317,7 +317,7 @@ func TestTokenHandler_CreateToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+			h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/tokens", bytes.NewBufferString(tt.body))
 			ctx := context.WithValue(req.Context(), handler.UserIDKey, tt.userID)
@@ -423,7 +423,7 @@ func TestTokenHandler_RevokeToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+			h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodDelete, "/api/tokens/"+tt.keyID, http.NoBody)
 			ctx := context.WithValue(req.Context(), handler.UserIDKey, tt.userID)
@@ -529,7 +529,7 @@ func TestTokenHandler_DeleteToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewToken(assets.EmbeddedFS, mockUC)
+			h := handler.NewToken(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodDelete, "/api/tokens/"+tt.keyID, http.NoBody)
 			ctx := context.WithValue(req.Context(), handler.UserIDKey, tt.userID)

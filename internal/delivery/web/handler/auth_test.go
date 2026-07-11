@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"gotunnel/assets"
 	"gotunnel/internal/delivery/web/handler"
 	domainErrors "gotunnel/internal/domain/errors"
 	domainUser "gotunnel/internal/domain/user"
 	mockUser "gotunnel/internal/usecase/user/mocks"
+	webassets "gotunnel/web"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -23,13 +23,13 @@ import (
 
 func TestNewAuth(t *testing.T) {
 	mockUC := new(mockUser.MockAuthUsecase)
-	h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+	h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 	assert.NotNil(t, h)
 }
 
 func TestAuthHandler_LoginPage(t *testing.T) {
 	mockUC := new(mockUser.MockAuthUsecase)
-	h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+	h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 
 	req := httptest.NewRequest(http.MethodGet, "/login", http.NoBody)
 	rec := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+			h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(tt.form.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -125,7 +125,7 @@ func TestAuthHandler_Logout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+			h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/logout", http.NoBody)
 			if tt.cookie != nil {
@@ -205,9 +205,9 @@ func TestAuthHandler_JWTMiddleware(t *testing.T) {
 			wantCode: http.StatusUnauthorized,
 		},
 		{
-			name:    "verify error on web redirects to login",
-			path:    "/dashboard",
-			cookie:  &http.Cookie{Name: "tunnel_token", Value: "bad-token"},
+			name:   "verify error on web redirects to login",
+			path:   "/dashboard",
+			cookie: &http.Cookie{Name: "tunnel_token", Value: "bad-token"},
 			mockSetup: func(m *mockUser.MockAuthUsecase) {
 				m.On("VerifyToken", mock.Anything, "bad-token").Return(nil, errors.New("expired"))
 			},
@@ -239,7 +239,7 @@ func TestAuthHandler_JWTMiddleware(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockUC)
 			}
-			h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+			h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 			mw := h.JWTMiddleware(dummyHandler)
 
 			req := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
@@ -309,7 +309,7 @@ func TestAuthHandler_APILogin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := new(mockUser.MockAuthUsecase)
 			tt.mockSetup(mockUC)
-			h := handler.NewAuth(assets.EmbeddedFS, mockUC)
+			h := handler.NewAuth(webassets.EmbeddedFS, mockUC)
 
 			req := httptest.NewRequest(tt.method, "/api/login", strings.NewReader(tt.form.Encode()))
 			if tt.method == http.MethodPost {

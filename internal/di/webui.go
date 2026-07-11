@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"gotunnel/assets"
 	"gotunnel/internal/config"
 	"gotunnel/internal/delivery/web"
 	webui "gotunnel/internal/delivery/web/handler"
@@ -21,6 +20,7 @@ import (
 	usecaseSetting "gotunnel/internal/usecase/setting"
 	usecaseTunnel "gotunnel/internal/usecase/tunnel"
 	usecaseUser "gotunnel/internal/usecase/user"
+	webassets "gotunnel/web"
 )
 
 func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
@@ -57,14 +57,14 @@ func BuildWebUIApp(env *config.ServerConfig) (*chi.Mux, func(), error) {
 	statsCollector.Start(context.Background())
 
 	// Handlers
-	h := webui.New(assets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion, env.InspectDefaultLimit, statsCollector)
-	authH := webui.NewAuth(assets.EmbeddedFS, authUsecase)
-	userH := webui.NewUserHandler(assets.EmbeddedFS, authUsecase, settingUsecase)
+	h := webui.New(webassets.EmbeddedFS, tunnelUsecase, configUsecase, settingUsecase, env.JWTSecret, tunnelAddr, env.WildcardDomain, env.GatewayDomain, env.ACMEEnable, env.MaxFreeDomains, env.CLILatestVersion, env.InspectDefaultLimit, statsCollector)
+	authH := webui.NewAuth(webassets.EmbeddedFS, authUsecase)
+	userH := webui.NewUserHandler(webassets.EmbeddedFS, authUsecase, settingUsecase)
 	cliH := webui.NewCLIHandler(configUsecase, tunnelAddr, env.ACMEEnable, env.CLILatestVersion)
-	tokenH := webui.NewToken(assets.EmbeddedFS, authUsecase)
+	tokenH := webui.NewToken(webassets.EmbeddedFS, authUsecase)
 
 	// Router
-	router := web.SetupRouter(h, authH, userH, cliH, tokenH, env.CORSAllowedOrigins, http.FS(assets.EmbeddedFS))
+	router := web.SetupRouter(h, authH, userH, cliH, tokenH, env.CORSAllowedOrigins, http.FS(webassets.EmbeddedFS))
 
 	cleanup := func() {
 		log.Println("[di] Cleaning up WebUI resources...")

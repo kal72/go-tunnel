@@ -28,7 +28,7 @@ go-tunnel/
 │   │   ├── schema/          # Validation schemas
 │   │   └── service/         # Business logic
 │   └── tunnel/              # Tunnel core logic
-├── assets/
+├── web/
 │   └── templates/
 │       ├── base.html
 │       ├── index.html       # Config editor UI

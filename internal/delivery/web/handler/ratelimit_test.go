@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gotunnel/assets"
 	"gotunnel/internal/delivery/web/handler"
 	mockSetting "gotunnel/internal/usecase/setting/mocks"
+	webassets "gotunnel/web"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,7 +18,7 @@ import (
 
 func TestHandler_RateLimitPage(t *testing.T) {
 	mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/ratelimit", http.NoBody)
 	ctx := context.WithValue(req.Context(), handler.UserRoleKey, int16(0))
@@ -34,13 +34,13 @@ func TestHandler_RateLimitPage(t *testing.T) {
 
 func TestHandler_GetRateLimit(t *testing.T) {
 	mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 	mockSettingUsecase.On("GetAllSettings", mock.Anything).Return(map[string]string{
-		"rate_limit_enabled":          "true",
+		"rate_limit_enabled":         "true",
 		"rate_limit_enabled:user123": "false",
-		"rate_limit_rate":             "150",
-		"rate_limit_burst":            "30",
+		"rate_limit_rate":            "150",
+		"rate_limit_burst":           "30",
 	}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/ratelimit", http.NoBody)
@@ -62,7 +62,7 @@ func TestHandler_GetRateLimit(t *testing.T) {
 
 func TestHandler_UpdateRateLimit_RegularUser(t *testing.T) {
 	mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 	mockSettingUsecase.On("SetSetting", mock.Anything, "rate_limit_enabled:user123", "false").Return(nil)
 
@@ -81,7 +81,7 @@ func TestHandler_UpdateRateLimit_RegularUser(t *testing.T) {
 
 func TestHandler_UpdateRateLimit_AdminUser(t *testing.T) {
 	mockSettingUsecase := new(mockSetting.MockSettingUsecase)
-	h := handler.New(assets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, mockSettingUsecase, "sec", "addr", "wildcard", "gateway", false, 3, "v1.0.0", 100, nil)
 
 	mockSettingUsecase.On("SetSetting", mock.Anything, "rate_limit_enabled", "true").Return(nil)
 	mockSettingUsecase.On("SetSetting", mock.Anything, "rate_limit_rate", "250").Return(nil)

@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gotunnel/assets"
 	"gotunnel/internal/delivery/web/handler"
 	"gotunnel/internal/shared/stats"
+	webassets "gotunnel/web"
 )
 
 func TestStatsPage(t *testing.T) {
 	sc := stats.NewStatsCollector(1 * time.Second)
-	h := handler.New(assets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
 
 	req := httptest.NewRequest(http.MethodGet, "/stats", nil)
 	ctx := context.WithValue(req.Context(), handler.UserRoleKey, int16(1))
@@ -35,7 +35,7 @@ func TestStatsPage(t *testing.T) {
 
 func TestStreamStats(t *testing.T) {
 	sc := stats.NewStatsCollector(10 * time.Millisecond)
-	h := handler.New(assets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
@@ -52,7 +52,7 @@ func TestStreamStats(t *testing.T) {
 }
 
 func TestStreamStats_NoCollector(t *testing.T) {
-	h := handler.New(assets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
@@ -72,7 +72,7 @@ type nonFlusherWriter struct {
 }
 
 func TestStreamStats_NonFlusher(t *testing.T) {
-	h := handler.New(assets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/stats/stream", nil)
 	rec := httptest.NewRecorder()
@@ -94,7 +94,7 @@ func (e *errorFlusherWriter) Flush() {}
 
 func TestStreamStats_WriteError(t *testing.T) {
 	sc := stats.NewStatsCollector(10 * time.Millisecond)
-	h := handler.New(assets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
+	h := handler.New(webassets.EmbeddedFS, nil, nil, nil, "secret", "tunnel.test", "example.com", "gateway.test", false, 3, "v1.0.0", 100, sc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/stats/stream", nil)
 	rec := httptest.NewRecorder()
