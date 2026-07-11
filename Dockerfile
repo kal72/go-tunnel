@@ -41,9 +41,12 @@ RUN printf '#!/bin/sh\nset -e\n./gotunnel-webui &\n./gotunnel-tunnel &\nexec ./g
     && chmod +x /app/start.sh
 
 # Expose ports:
-# 80    -> HTTP-01 ACME challenge
+# 80    -> HTTP-01 ACME challenge & Public HTTP Edge Proxy
 # 443   -> HTTPS publik & Edge Gateway Proxy (semua trafik masuk ke sini)
-EXPOSE 80 443
+# 8080  -> Web UI Dashboard (Internal/Pod access)
+# 8443  -> Internal Gateway Port (Untuk diakses antar-Pod oleh gotunnel-proxy)
+# 9443  -> Internal Tunnel Port (Untuk diakses antar-Pod oleh gotunnel-proxy atau agen langsung)
+EXPOSE 80 443 8080 8443 9443
 
 # Gunakan array form (lebih aman, tidak wrap shell)
 CMD ["./start.sh"]
