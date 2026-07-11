@@ -42,12 +42,36 @@ func NewProxy(env *config.ServerConfig, domainStore domainTunnel.DomainStore, ho
 		p.acmeManager = cert.NewAutocertManager(env.ACMECache, env.ACMEEnv, hostPolicy)
 	}
 
-	// Setup Reverse Proxies
+	// Setup Reverse Proxies with zero-Nagle Transport and 128KB buffer optimization
+	customTransport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			conn, err := dialer.DialContext(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+			netutil.SetTCPNoDelay(conn)
+			return conn, nil
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          1024,
+		MaxIdleConnsPerHost:   1024,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	tunnelTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.GatewayPort))
 	tunnelProxy := httputil.NewSingleHostReverseProxy(tunnelTarget)
+	tunnelProxy.Transport = customTransport
 
 	webuiTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
 	webuiProxy := httputil.NewSingleHostReverseProxy(webuiTarget)
+	webuiProxy.Transport = customTransport
 
 	// Main HTTP Handler
 	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
