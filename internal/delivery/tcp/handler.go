@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -159,12 +160,64 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
 		}
-		resp, err := http.ReadResponse(bufio.NewReader(stream), r)
+		br := bufio.NewReader(stream)
+		resp, err := http.ReadResponse(br, r)
 		if err != nil {
 			http.Error(w, "bad response from agent", http.StatusBadGateway)
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode == http.StatusSwitchingProtocols {
+			hij, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "hijacking not supported for upgrade", http.StatusInternalServerError)
+				return
+			}
+			clientConn, clientBuf, err := hij.Hijack()
+			if err != nil {
+				http.Error(w, "hijack failed", http.StatusInternalServerError)
+				return
+			}
+			netutil.SetTCPNoDelay(clientConn)
+
+			var hdrBuf bytes.Buffer
+			_, _ = fmt.Fprintf(&hdrBuf, "HTTP/1.1 %d %s\r\n", resp.StatusCode, http.StatusText(resp.StatusCode))
+			_ = resp.Header.Write(&hdrBuf)
+			hdrBuf.WriteString("\r\n")
+			if _, err := clientConn.Write(hdrBuf.Bytes()); err != nil {
+				_ = clientConn.Close()
+				return
+			}
+
+			var targetStream io.ReadWriter = stream
+			if br.Buffered() > 0 {
+				peeked, _ := br.Peek(br.Buffered())
+				buf := make([]byte, len(peeked))
+				copy(buf, peeked)
+				targetStream = &bufferedStream{ReadWriter: stream, buf: buf}
+			}
+
+			var sourceConn io.ReadWriter = clientConn
+			if clientBuf != nil && clientBuf.Reader != nil {
+				rBuf := clientBuf.Reader
+				if rBuf.Buffered() > 0 {
+					peeked, _ := rBuf.Peek(rBuf.Buffered())
+					buf := make([]byte, len(peeked))
+					copy(buf, peeked)
+					sourceConn = &bufferedStream{ReadWriter: clientConn, buf: buf}
+				}
+			}
+
+			go func() {
+				_, _ = netutil.CopyBuffer(targetStream, sourceConn)
+				_ = stream.Close()
+			}()
+			_, _ = netutil.CopyBuffer(sourceConn, targetStream)
+			_ = clientConn.Close()
+			return
+		}
+
 		copyHeader(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
@@ -694,4 +747,28 @@ func canonicalHost(hostport string) string {
 		}
 	}
 	return strings.ToLower(hostport)
+}
+
+type bufferedStream struct {
+	io.ReadWriter
+	buf []byte
+}
+
+func (b *bufferedStream) Read(p []byte) (n int, err error) {
+	if len(b.buf) > 0 {
+		n = copy(p, b.buf)
+		b.buf = b.buf[n:]
+		return n, nil
+	}
+	return b.ReadWriter.Read(p)
+}
+
+func (b *bufferedStream) NetConn() net.Conn {
+	if c, ok := b.ReadWriter.(net.Conn); ok {
+		return c
+	}
+	if w, ok := b.ReadWriter.(interface{ NetConn() net.Conn }); ok {
+		return w.NetConn()
+	}
+	return nil
 }
