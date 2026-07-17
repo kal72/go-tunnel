@@ -47,8 +47,8 @@ func (s *TunnelRedisStore) SetTunnel(ctx context.Context, sessionID string, info
 	if err != nil {
 		return err
 	}
-	// Expire after 1 hour if not refreshed
-	err = s.client.Set(ctx, s.prefix+sessionID, data, 1*time.Hour).Err()
+	// Expire after 3 minutes if not refreshed by heartbeat
+	err = s.client.Set(ctx, s.prefix+sessionID, data, 3*time.Minute).Err()
 	if err == nil {
 		_ = s.PublishTunnelEvent(ctx, "update")
 	}
@@ -134,13 +134,13 @@ func (s *TunnelRedisStore) RevokeUserTokens(ctx context.Context, userID string) 
 }
 
 func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain, sessionID string) error {
-	// SET active_domain:<domain> <sessionID> NX EX 24h
+	// SET active_domain:<domain> <sessionID> NX EX 3m
 	// Set the key only if it doesn't exist to guarantee atomic locking.
 	key := "active_domain:" + domain
 	// Expiration is a safety net in case of dirty disconnects. The cleanup normally removes this key.
 	_, err := s.client.SetArgs(ctx, key, sessionID, redis.SetArgs{
 		Mode: "NX",
-		TTL:  24 * time.Hour,
+		TTL:  3 * time.Minute,
 	}).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -152,9 +152,44 @@ func (s *TunnelRedisStore) SetActiveDomain(ctx context.Context, domain, sessionI
 	return nil
 }
 
+func (s *TunnelRedisStore) RefreshActiveDomains(ctx context.Context, domains []string, sessionID string, ttl time.Duration) error {
+	for _, domain := range domains {
+		key := "active_domain:" + domain
+		current, err := s.client.Get(ctx, key).Result()
+		if err == nil && current == sessionID {
+			_ = s.client.Expire(ctx, key, ttl).Err()
+		}
+	}
+	return nil
+}
+
 func (s *TunnelRedisStore) RemoveActiveDomain(ctx context.Context, domain string) error {
 	key := "active_domain:" + domain
 	return s.client.Del(ctx, key).Err()
+}
+
+func (s *TunnelRedisStore) FlushAllTunnelsAndDomains(ctx context.Context) error {
+	tunnelKeys, err := s.client.Keys(ctx, s.prefix+"*").Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return fmt.Errorf("list tunnel keys: %w", err)
+	}
+	if len(tunnelKeys) > 0 {
+		if err := s.client.Del(ctx, tunnelKeys...).Err(); err != nil {
+			return fmt.Errorf("delete tunnel keys: %w", err)
+		}
+	}
+
+	domainKeys, err := s.client.Keys(ctx, "active_domain:*").Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return fmt.Errorf("list active domain keys: %w", err)
+	}
+	if len(domainKeys) > 0 {
+		if err := s.client.Del(ctx, domainKeys...).Err(); err != nil {
+			return fmt.Errorf("delete active domain keys: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *TunnelRedisStore) SetRateLimitSetting(ctx context.Context, username, value string) error {

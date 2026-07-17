@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gotunnel-config
+  namespace: default
+data:
+  GATEWAY_DOMAIN: "gate.example.com"
+  TUNNEL_DOMAIN: "tunnel.example.com"
+  WEBUI_DOMAIN: "app.example.com"
+  GATEWAY_PORT: "8443"
+  TUNNEL_PORT: "9443"
+  WEBUI_PORT: "8080"
+  PROXY_HTTP_PORT: "80"
+  PROXY_HTTPS_PORT: "443"
+  REDIS_ADDR: "gotunnel-redis.default.svc.cluster.local:6379"
+  TUNNEL_TARGET: "http://gotunnel-core.default.svc.cluster.local:8443"
+  WEBUI_TARGET: "http://gotunnel-webui.default.svc.cluster.local:8080"
+  ACME_ENABLE: "false" # Set true to enable Let's Encrypt automated TLS certificates at pod level
+  ACME_ENV: "staging"  # production or staging

@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	clientconfig "gotunnel/internal/client/config"
+	"gotunnel/internal/shared/netutil"
 	"gotunnel/internal/shared/protocol"
 )
 
@@ -110,7 +111,8 @@ func (c *Client) runOnce() error {
 	}
 	defer func() { _ = conn.Close() }()
 
-	sess, err := yamux.Client(conn, nil)
+	netutil.SetTCPNoDelay(conn)
+	sess, err := yamux.Client(conn, netutil.YamuxConfig())
 	if err != nil {
 		return err
 	}
@@ -187,7 +189,7 @@ func (c *Client) handleDataStream(stream *yamux.Stream) {
 	}
 
 	mode := c.modes[hostname]
-	if mode == "tcp" {
+	if mode == "tcp" || mode == "minecraft-proxy" {
 		c.handleTCPStream(stream, target)
 		return
 	}
@@ -284,7 +286,15 @@ func hostOnly(addr string) string {
 	return addr
 }
 
+func formatTarget(target string) string {
+	if !strings.Contains(target, ":") && target != "" {
+		return "127.0.0.1:" + target
+	}
+	return target
+}
+
 func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
+	target = formatTarget(target)
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
@@ -293,17 +303,17 @@ func (c *Client) handleTCPStream(stream *yamux.Stream, target string) {
 	}
 	defer func() { _ = local.Close() }()
 
-	bufA := make([]byte, 32*1024)
-	bufB := make([]byte, 32*1024)
+	netutil.SetTCPNoDelay(local)
 
 	go func() {
-		_, _ = io.CopyBuffer(local, stream, bufA)
+		_, _ = netutil.CopyBuffer(local, stream)
 		_ = local.Close()
 	}()
-	_, _ = io.CopyBuffer(stream, local, bufB)
+	_, _ = netutil.CopyBuffer(stream, local)
 }
 
 func (c *Client) handleHTTPStream(stream *yamux.Stream, target string) {
+	target = formatTarget(target)
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	local, err := dialer.DialContext(context.Background(), "tcp", target)
 	if err != nil {
@@ -313,12 +323,11 @@ func (c *Client) handleHTTPStream(stream *yamux.Stream, target string) {
 	}
 	defer func() { _ = local.Close() }()
 
-	bufA := make([]byte, 32*1024)
-	bufB := make([]byte, 32*1024)
+	netutil.SetTCPNoDelay(local)
 
 	go func() {
-		_, _ = io.CopyBuffer(local, stream, bufA)
+		_, _ = netutil.CopyBuffer(local, stream)
 		_ = local.Close()
 	}()
-	_, _ = io.CopyBuffer(stream, local, bufB)
+	_, _ = netutil.CopyBuffer(stream, local)
 }

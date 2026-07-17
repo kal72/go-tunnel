@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +19,7 @@ import (
 	domainSetting "gotunnel/internal/domain/setting"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	domainUser "gotunnel/internal/domain/user"
+	"gotunnel/internal/shared/netutil"
 	"gotunnel/internal/shared/protocol"
 	"gotunnel/internal/shared/ratelimit"
 	usecaseSetting "gotunnel/internal/usecase/setting"
@@ -151,18 +154,70 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- jika HTTP (default): kirim HTTP request ---
-	if mode != "tcp" {
+	if mode != "tcp" && mode != "minecraft-proxy" {
 		start := time.Now()
 		if err := r.Write(stream); err != nil {
 			http.Error(w, "write req failed", http.StatusBadGateway)
 			return
 		}
-		resp, err := http.ReadResponse(bufio.NewReader(stream), r)
+		br := bufio.NewReader(stream)
+		resp, err := http.ReadResponse(br, r)
 		if err != nil {
 			http.Error(w, "bad response from agent", http.StatusBadGateway)
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode == http.StatusSwitchingProtocols {
+			hij, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "hijacking not supported for upgrade", http.StatusInternalServerError)
+				return
+			}
+			clientConn, clientBuf, err := hij.Hijack()
+			if err != nil {
+				http.Error(w, "hijack failed", http.StatusInternalServerError)
+				return
+			}
+			netutil.SetTCPNoDelay(clientConn)
+
+			var hdrBuf bytes.Buffer
+			_, _ = fmt.Fprintf(&hdrBuf, "HTTP/1.1 %d %s\r\n", resp.StatusCode, http.StatusText(resp.StatusCode))
+			_ = resp.Header.Write(&hdrBuf)
+			hdrBuf.WriteString("\r\n")
+			if _, err := clientConn.Write(hdrBuf.Bytes()); err != nil {
+				_ = clientConn.Close()
+				return
+			}
+
+			var targetStream io.ReadWriter = stream
+			if br.Buffered() > 0 {
+				peeked, _ := br.Peek(br.Buffered())
+				buf := make([]byte, len(peeked))
+				copy(buf, peeked)
+				targetStream = &bufferedStream{ReadWriter: stream, buf: buf}
+			}
+
+			var sourceConn io.ReadWriter = clientConn
+			if clientBuf != nil && clientBuf.Reader != nil {
+				rBuf := clientBuf.Reader
+				if rBuf.Buffered() > 0 {
+					peeked, _ := rBuf.Peek(rBuf.Buffered())
+					buf := make([]byte, len(peeked))
+					copy(buf, peeked)
+					sourceConn = &bufferedStream{ReadWriter: clientConn, buf: buf}
+				}
+			}
+
+			go func() {
+				_, _ = netutil.CopyBuffer(targetStream, sourceConn)
+				_ = stream.Close()
+			}()
+			_, _ = netutil.CopyBuffer(sourceConn, targetStream)
+			_ = clientConn.Close()
+			return
+		}
+
 		copyHeader(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
@@ -196,8 +251,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- jika TCP: relay langsung ---
-	s.logger.Info("new raw TCP tunnel", zap.String("host", host))
+	// --- jika TCP / Minecraft: relay langsung ---
+	s.logger.Info("new raw TCP/Minecraft tunnel", zap.String("host", host), zap.String("mode", mode))
 	hij, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "hijacking not supported", http.StatusInternalServerError)
@@ -208,11 +263,71 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "hijack failed", http.StatusInternalServerError)
 		return
 	}
+	netutil.SetTCPNoDelay(conn)
+
+	if r.Method == "CONNECT" || strings.ToLower(r.Header.Get("Upgrade")) == "tcp" {
+		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
+	}
+
+	if mode == "minecraft-proxy" {
+		clientIP := r.RemoteAddr
+		clientPort := 0
+		if xff := r.Header.Get("X-Real-IP"); xff != "" {
+			clientIP = xff
+			if portStr := r.Header.Get("X-Real-Port"); portStr != "" {
+				if p, err := strconv.Atoi(portStr); err == nil {
+					clientPort = p
+				}
+			}
+		} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			clientIP = strings.Split(xff, ",")[0]
+		}
+
+		clientHost, clientPortStr, _ := net.SplitHostPort(clientIP)
+		if clientHost == "" {
+			clientHost = clientIP
+		} else if clientPort == 0 {
+			if p, err := strconv.Atoi(clientPortStr); err == nil {
+				clientPort = p
+			}
+		}
+
+		if clientPort <= 0 || clientPort > 65535 {
+			if _, remPortStr, remErr := net.SplitHostPort(r.RemoteAddr); remErr == nil {
+				if rp, err := strconv.Atoi(remPortStr); err == nil && rp > 0 && rp <= 65535 {
+					clientPort = rp
+				}
+			}
+			if clientPort <= 0 || clientPort > 65535 {
+				clientPort = 54321
+			}
+		}
+
+		proto := "TCP4"
+		dstIP := "127.0.0.1"
+		if ip := net.ParseIP(clientHost); ip != nil {
+			if ip.To4() != nil {
+				proto = "TCP4"
+				dstIP = "127.0.0.1"
+				clientHost = ip.To4().String()
+			} else if ip.To16() != nil {
+				proto = "TCP6"
+				dstIP = "::1"
+				clientHost = ip.To16().String()
+			}
+		} else {
+			clientHost = "127.0.0.1"
+		}
+
+		proxyLine := fmt.Sprintf("PROXY %s %s %s %d 25565\r\n", proto, clientHost, dstIP, clientPort)
+		_, _ = io.WriteString(stream, proxyLine)
+	}
+
 	go func() {
-		_, _ = io.Copy(stream, conn)
+		_, _ = netutil.CopyBuffer(stream, conn)
 		_ = stream.Close()
 	}()
-	_, _ = io.Copy(conn, stream)
+	_, _ = netutil.CopyBuffer(conn, stream)
 	_ = conn.Close()
 }
 
@@ -231,8 +346,14 @@ func (s *Server) updateState(ts *TunnelSession) {
 		ConnectedAt: ts.Connected,
 		LastPing:    time.Now(),
 	}
-	if err := s.tunnelUsecase.RegisterTunnel(context.Background(), fmt.Sprintf("%p", ts), info); err != nil {
+	sessionID := fmt.Sprintf("%p", ts)
+	if err := s.tunnelUsecase.RegisterTunnel(context.Background(), sessionID, info); err != nil {
 		s.logger.Error("failed to update tunnel state in store", zap.Error(err))
+	}
+	if len(hosts) > 0 {
+		if err := s.tunnelUsecase.RefreshActiveDomains(context.Background(), hosts, sessionID, 3*time.Minute); err != nil {
+			s.logger.Warn("failed to refresh active domains ttl", zap.Error(err))
+		}
 	}
 }
 
@@ -280,7 +401,8 @@ func (s *Server) activeTunnelsForUser(username string) int {
 }
 
 func (s *Server) handleClientConn(conn net.Conn) {
-	session, _ := yamux.Server(conn, nil)
+	netutil.SetTCPNoDelay(conn)
+	session, _ := yamux.Server(conn, netutil.YamuxConfig())
 	ip := conn.RemoteAddr().String()
 	s.logger.Info("new tunnel", zap.String("addr", ip))
 
@@ -522,6 +644,39 @@ func (s *Server) cleanup(ts *TunnelSession) {
 	}
 }
 
+// StartupCleanup purges any stale tunnel sessions and active domain locks from previous server runs.
+func (s *Server) StartupCleanup(ctx context.Context) {
+	if s.tunnelUsecase != nil {
+		s.logger.Info("[edge] performing startup cleanup of stale tunnels and domains")
+		if err := s.tunnelUsecase.FlushAllTunnelsAndDomains(ctx); err != nil {
+			s.logger.Warn("[edge] startup cleanup failed", zap.Error(err))
+		}
+	}
+}
+
+// Shutdown gracefully closes all active tunnel sessions and unregisters them from storage.
+func (s *Server) Shutdown(ctx context.Context) {
+	s.mu.Lock()
+	sessions := make([]*TunnelSession, 0, len(s.hostToSes))
+	for _, ts := range s.hostToSes {
+		if ts != nil {
+			sessions = append(sessions, ts)
+		}
+	}
+	s.mu.Unlock()
+
+	for _, ts := range sessions {
+		if ts.Session != nil {
+			_ = ts.Session.Close()
+		}
+		s.cleanup(ts)
+	}
+
+	if s.tunnelUsecase != nil {
+		_ = s.tunnelUsecase.FlushAllTunnelsAndDomains(ctx)
+	}
+}
+
 func (s *Server) sessionForHost(host string) *TunnelSession {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -592,4 +747,28 @@ func canonicalHost(hostport string) string {
 		}
 	}
 	return strings.ToLower(hostport)
+}
+
+type bufferedStream struct {
+	io.ReadWriter
+	buf []byte
+}
+
+func (b *bufferedStream) Read(p []byte) (n int, err error) {
+	if len(b.buf) > 0 {
+		n = copy(p, b.buf)
+		b.buf = b.buf[n:]
+		return n, nil
+	}
+	return b.ReadWriter.Read(p)
+}
+
+func (b *bufferedStream) NetConn() net.Conn {
+	if c, ok := b.ReadWriter.(net.Conn); ok {
+		return c
+	}
+	if w, ok := b.ReadWriter.(interface{ NetConn() net.Conn }); ok {
+		return w.NetConn()
+	}
+	return nil
 }

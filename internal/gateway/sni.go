@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 )
 
 // peekSNI reads from the connection just enough to extract the SNI hostname
@@ -13,7 +14,6 @@ func peekSNI(conn net.Conn) (string, net.Conn, error) {
 	// We only peek, so we don't consume the actual connection data for the next handler
 	// However, net.Conn doesn't have Peek. We must read and buffer.
 	// Since we need to return a conn that replays these bytes, we use a wrapper.
-
 	const recordHeaderLen = 5
 	buf := make([]byte, recordHeaderLen)
 	_, err := io.ReadFull(conn, buf)
@@ -115,6 +115,105 @@ func peekSNI(conn net.Conn) (string, net.Conn, error) {
 	return "", &bufferedConn{Conn: conn, buf: fullBuf}, errors.New("SNI not found")
 }
 
+// peekMinecraft reads from the connection just enough to check if it's a Minecraft
+// Java Edition Handshake packet (Packet ID 0x00) and extracts the target hostname.
+func peekMinecraft(conn net.Conn) (string, net.Conn, error) {
+	const maxHeaderLen = 512
+	buf := make([]byte, maxHeaderLen)
+	n, err := conn.Read(buf)
+	if err != nil && n == 0 {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, err
+	}
+
+	// Helper to decode VarInt from buffer
+	readVarInt := func(data []byte) (int, int, error) {
+		var num int
+		var shift uint
+		for i, b := range data {
+			if shift >= 35 {
+				return 0, 0, errors.New("varint too big")
+			}
+			num |= int(b&0x7F) << shift
+			if b&0x80 == 0 {
+				return num, i + 1, nil
+			}
+			shift += 7
+		}
+		return 0, 0, errors.New("incomplete varint")
+	}
+
+	for n < 5 && err == nil {
+		var more int
+		more, err = conn.Read(buf[n:])
+		if more > 0 {
+			n += more
+		}
+		if err != nil && n < 3 {
+			return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("packet too short for Minecraft handshake")
+		}
+	}
+
+	pktLen, posLen, err := readVarInt(buf[:n])
+	if err != nil || pktLen < 3 || pktLen > maxHeaderLen*2 {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("not a valid Minecraft packet length")
+	}
+
+	totalNeeded := posLen + pktLen
+	if totalNeeded > maxHeaderLen {
+		totalNeeded = maxHeaderLen
+	}
+
+	for n < totalNeeded && err == nil {
+		var more int
+		more, err = conn.Read(buf[n:totalNeeded])
+		if more > 0 {
+			n += more
+		}
+	}
+	if n < totalNeeded {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("truncated Minecraft packet buffer")
+	}
+
+	// Read Packet ID (must be 0x00 for Handshake)
+	pktID, posID, err := readVarInt(buf[posLen:n])
+	if err != nil || pktID != 0x00 {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("not a Minecraft Handshake packet (ID != 0x00)")
+	}
+
+	// Read Protocol Version (e.g., 47 to 767+)
+	_, posProto, err := readVarInt(buf[posLen+posID : n])
+	if err != nil {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("invalid Minecraft protocol version")
+	}
+
+	// Read Server Address String (VarInt length + string bytes)
+	offset := posLen + posID + posProto
+	if offset >= n {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("buffer truncated before Server Address")
+	}
+
+	strLen, posStr, err := readVarInt(buf[offset:n])
+	if err != nil || strLen <= 0 || offset+posStr+strLen > n {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("invalid Minecraft Server Address string")
+	}
+
+	rawHost := string(buf[offset+posStr : offset+posStr+strLen])
+	// Clean rawHost: remove FML/Forge null terminators and trailing port if present
+	host := strings.Split(rawHost, "\x00")[0]
+	host = strings.TrimSpace(host)
+	if strings.Contains(host, ":") {
+		host = strings.Split(host, ":")[0]
+	}
+	host = strings.ToLower(host)
+
+	// Validate basic domain format
+	if host == "" || !strings.Contains(host, ".") {
+		return "", &bufferedConn{Conn: conn, buf: buf[:n]}, errors.New("extracted Minecraft Server Address is not a valid hostname")
+	}
+
+	return host, &bufferedConn{Conn: conn, buf: buf[:n]}, nil
+}
+
 // bufferedConn wraps a net.Conn and replays buffered data first.
 type bufferedConn struct {
 	net.Conn
@@ -128,6 +227,10 @@ func (b *bufferedConn) Read(p []byte) (n int, err error) {
 		return n, nil
 	}
 	return b.Conn.Read(p)
+}
+
+func (b *bufferedConn) NetConn() net.Conn {
+	return b.Conn
 }
 
 // ChanListener allows passing accepted connections via a channel.

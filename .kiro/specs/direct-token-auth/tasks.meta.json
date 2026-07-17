@@ -1,0 +1,1110 @@
+{
+  "pbtResults": {
+    "7.6 Write property test for expiration date validation (Property 3)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783675031335
+    },
+    "7.7 Write property test for revoked key auth failure (Property 4)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783675124464
+    },
+    "7.5 Write property test for name validation rejection (Property 2)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783675312071
+    },
+    "7.4 Write property test for API key format validity (Property 1)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783675423545
+    },
+    "7.8 Write property test for expired key auth failure (Property 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783675617435
+    },
+    "9.4 Write property test for user state change cascade (Property 8)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783676221818
+    },
+    "10.8 Write property test for ownership-based revocation (Property 7)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783681096677
+    },
+    "10.7 Write property test for key hash exclusion (Property 6)": {
+      "status": "failed",
+      "failingExample": "Test \"ListAPIKeys never exposes KeyHash in response (regular user)\" failed:\n- ARG_0: userID = d0218c54-a1a2-a5a5-6063-87ce1820d8c3\n- ARG_1: keys with populated KeyHash values (e.g., \"13ed9a75769eb3683ed806036c1b1be5f5dd54a872c7854a3a73b3f91a5e60f2\")\n- Error: Key at index 0 has non-empty KeyHash (expected empty)\n\nTest \"ListAPIKeys never exposes KeyHash in response (admin user)\" failed:\n- ARG_0: userID = 5a3f96e3-fa87-8c10-d430-605973252377\n- ARG_1: keys with populated KeyHash (e.g., \"b01b7216a741960ad90e66ef3cea802d04036fb456202471eeda0e16793a081c\")\n- Error: Admin view: Key at index 0 has non-empty KeyHash (expected empty)\n\nRoot Cause: The ListAPIKeys method in auth_usecase.go directly returns keys from the repository without clearing the KeyHash field. The implementation needs to be fixed to sanitize KeyHash before returning.",
+      "lastRunTimestamp": 1783681097561
+    },
+    "14.7 Write property test for CLI token format validation (Property 11)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783681997440
+    },
+    "15.1 Write property test for token routing (Property 10)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783681997782
+    },
+    "15.2 Write property test for valid API key returns correct user (Property 9)": {
+      "status": "passed",
+      "lastRunTimestamp": 1783682048399
+    }
+  },
+  "executionHistory": {
+    "1.1 Create database migration for api_keys table": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314102
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654326890
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654446931
+      }
+    ],
+    "2.1 Create APIKey entity": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314155
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654453921
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654680189
+      }
+    ],
+    "2.2 Create APIKeyRepository interface": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314198
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654454355
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654680892
+      }
+    ],
+    "2.3 Write unit tests for APIKey entity methods": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314220
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654687711
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654992542
+      }
+    ],
+    "3.1 Create PostgreSQL repository implementation": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314236
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654688429
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654993387
+      }
+    ],
+    "3.2 Write unit tests for PostgreSQL repository": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314257
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654999689
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783655206478
+      }
+    ],
+    "4.1 Add GetUserByID to UserRepository interface": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314275
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654689257
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654994219
+      }
+    ],
+    "4.2 Implement GetUserByID in PostgreSQL repository": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314295
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783655000449
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783655207383
+      }
+    ],
+    "4.3 Regenerate UserRepository mock": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314314
+      },
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783655213868
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783666029580
+      }
+    ],
+    "5. Checkpoint - Ensure domain and infrastructure layers compile": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314338
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783666035917
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783668311886
+      }
+    ],
+    "6.1 Add API key constants and helper functions": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314358
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783668316704
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783670128199
+      }
+    ],
+    "6.2 Extend AuthUsecase interface with API key methods": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314383
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783668317588
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783670128706
+      }
+    ],
+    "6.3 Update authUsecase struct with apiKeyRepo dependency": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314402
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783670134050
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783671166128
+      }
+    ],
+    "6.4 Implement CreateAPIKey method": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314421
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783671173813
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672047120
+      }
+    ],
+    "6.5 Implement ListAPIKeys method": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314442
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783671171511
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672047477
+      }
+    ],
+    "6.6 Implement RevokeAPIKey method": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314462
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783671173068
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672048225
+      }
+    ],
+    "6.7 Implement GetAPIKeyByID method": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314480
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783671172294
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672048964
+      }
+    ],
+    "6.8 Write unit tests for CreateAPIKey": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314499
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672055323
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674110218
+      }
+    ],
+    "6.9 Write unit tests for RevokeAPIKey": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314518
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672055916
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674108342
+      }
+    ],
+    "7.1 Implement verifyAPIKey internal method": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314537
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783672054356
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674107560
+      }
+    ],
+    "7.2 Modify VerifyToken to route based on token prefix": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314562
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674115688
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674643618
+      }
+    ],
+    "7.3 Write unit tests for verifyAPIKey": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314580
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674650043
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675441014
+      }
+    ],
+    "7.4 Write property test for API key format validity (Property 1)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314597
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674650859
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675441736
+      }
+    ],
+    "7.5 Write property test for name validation rejection (Property 2)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314618
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674651647
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675442517
+      }
+    ],
+    "7.6 Write property test for expiration date validation (Property 3)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314637
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674652372
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675443369
+      }
+    ],
+    "7.7 Write property test for revoked key auth failure (Property 4)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314654
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674653310
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675444208
+      }
+    ],
+    "7.8 Write property test for expired key auth failure (Property 5)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314671
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675449957
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675635129
+      }
+    ],
+    "8. Checkpoint - Ensure usecase layer tests pass": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314693
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675653394
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675735836
+      }
+    ],
+    "9.1 Update user deletion to revoke API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314725
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675747301
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676033332
+      }
+    ],
+    "9.2 Update user deactivation to revoke API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314742
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675748162
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676033959
+      }
+    ],
+    "9.3 Update RevokeUserTokens to include API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314759
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675746509
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676034797
+      }
+    ],
+    "9.4 Write property test for user state change cascade (Property 8)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314776
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676041959
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676241793
+      }
+    ],
+    "10.1 Create TokenHandler struct": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314792
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676042442
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676242451
+      }
+    ],
+    "10.2 Implement TokensPage handler": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314809
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676249144
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680126506
+      }
+    ],
+    "10.3 Implement ListTokens API handler": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314825
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676249969
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680124982
+      }
+    ],
+    "10.4 Implement CreateToken API handler": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314842
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676250503
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680127264
+      }
+    ],
+    "10.5 Implement RevokeToken API handler": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314860
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676248511
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680125811
+      }
+    ],
+    "10.6 Write unit tests for TokenHandler": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314877
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680181259
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680970903
+      }
+    ],
+    "10.7 Write property test for key hash exclusion (Property 6)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314894
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680182006
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681128367
+      }
+    ],
+    "10.8 Write property test for ownership-based revocation (Property 7)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314911
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680182801
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681128673
+      }
+    ],
+    "11.1 Register token routes in router": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314930
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680183568
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680972000
+      }
+    ],
+    "11.2 Update WebUI DI wiring": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314952
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680184313
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680970416
+      }
+    ],
+    "11.3 Update Tunnel DI wiring": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314969
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783680185059
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681125064
+      }
+    ],
+    "12.1 Create tokens.html template": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654314986
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681258230
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681430452
+      }
+    ],
+    "12.2 Implement token creation modal": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315003
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681466853
+      }
+    ],
+    "12.3 Implement plaintext key display modal": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315024
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681467665
+      }
+    ],
+    "12.4 Add navigation link to tokens page": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315042
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681468290
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681581684
+      }
+    ],
+    "13. Checkpoint - Ensure Web UI works end-to-end": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315061
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682127581
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682389827
+      }
+    ],
+    "14.1 Add --token flag to CLI client": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315081
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681603176
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681816305
+      }
+    ],
+    "14.2 Implement GOTUNNEL_TOKEN environment variable support": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315100
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681602911
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681816685
+      }
+    ],
+    "14.3 Implement token format validation": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315118
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681834536
+      }
+    ],
+    "14.4 Implement token precedence logic": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315135
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681835213
+      }
+    ],
+    "14.5 Update Client struct to accept token override": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315153
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681852206
+      }
+    ],
+    "14.6 Handle authentication failure exit": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315171
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681852962
+      }
+    ],
+    "14.7 Write property test for CLI token format validation (Property 11)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315191
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681869316
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682071269
+      }
+    ],
+    "15.1 Write property test for token routing (Property 10)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315210
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681870047
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682071762
+      }
+    ],
+    "15.2 Write property test for valid API key returns correct user (Property 9)": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315227
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681870979
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682072539
+      }
+    ],
+    "16.1 Apply migration to development database": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315253
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682103349
+      }
+    ],
+    "17. Final checkpoint - Complete integration testing": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654315282
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682407138
+      },
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682634181
+      }
+    ],
+    "1. Set up database schema for API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654446969
+      }
+    ],
+    "2. Implement domain layer for API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783654992570
+      }
+    ],
+    "3. Implement infrastructure layer for API keys": [
+      {
+        "executionId": "bfd2f8d7-7e78-4628-b006-86d563fbf929",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783655206508
+      }
+    ],
+    "4. Extend UserRepository with GetUserByID": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783666029609
+      }
+    ],
+    "6. Implement usecase layer for API key management": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783674110247
+      }
+    ],
+    "7. Implement API key authentication in VerifyToken": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783675635152
+      }
+    ],
+    "9. Implement user cascade revocation": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783676241833
+      }
+    ],
+    "11. Register Web API routes and update DI": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681125106
+      }
+    ],
+    "10. Implement Web API handlers for token management": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681128708
+      }
+    ],
+    "12. Create Web UI template for token management": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783681581706
+      }
+    ],
+    "14. Implement CLI client API key support": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682071292
+      }
+    ],
+    "15. Implement token routing in tunnel server": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682072573
+      }
+    ],
+    "16. Run database migration": [
+      {
+        "executionId": "a4c6a111-34b3-4279-87ab-29a4c32d03cd",
+        "chatSessionId": "sess_cbe899fc-9ad5-4ed1-a5bf-0d89aa928f84",
+        "timestamp": 1783682103403
+      }
+    ]
+  }
+}

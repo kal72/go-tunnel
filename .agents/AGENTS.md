@@ -81,8 +81,20 @@ git log -1 --pretty=format:"%B" | grep -E "^(feat|fix|docs|style|refactor|perf|t
 ```
 
 ## Changelog Policy
-- **Record Changes**: Whenever a new feature (`feat`), improvement (`improvement`), or bug fix (`fix`) is completed, the agent **MUST** update `CHANGELOG.md` in the project root.
-- Add the title and brief description under the `## [Unreleased]` section categorized by `### Added`, `### Changed`, or `### Fixed`. This ensures all changes are properly tracked for future release changelogs.
+- **Record Changes**: Whenever a new feature (`feat`), improvement (`improvement`), bug fix (`fix`), or security fix is completed, the agent **MUST** update `CHANGELOG.md` in the project root under the `## [Unreleased]` section.
+- **Categorization & Filtering Rules**:
+  - **`### Added` (New Features)**: Must always be recorded. Every new feature (`feat`) introduced to the project must be documented cleanly.
+  - **`### Changed` (Existing Feature Improvements)**: Only record modifications, refactorings, or enhancements made to **pre-existing features from previous released versions**. If an iterative change or improvement is made to a brand new feature introduced within the current `[Unreleased]` cycle, **DO NOT** record it under `### Changed` (it is considered part of the initial `### Added` implementation).
+  - **Security Fixes/Enhancements**: Must **ALWAYS** be recorded (under `### Fixed` or `### Added` as appropriate) to ensure full transparency regarding security posture.
+  - **CI/CD, Tooling & Documentation Exclusions**: **DO NOT** record CI/CD (`ci`), GitHub Actions workflows, automated build pipeline adjustments, internal automation scripts, or pure documentation updates/additions (`docs/`, markdown guides, or `docs:` commits without functional code changes) in `CHANGELOG.md`. Keep the changelog strictly focused on functional, user-facing, and runtime architectural code changes.
 
 ## Release Documentation Policy
 - **Concise & Categorized Release Notes**: When generating release documents or GitHub release notes, keep the output **as concise as possible** using concise 1-line bullet points. Exactly categorize changes under clear sections: `## 🚀 New Features`, `## ⚡ Enhancements & Changes`, and `## 🐛 Bug Fixes & Security`. Avoid lengthy multi-paragraph explanations.
+- **Upgrading Section**: Always append an Upgrading section at the very end of any release document or GitHub release note using the exact format:
+  ```markdown
+  ## 📦 Upgrading
+  - **Server Image**: `docker pull ghcr.io/kal72/gotunnel:<version>`
+  - **CLI Binary**: Run `gotunnel update` or download binaries directly from the Web UI (`/downloads`).
+  
+  For full commit history, view the [Full Changelog](https://github.com/kal72/go-tunnel/compare/<prev_version>...<version>).
+  ```

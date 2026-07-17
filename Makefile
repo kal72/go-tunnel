@@ -24,9 +24,10 @@ DB_PORT ?= 5432
 DB_USER ?= postgres
 DB_PASS ?= postgres
 DB_NAME ?= gotunnel
+DB_SSLMODE ?= disable
 
 # DB parameters
-DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
+DB_URL ?= "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)"
 
 SERVER_URL ?= http://localhost:8080
 VERSION ?= dev

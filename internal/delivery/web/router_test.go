@@ -19,8 +19,9 @@ func TestSetupRouter(t *testing.T) {
 	authH := &handler.AuthHandler{}
 	userH := &handler.UserHandler{}
 	cliH := &handler.CLIHandler{}
+	tokenH := &handler.TokenHandler{}
 
-	r := SetupRouter(h, authH, userH, cliH, []string{"*"}, http.Dir("."))
+	r := SetupRouter(h, authH, userH, cliH, tokenH, []string{"*"}, http.Dir("."))
 	assert.NotNil(t, r)
 }
 

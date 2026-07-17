@@ -1,10 +1,10 @@
 package gateway
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -16,6 +16,7 @@ import (
 	"gotunnel/internal/config"
 	domainTunnel "gotunnel/internal/domain/tunnel"
 	"gotunnel/internal/infrastructure/cert"
+	"gotunnel/internal/shared/netutil"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/acme/autocert"
@@ -41,12 +42,36 @@ func NewProxy(env *config.ServerConfig, domainStore domainTunnel.DomainStore, ho
 		p.acmeManager = cert.NewAutocertManager(env.ACMECache, env.ACMEEnv, hostPolicy)
 	}
 
-	// Setup Reverse Proxies
+	// Setup Reverse Proxies with zero-Nagle Transport and 128KB buffer optimization
+	customTransport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			conn, err := dialer.DialContext(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+			netutil.SetTCPNoDelay(conn)
+			return conn, nil
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          1024,
+		MaxIdleConnsPerHost:   1024,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	tunnelTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.GatewayPort))
 	tunnelProxy := httputil.NewSingleHostReverseProxy(tunnelTarget)
+	tunnelProxy.Transport = customTransport
 
 	webuiTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WebUIPort))
 	webuiProxy := httputil.NewSingleHostReverseProxy(webuiTarget)
+	webuiProxy.Transport = customTransport
 
 	// Main HTTP Handler
 	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -182,13 +207,67 @@ func (p *ProxyServer) Run(ctx context.Context) error {
 }
 
 func (p *ProxyServer) handleConnection(conn net.Conn) {
+	netutil.SetTCPNoDelay(conn)
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	sni, bConn, err := peekSNI(conn)
 	_ = bConn.SetReadDeadline(time.Time{}) // reset deadline
 
 	if err != nil {
-		// Could not read SNI, maybe plain HTTP or malformed. We let HTTPS server handle it to throw error.
-		// Or if plain HTTP was sent to 443, it will fail TLS handshake.
+		// Could not read SNI, check if it is a Minecraft Handshake packet
+		_ = bConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		mcHost, mcConn, mcErr := peekMinecraft(bConn)
+		_ = mcConn.SetReadDeadline(time.Time{}) // reset deadline
+
+		if mcErr == nil && mcHost != "" {
+			log.Printf("[proxy] Minecraft Handshake detected for host %s, routing to gateway :%d", mcHost, p.cfg.GatewayPort)
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			gwConn, dialErr := dialer.DialContext(context.Background(), "tcp", fmt.Sprintf("127.0.0.1:%d", p.cfg.GatewayPort))
+			if dialErr != nil {
+				log.Printf("[proxy] gateway dial error for Minecraft host %s: %v", mcHost, dialErr)
+				_ = mcConn.Close()
+				return
+			}
+			netutil.SetTCPNoDelay(gwConn)
+			clientAddr := mcConn.RemoteAddr().String()
+			clientIP, clientPortStr, errSplit := net.SplitHostPort(clientAddr)
+			if errSplit != nil {
+				clientIP = clientAddr
+				clientPortStr = "54321"
+			}
+			reqStr := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nX-Real-IP: %s\r\nX-Real-Port: %s\r\nX-Forwarded-For: %s\r\n\r\n", mcHost, mcHost, clientIP, clientPortStr, clientIP)
+			if _, wErr := gwConn.Write([]byte(reqStr)); wErr != nil {
+				log.Printf("[proxy] failed to send upgrade to gateway for %s: %v", mcHost, wErr)
+				_ = gwConn.Close()
+				_ = mcConn.Close()
+				return
+			}
+			br := bufio.NewReader(gwConn)
+			resp, rErr := http.ReadResponse(br, &http.Request{Method: "CONNECT"})
+			if resp != nil && resp.Body != nil {
+				_ = resp.Body.Close()
+			}
+			if rErr != nil || (resp.StatusCode != http.StatusSwitchingProtocols && resp.StatusCode != http.StatusOK) {
+				if resp != nil {
+					log.Printf("[proxy] gateway rejected Minecraft host %s with status %d", mcHost, resp.StatusCode)
+				} else {
+					log.Printf("[proxy] failed to read upgrade response for %s: %v", mcHost, rErr)
+				}
+				_ = gwConn.Close()
+				_ = mcConn.Close()
+				return
+			}
+			targetConn := gwConn
+			if br.Buffered() > 0 {
+				bufferedData, _ := br.Peek(br.Buffered())
+				bufCopy := make([]byte, len(bufferedData))
+				copy(bufCopy, bufferedData)
+				targetConn = &bufferedConn{Conn: gwConn, buf: bufCopy}
+			}
+			go proxyConn(mcConn, targetConn)
+			return
+		}
+
+		// Not TLS and not Minecraft, let HTTPS server handle it to throw error.
 		tlsConn := tls.Server(bConn, p.httpSrv.TLSConfig)
 		p.chanLn.SendConn(tlsConn)
 		return
@@ -204,6 +283,7 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 			_ = bConn.Close()
 			return
 		}
+		netutil.SetTCPNoDelay(target)
 		go proxyConn(bConn, target)
 		return
 	}
@@ -214,15 +294,17 @@ func (p *ProxyServer) handleConnection(conn net.Conn) {
 }
 
 func proxyConn(src, dst net.Conn) {
+	netutil.SetTCPNoDelay(src)
+	netutil.SetTCPNoDelay(dst)
 	defer func() { _ = src.Close() }()
 	defer func() { _ = dst.Close() }()
 	errc := make(chan error, 1)
 	go func() {
-		_, err := io.Copy(src, dst)
+		_, err := netutil.CopyBuffer(src, dst)
 		errc <- err
 	}()
 	go func() {
-		_, err := io.Copy(dst, src)
+		_, err := netutil.CopyBuffer(dst, src)
 		errc <- err
 	}()
 	<-errc

@@ -55,6 +55,11 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 	tunnelTLS.MinVersion = tls.VersionTLS12
 	tunnelAddr := fmt.Sprintf("0.0.0.0:%d", a.cfg.TunnelPort)
 
+	// Perform startup cleanup of any stale tunnels/domains right before accepting new connections
+	if a.tunnelSrv != nil {
+		a.tunnelSrv.StartupCleanup(ctx)
+	}
+
 	// Start TCP Tunnel listener
 	tunnelLn, err := a.tunnelSrv.ListenTunnelTLS(tunnelAddr, tunnelTLS)
 	if err != nil {
@@ -72,9 +77,16 @@ func (a *TunnelApp) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
+		log.Println("[tunnel] Gracefully shutting down server and cleaning up active tunnels...")
+		if a.tunnelSrv != nil {
+			a.tunnelSrv.Shutdown(context.Background())
+		}
 		_ = a.httpSrv.Shutdown(context.Background())
 		return nil
 	case err := <-errCh:
+		if a.tunnelSrv != nil {
+			a.tunnelSrv.Shutdown(context.Background())
+		}
 		return err
 	}
 }
@@ -106,7 +118,8 @@ func BuildTunnelApp(env *config.ServerConfig) (*TunnelApp, func(), error) {
 
 	// Usecases
 	tunnelUsecase := usecaseTunnel.NewTunnelUsecase(tunnelStore, domainStore)
-	authUsecase := usecaseUser.NewAuthUsecase(userRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
+	apiKeyRepo := postgresrepo.NewAPIKeyRepository(db)
+	authUsecase := usecaseUser.NewAuthUsecase(userRepo, apiKeyRepo, tunnelStore, env.JWTSecret, env.WebJWTExpireHours, env.CliJWTExpireHours)
 	settingUsecase := usecaseSetting.NewSettingUsecase(postgresrepo.NewSettingRepository(db))
 
 	// Handlers

@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -184,6 +185,7 @@ func TestUpdateState(t *testing.T) {
 	srv := &Server{logger: zap.NewNop(), tunnelUsecase: mockTun}
 
 	mockTun.On("RegisterTunnel", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	mockTun.On("RefreshActiveDomains", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	srv.updateState(&TunnelSession{Hostnames: map[string]struct{}{"h1.com": {}}})
 
 	mockTun.On("RegisterTunnel", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("redis err")).Once()
@@ -556,6 +558,7 @@ func TestHandleClientConn_ErrorsAndSuccess(t *testing.T) {
 	mockTun.On("IsDomainAllowed", mock.Anything, "valid.com", testUser.ID, testUser.Role).Return(true, nil).Once()
 	mockTun.On("SetActiveDomain", mock.Anything, "valid.com", mock.Anything).Return(nil).Once()
 	mockTun.On("RegisterTunnel", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	mockTun.On("RefreshActiveDomains", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	mockTun.On("RemoveActiveDomain", mock.Anything, "valid.com").Return(nil).Maybe()
 	mockTun.On("UnregisterTunnel", mock.Anything, mock.Anything).Return(nil).Maybe()
 	mockTun.On("DeleteRateLimitSetting", mock.Anything, "john").Return(nil).Maybe()
@@ -888,6 +891,7 @@ func TestHandleClientConn_AdditionalBranches(t *testing.T) {
 	mockTun.On("IsDomainAllowed", mock.Anything, "hb.com", mock.Anything, mock.Anything).Return(true, nil).Maybe()
 	mockTun.On("SetActiveDomain", mock.Anything, "hb.com", mock.Anything).Return(nil).Maybe()
 	mockTun.On("RegisterTunnel", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockTun.On("RefreshActiveDomains", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	mockTun.On("RemoveActiveDomain", mock.Anything, "hb.com").Return(nil).Maybe()
 	mockTun.On("UnregisterTunnel", mock.Anything, mock.Anything).Return(nil).Maybe()
 
@@ -1108,4 +1112,103 @@ func TestServeHTTP_RateLimitSettingAndWriteError(t *testing.T) {
 		srv.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusBadGateway, rec.Code)
 	})
+}
+
+func TestServeHTTP_MinecraftProxy_ProxyProtocol(t *testing.T) {
+	agentSess, srvSess, clean := makeYamuxPair()
+	defer clean()
+
+	mockSet := new(mockSetting.MockSettingUsecase)
+	mockSet.On("GetRateLimitConfig", mock.Anything).Return(domainSetting.RateLimitConfig{Enabled: false, Rate: 100, Burst: 10}).Maybe()
+
+	srv := &Server{
+		logger:         zap.NewNop(),
+		settingUsecase: mockSet,
+		hostToSes: map[string]*TunnelSession{
+			"mcproxy.com": {Session: srvSess, Modes: map[string]string{"mcproxy.com": "minecraft-proxy"}},
+		},
+	}
+
+	receivedCh := make(chan string, 1)
+	go func() {
+		stream, err := agentSess.AcceptStream()
+		if err == nil {
+			hostname, _ := protocol.ReadDataHeader(stream)
+			buf := make([]byte, 1024)
+			n, _ := stream.Read(buf)
+			_ = stream.Close()
+			receivedCh <- hostname + "|" + string(buf[:n])
+		}
+	}()
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	go func() {
+		_, _ = io.Copy(io.Discard, clientConn)
+	}()
+
+	rec := &mockHijacker{
+		ResponseWriter: httptest.NewRecorder(),
+		conn:           serverConn,
+	}
+
+	req := httptest.NewRequest(http.MethodConnect, "http://mcproxy.com/", http.NoBody)
+	req.Host = "mcproxy.com"
+	req.Header.Set("X-Real-IP", "198.51.100.25")
+	req.Header.Set("X-Real-Port", "54321")
+
+	go func() {
+		srv.ServeHTTP(rec, req)
+	}()
+
+	select {
+	case res := <-receivedCh:
+		parts := strings.SplitN(res, "|", 2)
+		assert.Equal(t, "mcproxy.com", parts[0])
+		assert.Contains(t, parts[1], "PROXY TCP4 198.51.100.25 127.0.0.1 54321 25565\r\n")
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for stream data")
+	}
+}
+
+func TestServer_StartupCleanup(t *testing.T) {
+	mockTun := new(mockTunnel.MockTunnelUsecase)
+	srv := &Server{
+		logger:        zap.NewNop(),
+		tunnelUsecase: mockTun,
+	}
+
+	mockTun.On("FlushAllTunnelsAndDomains", mock.Anything).Return(nil).Once()
+	srv.StartupCleanup(context.Background())
+	mockTun.AssertExpectations(t)
+}
+
+func TestServer_Shutdown(t *testing.T) {
+	mockTun := new(mockTunnel.MockTunnelUsecase)
+	mockReg := new(mockRegistry.MockHostRegistry)
+	srv := &Server{
+		logger:        zap.NewNop(),
+		tunnelUsecase: mockTun,
+		hostRegistry:  mockReg,
+		hostToSes:     make(map[string]*TunnelSession),
+	}
+
+	ts := &TunnelSession{
+		Username:  "user1",
+		Hostnames: map[string]struct{}{"h1.com": {}},
+		Modes:     map[string]string{"h1.com": "http"},
+	}
+	srv.hostToSes["h1.com"] = ts
+
+	mockReg.On("Unregister", "h1.com").Return(true).Once()
+	mockTun.On("RemoveActiveDomain", mock.Anything, "h1.com").Return(nil).Once()
+	mockTun.On("UnregisterTunnel", mock.Anything, mock.Anything).Return(nil).Once()
+	mockTun.On("DeleteRateLimitSetting", mock.Anything, "user1").Return(nil).Maybe()
+	mockTun.On("FlushAllTunnelsAndDomains", mock.Anything).Return(nil).Once()
+
+	srv.Shutdown(context.Background())
+	assert.Empty(t, srv.hostToSes)
+	mockTun.AssertExpectations(t)
 }

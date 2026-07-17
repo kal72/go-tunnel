@@ -9,11 +9,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gotunnel/assets"
 	"gotunnel/internal/delivery/web/handler"
 	domainUser "gotunnel/internal/domain/user"
 	mockSetting "gotunnel/internal/usecase/setting/mocks"
 	mockUser "gotunnel/internal/usecase/user/mocks"
+	webassets "gotunnel/web"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -73,7 +73,7 @@ func TestUserHandler_AdminMiddleware(t *testing.T) {
 func TestUserHandler_UsersPage(t *testing.T) {
 	mockAuth := new(mockUser.MockAuthUsecase)
 	mockSetting := new(mockSetting.MockSettingUsecase)
-	h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, mockSetting)
+	h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, mockSetting)
 
 	req := httptest.NewRequest(http.MethodGet, "/users", http.NoBody)
 	ctx := context.WithValue(req.Context(), handler.UserRoleKey, int16(1))
@@ -115,7 +115,7 @@ func TestUserHandler_ListUsers(t *testing.T) {
 			mockAuth := new(mockUser.MockAuthUsecase)
 			mockAuth.On("ListUsers", mock.Anything).Return(tt.mockReturn, tt.mockErr)
 
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, nil)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, nil)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/users", http.NoBody)
 			rec := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockAuth, mockSet)
 			}
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, mockSet)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, mockSet)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewBufferString(tt.body))
 			rec := httptest.NewRecorder()
@@ -249,7 +249,7 @@ func TestUserHandler_UpdateStatus(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockAuth)
 			}
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, nil)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, nil)
 
 			req := httptest.NewRequest(http.MethodPut, "/api/users/"+tt.idParam+"/status", bytes.NewBufferString(tt.body))
 			req = setURLParam(req, "id", tt.idParam)
@@ -311,7 +311,7 @@ func TestUserHandler_UpdatePassword(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockAuth)
 			}
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, nil)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, nil)
 
 			req := httptest.NewRequest(http.MethodPut, "/api/users/"+tt.idParam+"/password", bytes.NewBufferString(tt.body))
 			req = setURLParam(req, "id", tt.idParam)
@@ -362,7 +362,7 @@ func TestUserHandler_DeleteUser(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockAuth)
 			}
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, nil)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, nil)
 
 			req := httptest.NewRequest(http.MethodDelete, "/api/users/"+tt.idParam, http.NoBody)
 			req = setURLParam(req, "id", tt.idParam)
@@ -413,7 +413,7 @@ func TestUserHandler_RevokeTokens(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockAuth)
 			}
-			h := handler.NewUserHandler(assets.EmbeddedFS, mockAuth, nil)
+			h := handler.NewUserHandler(webassets.EmbeddedFS, mockAuth, nil)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/users/"+tt.idParam+"/revoke-tokens", http.NoBody)
 			req = setURLParam(req, "id", tt.idParam)

@@ -1,69 +1,69 @@
-# Roadmap & Ide Pengembangan Masa Depan `go-tunnel`
+# Roadmap & Future Architectural Ideas for `go-tunnel`
 
-Dokumen ini berisi daftar ide fitur, peningkatan sistem (*improvement*), dan rancangan arsitektur masa depan yang telah diverifikasi kelayakannya. Fitur-fitur ini dikelompokkan berdasarkan prioritas dan dampaknya terhadap sistem.
+This document details future feature proposals, system enhancements, and long-term architectural blueprints validated for feasibility. These initiatives are categorized by priority and their structural impact on the overall ecosystem.
 
 ---
 
-## 1. Observability & Analytics (Pantauan & Statistik)
+## 1. Observability & Analytics
 
-### 1.1 Bandwidth & Traffic Analytics per Tunnel
-- **Deskripsi:** Menghitung statistik aliran data (Bytes Sent/Received, Jumlah Request HTTP, Koneksi Aktif) untuk setiap sesi tunnel secara real-time.
-- **Implementasi:** Menyimpan *counter* metrik di memori server atau Redis atomik (`INCRBY`), kemudian menampilkannya di halaman utama Web UI (*Dashboard*) dalam bentuk grafik visual atau kartu statistik.
-- **Manfaat:** Memberikan visibilitas penuh kepada pengguna atas konsumsi data servis lokal mereka.
+### 1.1 Per-Tunnel Bandwidth & Traffic Analytics
+- **Description:** Track data transfer statistics (Bytes Sent/Received, Total HTTP Requests, Active Connections) for every individual tunnel session in real-time.
+- **Implementation:** Maintain atomic in-memory or Redis counters (`INCRBY`), presenting historical charts and live metrics across the Web UI dashboard.
+- **Benefit:** Gives users granular visibility over data consumption and traffic patterns directed at their local services.
 
 ### 1.2 Live Request Inspector (Web UI / CLI)
-- **Deskripsi:** Fitur inspeksi lalu lintas HTTP interaktif mirip seperti *inspector* lokal pada ngrok.
-- **Implementasi:** Menyimpan riwayat singkat (misal: 50 request terakhir mencakup URL, HTTP Method, Status Code, durasi eksekusi, dan ukuran payload) di *ring buffer* memori atau Redis.
-- **Manfaat:** Memudahkan developer melakukan *debugging* API webhook atau *backend* yang sedang dialirkan melalui tunnel tanpa harus membuka terminal log.
+- **Description:** Interactive HTTP request/response inspection utility similar to local inspection interfaces like ngrok.
+- **Implementation:** Buffer the most recent ~50 requests (capturing URL, HTTP Method, Status Code, execution duration, and payload size) in an in-memory ring buffer or Redis stream.
+- **Benefit:** Accelerates debugging for local webhook development and REST API testing without requiring developers to check terminal logs.
 
 ### 1.3 Admin Audit Logs
-- **Deskripsi:** Mencatat setiap aktivitas krusial operasional ke dalam database.
-- **Implementasi:** Membuat tabel `audit_logs` (mengandung kolom `user_id`, `action`, `target`, `ip_address`, `timestamp`). Aksi yang dicatat mencakup login, pencabutan token, pembuatan/penghapusan domain, dan perubahan status pengguna.
-- **Manfaat:** Meningkatkan keandalan tata kelola sistem (*governance*) dan keamanan enterprise.
+- **Description:** Record all critical administrative actions and lifecycle events inside the primary database.
+- **Implementation:** Create an `audit_logs` table (`user_id`, `action`, `target`, `ip_address`, `timestamp`) logging events such as user logins, token revocations, domain creation/deletion, and user status updates.
+- **Benefit:** Enhances platform governance, compliance, and enterprise-grade security oversight.
 
 ---
 
-## 2. Security & Traffic Control (Keamanan & Proteksi)
+## 2. Security & Traffic Control
 
-### 2.1 Rate Limiting per Domain
-- **Deskripsi:** Pembatasan jumlah request HTTP maksimal per menit/detik dari alamat IP publik menuju domain tunnel tertentu.
-- **Implementasi:** Menambahkan *middleware limiter* berbasis *Token Bucket* atau Redis pada *reverse proxy gateway*.
-- **Manfaat:** Melindungi server lokal (*target*) milik pengguna agar tidak lumpuh atau kehabisan sumber daya akibat serangan *DDoS* atau *brute-force*.
+### 2.1 Per-Domain Rate Limiting
+- **Description:** Limit the maximum allowable HTTP requests per second/minute from public IP addresses targeting specific tunnel subdomains.
+- **Implementation:** Introduce a Token Bucket or Redis-backed rate limiting middleware inside the reverse proxy gateway (`gotunnel-proxy`).
+- **Benefit:** Protects user local servers (`TUNNEL_TARGET`) from exhaustion, DDoS floods, and high-rate brute-force attempts.
 
-### 2.2 IP Allowlist / Blocklist per Domain
-- **Deskripsi:** Fitur di Web UI yang memungkinkan pemilik domain mendaftarkan daftar IP publik yang diizinkan (*allowlist*) atau diblokir (*blocklist*).
-- **Implementasi:** Pengecekan alamat IP asal sebelum *proxy gateway* meneruskan *stream* koneksi ke *yamux session* klien.
-- **Manfaat:** Sangat krusial untuk mengamankan lingkungan pengembangan internal yang rahasia (misalnya hanya boleh diakses oleh IP kantor atau VPN internal tim).
+### 2.2 Per-Domain IP Allowlist / Blocklist
+- **Description:** Enable domain owners via the Web UI to define IP allowlists and blocklists for access restrictions.
+- **Implementation:** Evaluate visitor IP addresses at the L7 reverse proxy layer before multiplexing streams over Yamux client connections.
+- **Benefit:** Essential for securing internal staging environments, corporate intranets, or private APIs restricted to specific team IP ranges.
 
 ### 2.3 Custom API Token Expiry
-- **Deskripsi:** Fleksibilitas durasi masa berlaku token saat pembuatan kredensial baru.
-- **Implementasi:** Menambahkan opsi pada UI dan *endpoint* pembuatan token agar pengguna dapat memilih masa aktif (misal: 7 hari, 30 hari, 1 tahun, atau tanpa kedaluwarsa).
+- **Description:** Flexible expiration policies when generating new authentication tokens.
+- **Implementation:** Expand Web UI schemas and API endpoints to allow users to select token durations (e.g., 7 days, 30 days, 1 year, or non-expiring).
 
 ---
 
-## 3. Reliability & Client Resilience (Keandalan Sistem)
+## 3. Reliability & Client Resilience
 
-### 3.1 Jittered Exponential Backoff pada Client Agent
-- **Deskripsi:** Memperbarui algoritma *reconnect* pada CLI `gotunnel` saat terputus dari server.
-- **Implementasi:** Menambahkan jeda acak (*backoff jitter*) agar pengulangan koneksi tidak terjadi serentak.
-- **Manfaat:** Mencegah masalah *Thundering Herd* (ribuan klien menembak server secara bersamaan) sesaat setelah server gateway mengalami *restart* atau gangguan jaringan sesaat.
+### 3.1 Jittered Exponential Backoff in Client Agent
+- **Description:** Upgrade the automatic reconnection logic across the `gotunnel` CLI client during network interruptions or gateway restarts.
+- **Implementation:** Incorporate randomized jitter into the backoff retry delay calculation.
+- **Benefit:** Prevents the *Thundering Herd* effect (thousands of agents simultaneously pounding the gateway after a brief server restart or network hiccup).
 
 ### 3.2 Graceful Connection Draining
-- **Deskripsi:** Mekanisme penutupan server proxy secara halus (*graceful shutdown*).
-- **Implementasi:** Saat server menerima sinyal `SIGTERM`/`SIGINT`, server berhenti menerima koneksi baru namun menunggu (maksimal 30 detik) sampai request HTTP yang sedang berjalan selesai dieksekusi sebelum menutup *stream* TCP.
-- **Manfaat:** Mencegah terputusnya unduhan file besar atau transaksi API krusial yang sedang berlangsung.
+- **Description:** Clean, non-disruptive termination mechanism (`graceful shutdown`) for edge and core services.
+- **Implementation:** Upon intercepting `SIGTERM` / `SIGINT` signals, servers immediately cease accepting new incoming connections while allowing active HTTP/Yamux transactions a 30-second window to complete normally.
+- **Benefit:** Prevents abruptly dropping active large file transfers or critical API transactions during deployments.
 
 ---
 
-## 4. Arsitektur Tertunda: Mode Tunnel UDP (High Performance)
+## 4. Deferred Architecture: High-Performance UDP Tunneling
 
-*Status: Tertunda (Deferred) — Dirancang pada Juni 2026*
+*Status: Deferred — Originally designed June 2026*
 
-### 4.1 Latar Belakang & Tantangan
-Membungkus lalu lintas UDP ke dalam koneksi TCP standar memicu **TCP Head-of-Line (HoL) Blocking / Meltdown** saat terjadi *packet loss*, yang merusak latensi aplikasi *real-time* seperti Game Server (Minecraft, CS2), DNS, atau VPN.
+### 4.1 Background & Engineering Challenges
+Encapsulating UDP datagrams inside standard TCP streams causes **TCP Head-of-Line (HoL) Blocking and Meltdown** whenever packet loss occurs on the WAN. This completely degrades real-time latency-sensitive applications such as Game Servers (Minecraft, CS2), DNS, and VPN tunnels.
 
-### 4.2 Rancangan Solusi Performa Tinggi (Performance #1)
-- **Persistent Stream Worker Pool:** Sesi tunnel UDP membuka kolam stream paralel persisten sejak awal untuk menghindari *overhead handshake* buka-tutup stream per paket.
-- **Zero-Copy Buffer Pool (`sync.Pool`):** Mendaur ulang buffer 64KB untuk menekan *Garbage Collector (GC) pressure* hingga mendekati nol alokasi di jalur *hot-path*.
-- **Non-Blocking Dropping Policy:** Jika jaringan tunnel sedang penuh (*congested*), server memprioritaskan pembuangan (*drop*) paket baru daripada menahannya di antrean memori, sesuai dengan filosofi *low latency* UDP.
-- **Explicit Port Mapping:** Klien mendaftarkan nomor port UDP publik secara spesifik (misal: `30005`), dan server membuka *listener* UDP publik khusus di port tersebut yang disambungkan ke agen klien.
+### 4.2 High-Performance Solution Blueprint (Performance #1)
+- **Persistent Stream Worker Pool:** UDP tunnel sessions pre-open and maintain a pool of parallel persistent streams during registration, eliminating per-packet stream opening and teardown handshakes.
+- **Zero-Copy Buffer Pool (`sync.Pool`):** Recycles 64KB UDP packet buffers, suppressing Garbage Collector (GC) pressure to achieve near-zero memory allocation on hot-path operations.
+- **Non-Blocking Dropping Policy:** When a tunnel link experiences network congestion or buffer exhaustion, the server prioritizes dropping new incoming datagrams rather than queuing them in memory, adhering strictly to UDP low-latency semantics.
+- **Explicit Port Mapping:** Clients register explicit public UDP port numbers (e.g., `30005`), instructing the server to open dedicated public UDP listeners directly wired to the client's multiplexed channel.

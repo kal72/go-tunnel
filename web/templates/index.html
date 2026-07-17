@@ -7,7 +7,7 @@
   <aside
     class="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col shrink-0 transition-colors">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Client Configs</p>
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Tunnel Configs</p>
       <button @click="showNewModal = true" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-0.5"
         title="Add new config">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -165,8 +165,7 @@
 
                     <div class="grid grid-cols-[90px_1fr] items-center gap-3 py-2">
                       <label class="text-xs font-mono text-gray-400 dark:text-gray-500">hostname</label>
-                      <input type="text" x-model="tunnel.hostname"
-                        placeholder="app.example.com"
+                      <input type="text" x-model="tunnel.hostname" placeholder="app.example.com"
                         class="w-full text-xs font-mono border border-gray-200 dark:border-slate-600 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-colors">
                     </div>
 
@@ -183,6 +182,7 @@
                         <option value="http">http</option>
                         <option value="https">https</option>
                         <option value="tcp">tcp</option>
+                        <option value="minecraft-proxy">minecraft-proxy</option>
                       </select>
                     </div>
 
@@ -215,27 +215,85 @@
       <div
         class="w-80 border-l border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex flex-col shrink-0 transition-colors">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Guide &
+            Tunnel Modes</p>
         </div>
         <div class="flex-1 overflow-auto p-5 text-sm text-gray-600 dark:text-gray-400 space-y-5 leading-relaxed">
-          
+
           <div>
             <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">1. Add a Tunnel</h4>
-            <p class="text-xs">Click <span class="text-blue-600 dark:text-blue-400 font-medium">+ add tunnel</span> to create a new port mapping. You can add multiple tunnels to a single config.</p>
+            <p class="text-xs">Click <span class="text-blue-600 dark:text-blue-400 font-medium">+ add tunnel</span> to
+              create a new port mapping. You can add multiple tunnels to a single config.</p>
           </div>
 
           <div>
             <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">2. Configure Fields</h4>
             <ul class="text-xs space-y-2 list-disc ml-4">
-              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> The public domain you registered in Manage Domains (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">app.domain.com</code>).</li>
-              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Your local application's address and port (e.g., <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:8080</code>).</li>
-              <li><strong class="text-gray-700 dark:text-gray-300">mode:</strong> <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">http</code> for web apps, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">https</code> for secure local targets, <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">tcp</code> for raw TCP (SSH/DB).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">hostname:</strong> Public domain registered in Manage
+                Domains (e.g., <code
+                  class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">app.example.com</code> or
+                <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">mc.example.com</code>).
+              </li>
+              <li><strong class="text-gray-700 dark:text-gray-300">target:</strong> Local address and port (<code
+                  class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">127.0.0.1:25565</code>) or
+                just port (<code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">25565</code>
+                or <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded">22</code>).</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">mode:</strong>
+                <ul class="mt-1.5 space-y-2 list-none -ml-2">
+                  <li
+                    class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span
+                      class="font-mono text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded font-semibold">http
+                      / https</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For web apps, REST APIs
+                      & web dashboards. Supports Cloudflare Proxied (Orange Cloud) when using <code
+                        class="text-[10px]">Full (strict)</code> SSL.</p>
+                  </li>
+                  <li
+                    class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span
+                      class="font-mono text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 px-1.5 py-0.5 rounded font-semibold">tcp</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For raw TCP services:
+                      SSH, Database, custom TCP apps, Vanilla Minecraft & PaperMC without proxy protocol. <span
+                        class="text-amber-600 dark:text-amber-400 font-medium">Requires DNS-Only (Gray Cloud).</span>
+                    </p>
+                  </li>
+                  <li
+                    class="bg-white dark:bg-slate-800/80 p-2 rounded border border-gray-100 dark:border-slate-700/60 shadow-sm">
+                    <span
+                      class="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded font-semibold">minecraft-proxy</span>
+                    <p class="text-[11px] mt-1 text-gray-600 dark:text-gray-400 leading-normal">For PaperMC/BungeeCord
+                      with <code
+                        class="text-[10px] bg-gray-100 dark:bg-slate-700 px-1 rounded">proxy-protocol: true</code>.
+                      Injects HAProxy PROXY v1 headers for real player IP logging. <span
+                        class="text-emerald-600 dark:text-emerald-400 font-medium">Requires DNS-Only (Gray
+                        Cloud).</span></p>
+                  </li>
+                </ul>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Save & Run</h4>
-            <p class="text-xs">After saving the configuration, open your terminal and start the tunnel using the <code class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1 rounded text-green-600 dark:text-green-400">gotunnel run</code> command shown above.</p>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">3. Cloudflare & DNS Rules</h4>
+            <ul class="text-xs space-y-1.5 list-disc ml-4 text-gray-600 dark:text-gray-400">
+              <li><strong class="text-gray-700 dark:text-gray-300">Web Tunnels (<code
+                    class="font-mono text-[10px]">http/https</code>):</strong> Can use 🟧 <strong>Proxied (Orange
+                  Cloud)</strong> with valid SSL/Origin certs.</li>
+              <li><strong class="text-gray-700 dark:text-gray-300">Raw TCP & Minecraft:</strong> Must use ⚪
+                <strong>DNS-Only (Gray Cloud)</strong> because Cloudflare L7 proxy rejects non-HTTP handshakes.
+              </li>
+              <li><strong class="text-gray-700 dark:text-gray-300">Tunnel Gateway:</strong> The domain used by CLI
+                (<code class="font-mono text-[10px]">gotunnel connect</code>) must also be ⚪ <strong>DNS-Only (Gray
+                  Cloud)</strong>.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-1 text-sm">4. Save & Launch</h4>
+            <p class="text-xs">After saving, open terminal and run <code
+                class="font-mono text-[10px] bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-green-600 dark:text-green-400 font-medium">gotunnel run &lt;config_id&gt;</code>
+              to start all active tunnels in this profile.</p>
           </div>
 
         </div>
@@ -247,8 +305,7 @@
     <div
       class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-5 py-2 flex items-center justify-between shrink-0 transition-colors">
       <span class="text-xs font-mono text-gray-400 dark:text-gray-500" x-text="statusText"></span>
-      <span class="text-xs text-gray-400 dark:text-gray-500"
-        x-text="current ? 'PUT /api/configs/' + current.id : ''"></span>
+
     </div>
 
   </main>
@@ -399,23 +456,24 @@
         for (let i = 0; i < this.form.tunnels.length; i++) {
           const t = this.form.tunnels[i];
           if (!t.hostname || !t.hostname.trim()) {
-            alert(`Validation Error (Tunnel #${i+1}): Hostname cannot be empty.`);
+            alert(`Validation Error (Tunnel #${i + 1}): Hostname cannot be empty.`);
             return;
           }
           if (t.hostname.includes(' ') || t.hostname.includes('://')) {
-            alert(`Validation Error (Tunnel #${i+1}): Hostname '${t.hostname}' is invalid. Do not include protocols (http://) or spaces.`);
+            alert(`Validation Error (Tunnel #${i + 1}): Hostname '${t.hostname}' is invalid. Do not include protocols (http://) or spaces.`);
             return;
           }
           if (!t.target || !t.target.trim()) {
-            alert(`Validation Error (Tunnel #${i+1}): Target cannot be empty.`);
+            alert(`Validation Error (Tunnel #${i + 1}): Target cannot be empty.`);
             return;
           }
           if (t.target.includes(' ')) {
-            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Cannot contain spaces.`);
+            alert(`Validation Error (Tunnel #${i + 1}): Target '${t.target}' is invalid. Cannot contain spaces.`);
             return;
           }
-          if (t.mode !== 'https' && !t.target.includes(':')) {
-            alert(`Validation Error (Tunnel #${i+1}): Target '${t.target}' is invalid. Expected host:port format.`);
+          const isOnlyPort = /^\d+$/.test(t.target);
+          if (t.mode !== 'https' && !isOnlyPort && !t.target.includes(':')) {
+            alert(`Validation Error (Tunnel #${i + 1}): Target '${t.target}' is invalid. Expected host:port format or port number.`);
             return;
           }
         }

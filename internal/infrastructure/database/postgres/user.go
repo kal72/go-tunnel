@@ -20,6 +20,18 @@ func NewUserRepository(db *sqlx.DB) domainUser.UserRepository {
 	return &sqlxUserRepository{db: db}
 }
 
+func (r *sqlxUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error) {
+	var user domainUser.User
+	err := r.db.GetContext(ctx, &user, "SELECT id, username, password, role, status, created_at, updated_at FROM users WHERE id = $1", id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil //nolint:nilnil // Return nil if not found
+		}
+		return nil, fmt.Errorf("GetUserByID error: %w", err)
+	}
+	return &user, nil
+}
+
 func (r *sqlxUserRepository) GetUserByUsername(ctx context.Context, username string) (*domainUser.User, error) {
 	var user domainUser.User
 	err := r.db.GetContext(ctx, &user, "SELECT id, username, password, role, status, created_at, updated_at FROM users WHERE username = $1", username)

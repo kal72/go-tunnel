@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 	"gotunnel/internal/domain/tunnel"
+	"time"
 
 	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
@@ -155,6 +156,57 @@ func (_c *MockTunnelUsecase_DeleteRateLimitSetting_Call) Return(err error) *Mock
 }
 
 func (_c *MockTunnelUsecase_DeleteRateLimitSetting_Call) RunAndReturn(run func(ctx context.Context, username string) error) *MockTunnelUsecase_DeleteRateLimitSetting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FlushAllTunnelsAndDomains provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) FlushAllTunnelsAndDomains(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FlushAllTunnelsAndDomains")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelUsecase_FlushAllTunnelsAndDomains_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FlushAllTunnelsAndDomains'
+type MockTunnelUsecase_FlushAllTunnelsAndDomains_Call struct {
+	*mock.Call
+}
+
+// FlushAllTunnelsAndDomains is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTunnelUsecase_Expecter) FlushAllTunnelsAndDomains(ctx any) *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call {
+	return &MockTunnelUsecase_FlushAllTunnelsAndDomains_Call{Call: _e.mock.On("FlushAllTunnelsAndDomains", ctx)}
+}
+
+func (_c *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call) Run(run func(ctx context.Context)) *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call) Return(err error) *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call) RunAndReturn(run func(ctx context.Context) error) *MockTunnelUsecase_FlushAllTunnelsAndDomains_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -555,6 +607,75 @@ func (_c *MockTunnelUsecase_PublishTunnelEvent_Call) Return(err error) *MockTunn
 }
 
 func (_c *MockTunnelUsecase_PublishTunnelEvent_Call) RunAndReturn(run func(ctx context.Context, eventType string) error) *MockTunnelUsecase_PublishTunnelEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RefreshActiveDomains provides a mock function for the type MockTunnelUsecase
+func (_mock *MockTunnelUsecase) RefreshActiveDomains(ctx context.Context, domains []string, sessionID string, ttl time.Duration) error {
+	ret := _mock.Called(ctx, domains, sessionID, ttl)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshActiveDomains")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, string, time.Duration) error); ok {
+		r0 = returnFunc(ctx, domains, sessionID, ttl)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTunnelUsecase_RefreshActiveDomains_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshActiveDomains'
+type MockTunnelUsecase_RefreshActiveDomains_Call struct {
+	*mock.Call
+}
+
+// RefreshActiveDomains is a helper method to define mock.On call
+//   - ctx context.Context
+//   - domains []string
+//   - sessionID string
+//   - ttl time.Duration
+func (_e *MockTunnelUsecase_Expecter) RefreshActiveDomains(ctx any, domains any, sessionID any, ttl any) *MockTunnelUsecase_RefreshActiveDomains_Call {
+	return &MockTunnelUsecase_RefreshActiveDomains_Call{Call: _e.mock.On("RefreshActiveDomains", ctx, domains, sessionID, ttl)}
+}
+
+func (_c *MockTunnelUsecase_RefreshActiveDomains_Call) Run(run func(ctx context.Context, domains []string, sessionID string, ttl time.Duration)) *MockTunnelUsecase_RefreshActiveDomains_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Duration
+		if args[3] != nil {
+			arg3 = args[3].(time.Duration)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTunnelUsecase_RefreshActiveDomains_Call) Return(err error) *MockTunnelUsecase_RefreshActiveDomains_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTunnelUsecase_RefreshActiveDomains_Call) RunAndReturn(run func(ctx context.Context, domains []string, sessionID string, ttl time.Duration) error) *MockTunnelUsecase_RefreshActiveDomains_Call {
 	_c.Call.Return(run)
 	return _c
 }

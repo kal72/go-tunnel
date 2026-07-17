@@ -1,18 +1,13 @@
 {{define "content"}}
-<div class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900 overflow-y-auto">
-  
-  <!-- Header -->
-  <header class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 shrink-0">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Rate Limiting & Traffic Protection</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Protect your active tunnel hostnames against excessive HTTP traffic and DDoS surges.</p>
-      </div>
-    </div>
-  </header>
+<div x-data="rateLimitPage()" x-init="fetchConfig()" x-cloak class="flex flex-col h-full">
 
   <!-- Main Content -->
-  <main class="p-6 max-w-4xl mx-auto w-full" x-data="rateLimitPage()" x-init="fetchConfig()">
+  <main class="flex-1 overflow-auto p-6 bg-transparent">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Rate Limiting & Traffic Protection</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Protect your active tunnel hostnames against excessive HTTP traffic and DDoS surges.</p>
+      </div>
     
     <!-- Notification Banners -->
     <div x-show="saved" x-transition.opacity
@@ -130,8 +125,8 @@
 
       </div>
     </div>
-
-  </main>
+  </div>
+</main>
 </div>
 
 <script>

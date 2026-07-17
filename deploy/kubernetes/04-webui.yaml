@@ -1,0 +1,47 @@
+# Kubernetes Deployment & ClusterIP Service for Web UI Dashboard pods (`gotunnel-webui`)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gotunnel-webui
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gotunnel-webui
+  template:
+    metadata:
+      labels:
+        app: gotunnel-webui
+    spec:
+      containers:
+        - name: webui
+          image: ghcr.io/kal72/gotunnel:latest
+          command: ["./gotunnel-webui"]
+          envFrom:
+            - configMapRef:
+                name: gotunnel-config
+          ports:
+            - name: http-dashboard
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gotunnel-webui
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: gotunnel-webui
+  ports:
+    - name: http-dashboard
+      port: 8080
+      targetPort: 8080

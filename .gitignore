@@ -33,5 +33,10 @@ config.yaml
 .DS_Store
 *.bak
 
+#logs
+*.log
+*.logs
+*.log.*
+
 tmp
 downloads

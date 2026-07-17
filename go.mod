@@ -1,6 +1,6 @@
 module gotunnel
 
-go 1.26
+go 1.26.5
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/yamux v0.1.2
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
+	github.com/leanovate/gopter v0.2.11
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/shirou/gopsutil/v3 v3.24.5

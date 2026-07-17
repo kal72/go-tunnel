@@ -1,24 +1,24 @@
 # Web UI Manager
 
-Web UI untuk mengelola file konfigurasi YAML dan memantau status tunnel secara real-time.
+Web UI dashboard for managing YAML configuration files, API tokens, and real-time tunnel monitoring.
 
 ## Tech Stack
 
-| Layer      | Library                  |
-|------------|--------------------------|
-| HTTP       | `chi` v5                 |
-| Template   | `html/template` (stdlib) |
-| YAML       | `gopkg.in/yaml.v3`       |
-| Frontend   | Alpine.js + Tailwind CSS |
-| Dev reload | `air`                    |
+| Layer | Library |
+| :--- | :--- |
+| HTTP | `chi` v5 |
+| Template | `html/template` (stdlib) |
+| YAML | `gopkg.in/yaml.v3` |
+| Frontend | Alpine.js + Tailwind CSS |
+| Dev reload | `air` |
 
-## Struktur Project
+## Project Structure
 
 ```
 go-tunnel/
 ├── cmd/
 │   └── webui/
-│       └── main.go          # Entry point untuk Web UI
+│       └── main.go          # Entry point for Web UI
 ├── internal/
 │   ├── webui/
 │   │   ├── handler/
@@ -28,7 +28,7 @@ go-tunnel/
 │   │   ├── schema/          # Validation schemas
 │   │   └── service/         # Business logic
 │   └── tunnel/              # Tunnel core logic
-├── assets/
+├── web/
 │   └── templates/
 │       ├── base.html
 │       ├── index.html       # Config editor UI
@@ -37,13 +37,12 @@ go-tunnel/
 │       ├── docs.html        # Public documentation page
 │       └── login.html       # Login portal UI
 └── docs/
-    ├── PANDUAN_PENGGUNAAN.md # Panduan dalam Bahasa Indonesia
-    └── USAGE_GUIDE.md        # English Usage Guide
+    └── USAGE_GUIDE.md       # Client Usage Guide
 ```
 
-## Cara Menjalankan
+## Running Locally
 
-### Development (dengan live reload)
+### Development (with live reload)
 
 ```bash
 go install github.com/air-verse/air@latest
@@ -59,10 +58,10 @@ go build -o webui ./cmd/webui/main.go
 ./webui
 ```
 
-## Fitur Utama
+## Key Features
 
-1.  **Dashboard**: Pantau client yang sedang terhubung, alamat IP, dan hostname yang digunakan.
-2.  **Config Editor**: Edit file konfigurasi client secara langsung dari browser dengan preview YAML otomatis.
-3.  **Domain Manager**: Kelola daftar subdomain yang diizinkan untuk tunnel.
-4.  **Token Management**: Generate dan revoke token autentikasi client secara instan.
-5.  **Dokumentasi Publik**: Halaman `/docs` yang dapat diakses publik untuk panduan pengaturan client.
+1. **Dashboard**: Monitor active connected clients, remote IP addresses, and assigned hostnames in real-time.
+2. **Config Editor**: Directly edit client configuration files from your web browser with live YAML validation and preview.
+3. **Domain Manager**: Manage whitelisted and custom subdomains permitted for client tunnel mapping.
+4. **Token Management**: Instantly generate, inspect, and revoke client authentication tokens.
+5. **Public Documentation**: Accessible `/docs` page providing setup instructions and quick start commands for client devices.
